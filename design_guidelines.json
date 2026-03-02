@@ -1,0 +1,163 @@
+{
+  "identity": {
+    "name": "OpsCommand",
+    "tone": "Precision, Operational, trustworthy, High-Density",
+    "persona": "The Architect's Console - A tool that feels like a physical instrument.",
+    "emotional_archetype": "Swiss & High-Contrast (Authority, Clarity, Truth)"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight lg:text-5xl",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "p": "text-base leading-7 text-muted-foreground",
+      "small": "text-sm font-medium leading-none"
+    },
+    "rules": [
+      "Headings must use Manrope for a technical, precise feel.",
+      "Use 'tracking-tight' on all headings larger than 24px.",
+      "Dashboard metrics (numbers) should use 'font-variant-numeric: tabular-nums' to align perfectly."
+    ]
+  },
+  "colors": {
+    "mode": "system-toggle",
+    "palette": {
+      "primary": {
+        "DEFAULT": "#4F46E5",
+        "foreground": "#FFFFFF",
+        "50": "#EEF2FF",
+        "100": "#E0E7FF",
+        "500": "#6366F1",
+        "600": "#4F46E5",
+        "700": "#4338CA",
+        "900": "#312E81"
+      },
+      "neutral": {
+        "light_bg": "#F8FAFC",
+        "dark_bg": "#020617",
+        "light_surface": "#FFFFFF",
+        "dark_surface": "#0F172A",
+        "border_light": "#E2E8F0",
+        "border_dark": "#1E293B"
+      },
+      "functional": {
+        "success": "#10B981",
+        "warning": "#F59E0B",
+        "danger": "#EF4444",
+        "info": "#3B82F6"
+      }
+    },
+    "gradients": {
+      "dashboard_hero": "from-indigo-500/10 via-purple-500/5 to-transparent",
+      "active_state": "bg-indigo-50 dark:bg-indigo-950/30"
+    }
+  },
+  "layout": {
+    "structure": "Sidebar Layout",
+    "grid_system": "Bento Grid (Mode B: High Density)",
+    "spacing": {
+      "page_padding": "p-6 md:p-8",
+      "card_gap": "gap-6",
+      "section_gap": "gap-8"
+    },
+    "containers": {
+      "dashboard_card": "rounded-xl border border-border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-200",
+      "sidebar": "w-64 border-r bg-muted/40 hidden lg:block",
+      "main_content": "flex-1 overflow-y-auto bg-background"
+    },
+    "z_index": {
+      "toast": 50,
+      "modal": 40,
+      "dropdown": 30,
+      "sticky_header": 20
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm h-10 px-4 py-2 rounded-md transition-all active:scale-95",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 rounded-md",
+      "ghost": "hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 rounded-md"
+    },
+    "cards": {
+      "stat_card": "p-6 flex flex-row items-center justify-between space-y-0 pb-2 bg-card rounded-xl border shadow-sm",
+      "chart_card": "p-6 pt-0 bg-card rounded-xl border shadow-sm col-span-2"
+    },
+    "inputs": {
+      "default": "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "tables": {
+      "wrapper": "rounded-md border bg-card",
+      "header": "bg-muted/50 text-muted-foreground font-medium",
+      "row": "hover:bg-muted/50 transition-colors data-[state=selected]:bg-muted"
+    },
+    "badges": {
+      "status_pill": "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+      "variants": {
+        "success": "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+        "warning": "border-transparent bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+        "danger": "border-transparent bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+        "neutral": "border-transparent bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
+      }
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      "dropdown": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+      "glow": "0 0 15px rgba(79, 70, 229, 0.3)"
+    },
+    "borders": {
+      "default": "1px solid var(--border)",
+      "subtle": "1px solid rgba(226, 232, 240, 0.6)"
+    },
+    "glassmorphism": {
+      "sidebar": "backdrop-blur-md bg-background/95",
+      "overlay": "backdrop-blur-sm bg-background/80"
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-in-out",
+    "enter_animation": "animate-in fade-in zoom-in-95 duration-300",
+    "hover_lift": "hover:-translate-y-1 hover:shadow-lg transition-transform duration-200"
+  },
+  "images": {
+    "hero_bg": "https://images.unsplash.com/photo-1762904714036-d336853dec75?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "auth_side_image": "https://images.unsplash.com/photo-1769008302212-816b6a07e10c?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "placeholders": {
+      "asset_hvac": "https://images.unsplash.com/photo-1758873263491-f3969d8c6fda?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "asset_machinery": "https://images.unsplash.com/photo-1720036236694-d0a231c52563?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "user_avatar": "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80"
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure text-to-background contrast ratio of at least 4.5:1 for normal text.",
+    "focus_states": "All interactive elements must have a visible ring-2 ring-primary focus state.",
+    "aria_labels": "All icon-only buttons must have aria-label."
+  },
+  "instructions_to_main_agent": [
+    "Use 'lucide-react' for all icons.",
+    "Implement the 'Sidebar Layout' using a fixed sidebar on desktop and a Sheet component on mobile.",
+    "Use 'Recharts' for all charts (Bar, Pie, Line) inside Shadcn Cards.",
+    "For the 'Work Orders' table, use the 'TanStack Table' (React Table) implementation with sorting and pagination.",
+    "Ensure the 'Dark Mode' toggle works by applying the 'dark' class to the html/body element.",
+    "All forms (Login, Create Work Order) must use 'react-hook-form' and 'zod' for validation.",
+    "Do NOT use gradients for text. Keep it legible.",
+    "Use 'Sonner' for toast notifications.",
+    "When displaying dates, use 'date-fns' for formatting (e.g., 'PPP')."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) where appropriate (e.g., sticky headers).",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms.",
+    "Every interaction needs micro-animations - hover states, transitions.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "All interactive and key informational elements MUST include data-testid attribute."
+  ]
+}
