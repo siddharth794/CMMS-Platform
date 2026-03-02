@@ -60,6 +60,15 @@ Build a comprehensive web-based Facility Management System based on PDF specific
 - Recent work orders table
 - Completion rate tracking
 
+### Phase 6: Inventory Management ✅
+- Inventory item CRUD (Name, SKU, Category, Quantity, Min Qty, Unit, Unit Cost, Location)
+- Stats dashboard (Total Items, Low Stock Alerts, Total Value)
+- Search by name/SKU/location
+- Filter by category
+- Low Stock Only toggle
+- Low stock badge indicators
+- Edit/Delete actions per item
+
 ### Additional Features ✅
 - Dark/Light theme toggle
 - Responsive sidebar navigation
@@ -92,6 +101,7 @@ Build a comprehensive web-based Facility Management System based on PDF specific
 - ✅ Analytics aggregation
 - ✅ Audit logging
 - ✅ Demo data seeding
+- ✅ Inventory management with stats
 
 ### Frontend
 - ✅ Modern enterprise dashboard UI
@@ -100,6 +110,7 @@ Build a comprehensive web-based Facility Management System based on PDF specific
 - ✅ Dashboard with charts
 - ✅ Work Orders management
 - ✅ Assets management
+- ✅ Inventory management (NEW)
 - ✅ PM Schedules management
 - ✅ Analytics page
 - ✅ Settings/User management
@@ -120,9 +131,11 @@ Build a comprehensive web-based Facility Management System based on PDF specific
 
 ### P2 (Medium Priority)
 - [ ] Bulk asset import (CSV)
+- [ ] Bulk inventory import (CSV)
 - [ ] Auto-generate PM work orders
 - [ ] Calendar view for scheduling
 - [ ] Export reports (PDF/Excel)
+- [ ] Link inventory to work orders (parts usage)
 
 ### P3 (Low Priority)
 - [ ] Mobile app version
