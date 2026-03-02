@@ -233,6 +233,93 @@ class FacilityManagementAPITester:
         success, _ = self.run_test("List Audit Logs", "GET", "audit-logs", 200)
         return success
 
+    def test_inventory_crud(self):
+        """Test inventory CRUD operations"""
+        # Test inventory stats
+        success, stats = self.run_test("Get Inventory Stats", "GET", "inventory/stats", 200)
+        if not success:
+            return False
+        
+        # Validate stats structure
+        required_stats = ['total_items', 'low_stock_count', 'total_value']
+        for field in required_stats:
+            if field not in stats:
+                self.log_result("Inventory Stats Structure", False, f"Missing field: {field}")
+                return False
+        self.log_result("Inventory Stats Structure", True, "All required stats fields present")
+        
+        # Test inventory categories
+        success, categories = self.run_test("Get Inventory Categories", "GET", "inventory/categories", 200)
+        if not success:
+            return False
+        
+        # List inventory items
+        success, items_list = self.run_test("List Inventory Items", "GET", "inventory", 200)
+        if not success:
+            return False
+        
+        # Test search functionality
+        success, _ = self.run_test("Search Inventory", "GET", "inventory?search=filter", 200)
+        if not success:
+            return False
+        
+        # Test category filter
+        success, _ = self.run_test("Filter by Category", "GET", "inventory?category=Filters", 200)
+        if not success:
+            return False
+        
+        # Test low stock filter
+        success, low_stock_items = self.run_test("Filter Low Stock", "GET", "inventory?low_stock_only=true", 200)
+        if not success:
+            return False
+        
+        # Verify low stock logic (should include Pipe Fittings Kit from demo data)
+        low_stock_found = any(item.get('name') == 'Pipe Fittings Kit' for item in low_stock_items)
+        if low_stock_found:
+            self.log_result("Low Stock Logic", True, "Pipe Fittings Kit correctly identified as low stock")
+        else:
+            self.log_result("Low Stock Logic", False, "Low stock filter may not be working correctly")
+        
+        # Create new inventory item
+        inventory_data = {
+            "name": "Test Inventory Item",
+            "description": "Test item for API testing",
+            "sku": "TEST-INV-001",
+            "category": "Testing",
+            "quantity": 10,
+            "min_quantity": 5,
+            "unit": "pcs",
+            "unit_cost": "25.00",
+            "storage_location": "Test Storage Room"
+        }
+        success, created_item = self.run_test("Create Inventory Item", "POST", "inventory", 201, data=inventory_data)
+        if not success:
+            return False
+        
+        item_id = created_item.get('id')
+        if not item_id:
+            self.log_result("Get Inventory Item ID", False, "No ID in created inventory item response")
+            return False
+        
+        # Get specific inventory item
+        success, _ = self.run_test("Get Inventory Item", "GET", f"inventory/{item_id}", 200)
+        if not success:
+            return False
+        
+        # Update inventory item
+        update_data = {
+            "description": "Updated test inventory item",
+            "quantity": 15
+        }
+        success, _ = self.run_test("Update Inventory Item", "PUT", f"inventory/{item_id}", 200, data=update_data)
+        if not success:
+            return False
+        
+        # Delete inventory item
+        success, _ = self.run_test("Delete Inventory Item", "DELETE", f"inventory/{item_id}", 200)
+        
+        return success
+
     def run_all_tests(self):
         """Run complete test suite"""
         print("🚀 Starting Facility Management System API Tests")
@@ -262,6 +349,7 @@ class FacilityManagementAPITester:
         self.test_analytics()
         self.test_user_management()
         self.test_audit_logs()
+        self.test_inventory_crud()
 
         # Print summary
         print("\n" + "=" * 60)

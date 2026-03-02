@@ -9,13 +9,14 @@ import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
 import { 
   LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings, 
-  LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown
+  LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
   { name: 'Assets', href: '/assets', icon: Box },
+  { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Preventive Maintenance', href: '/pm-schedules', icon: Calendar },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },

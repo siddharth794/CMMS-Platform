@@ -44,6 +44,7 @@ class Organization(Base):
     assets = relationship("Asset", back_populates="organization", cascade="all, delete-orphan")
     work_orders = relationship("WorkOrder", back_populates="organization", cascade="all, delete-orphan")
     pm_schedules = relationship("PMSchedule", back_populates="organization", cascade="all, delete-orphan")
+    inventory_items = relationship("InventoryItem", back_populates="organization", cascade="all, delete-orphan")
 
 class Role(Base):
     __tablename__ = "roles"
@@ -173,3 +174,23 @@ class AuditLog(Base):
     new_values = Column(JSON)
     ip_address = Column(String(50))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class InventoryItem(Base):
+    __tablename__ = "inventory_items"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    org_id = Column(String(36), ForeignKey("organizations.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    sku = Column(String(100))
+    category = Column(String(100), nullable=False)
+    quantity = Column(Integer, nullable=False, default=0)
+    min_quantity = Column(Integer, default=0)
+    unit = Column(String(50), default="pcs")
+    unit_cost = Column(String(50), default="0")
+    storage_location = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    organization = relationship("Organization", back_populates="inventory_items")

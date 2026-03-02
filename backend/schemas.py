@@ -294,3 +294,43 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+# Inventory Schemas
+class InventoryItemBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    sku: Optional[str] = None
+    category: str
+    quantity: int = 0
+    min_quantity: Optional[int] = 0
+    unit: Optional[str] = "pcs"
+    unit_cost: Optional[str] = "0"
+    storage_location: str
+
+class InventoryItemCreate(InventoryItemBase):
+    pass
+
+class InventoryItemUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sku: Optional[str] = None
+    category: Optional[str] = None
+    quantity: Optional[int] = None
+    min_quantity: Optional[int] = None
+    unit: Optional[str] = None
+    unit_cost: Optional[str] = None
+    storage_location: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class InventoryItemResponse(InventoryItemBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    org_id: str
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class InventoryStats(BaseModel):
+    total_items: int
+    low_stock_count: int
+    total_value: float

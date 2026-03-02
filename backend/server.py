@@ -18,7 +18,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 from database import get_db, init_db, engine, Base
 from models import (
-    Organization, User, Role, Asset, WorkOrder, PMSchedule, AuditLog,
+    Organization, User, Role, Asset, WorkOrder, PMSchedule, AuditLog, InventoryItem,
     WorkOrderStatus, Priority
 )
 from schemas import (
@@ -29,7 +29,8 @@ from schemas import (
     WorkOrderCreate, WorkOrderUpdate, WorkOrderResponse, WorkOrderStatusUpdate, WorkOrderAssign,
     PMScheduleCreate, PMScheduleUpdate, PMScheduleResponse,
     AnalyticsResponse, DashboardStats, WorkOrdersByStatus, WorkOrdersByPriority,
-    AuditLogResponse
+    AuditLogResponse,
+    InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse, InventoryStats
 )
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -822,6 +823,151 @@ async def list_audit_logs(
     result = await db.execute(stmt)
     return [AuditLogResponse.model_validate(log) for log in result.scalars().all()]
 
+# ==================== INVENTORY ROUTES ====================
+@api_router.get("/inventory", response_model=List[InventoryItemResponse])
+async def list_inventory(
+    skip: int = 0, limit: int = 100,
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    low_stock_only: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(InventoryItem).where(InventoryItem.org_id == current_user.org_id, InventoryItem.is_active == True)
+    
+    if search:
+        stmt = stmt.where(or_(
+            InventoryItem.name.ilike(f"%{search}%"),
+            InventoryItem.sku.ilike(f"%{search}%"),
+            InventoryItem.storage_location.ilike(f"%{search}%")
+        ))
+    if category:
+        stmt = stmt.where(InventoryItem.category == category)
+    if low_stock_only:
+        stmt = stmt.where(InventoryItem.quantity <= InventoryItem.min_quantity)
+    
+    stmt = stmt.order_by(InventoryItem.name).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return [InventoryItemResponse.model_validate(item) for item in result.scalars().all()]
+
+@api_router.get("/inventory/stats", response_model=InventoryStats)
+async def get_inventory_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    org_id = current_user.org_id
+    
+    # Total items count
+    total_result = await db.execute(
+        select(func.count(InventoryItem.id)).where(InventoryItem.org_id == org_id, InventoryItem.is_active == True)
+    )
+    total_items = total_result.scalar() or 0
+    
+    # Low stock count
+    low_stock_result = await db.execute(
+        select(func.count(InventoryItem.id)).where(
+            InventoryItem.org_id == org_id,
+            InventoryItem.is_active == True,
+            InventoryItem.quantity <= InventoryItem.min_quantity,
+            InventoryItem.min_quantity > 0
+        )
+    )
+    low_stock_count = low_stock_result.scalar() or 0
+    
+    # Calculate total value
+    items_result = await db.execute(
+        select(InventoryItem).where(InventoryItem.org_id == org_id, InventoryItem.is_active == True)
+    )
+    items = items_result.scalars().all()
+    total_value = sum(float(item.unit_cost or 0) * item.quantity for item in items)
+    
+    return InventoryStats(
+        total_items=total_items,
+        low_stock_count=low_stock_count,
+        total_value=round(total_value, 2)
+    )
+
+@api_router.get("/inventory/categories")
+async def get_inventory_categories(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(InventoryItem.category).where(
+        InventoryItem.org_id == current_user.org_id,
+        InventoryItem.is_active == True
+    ).distinct()
+    result = await db.execute(stmt)
+    categories = [row[0] for row in result.all() if row[0]]
+    return {"categories": categories}
+
+@api_router.post("/inventory", response_model=InventoryItemResponse, status_code=status.HTTP_201_CREATED)
+async def create_inventory_item(
+    item_data: InventoryItemCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    item_dict = item_data.model_dump()
+    item_dict["org_id"] = current_user.org_id
+    
+    item = InventoryItem(**item_dict)
+    db.add(item)
+    await db.commit()
+    await db.refresh(item)
+    
+    await create_audit_log(db, current_user.org_id, current_user.id, current_user.email, "InventoryItem", item.id, "create", None, {"name": item.name})
+    
+    return InventoryItemResponse.model_validate(item)
+
+@api_router.get("/inventory/{item_id}", response_model=InventoryItemResponse)
+async def get_inventory_item(item_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stmt = select(InventoryItem).where(InventoryItem.id == item_id, InventoryItem.org_id == current_user.org_id)
+    result = await db.execute(stmt)
+    item = result.scalars().first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    return InventoryItemResponse.model_validate(item)
+
+@api_router.put("/inventory/{item_id}", response_model=InventoryItemResponse)
+async def update_inventory_item(
+    item_id: str, item_data: InventoryItemUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(InventoryItem).where(InventoryItem.id == item_id, InventoryItem.org_id == current_user.org_id)
+    result = await db.execute(stmt)
+    item = result.scalars().first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    
+    old_values = {"name": item.name, "quantity": item.quantity}
+    
+    for key, value in item_data.model_dump(exclude_unset=True).items():
+        setattr(item, key, value)
+    
+    await db.commit()
+    await db.refresh(item)
+    
+    await create_audit_log(db, current_user.org_id, current_user.id, current_user.email, "InventoryItem", item_id, "update", old_values, item_data.model_dump(exclude_unset=True))
+    
+    return InventoryItemResponse.model_validate(item)
+
+@api_router.delete("/inventory/{item_id}")
+async def delete_inventory_item(
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(InventoryItem).where(InventoryItem.id == item_id, InventoryItem.org_id == current_user.org_id)
+    result = await db.execute(stmt)
+    item = result.scalars().first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    
+    item.is_active = False
+    await db.commit()
+    await create_audit_log(db, current_user.org_id, current_user.id, current_user.email, "InventoryItem", item_id, "delete")
+    return {"message": "Inventory item deleted"}
+
 # ==================== SEED DATA ROUTE ====================
 @api_router.post("/seed-demo-data")
 async def seed_demo_data(db: AsyncSession = Depends(get_db)):
@@ -904,6 +1050,22 @@ async def seed_demo_data(db: AsyncSession = Depends(get_db)):
     for pm_item in pm_data:
         pm = PMSchedule(org_id=org.id, **pm_item)
         db.add(pm)
+    await db.commit()
+    
+    # Seed inventory items
+    inventory_data = [
+        {"name": "Air Filter 20x25", "sku": "FILTER-001", "category": "Filters", "quantity": 50, "min_quantity": 10, "unit": "pcs", "unit_cost": "15.99", "storage_location": "Warehouse A - Shelf 1"},
+        {"name": "HEPA Air Filter", "sku": "FILTER-002", "category": "HVAC", "quantity": 10, "min_quantity": 5, "unit": "pcs", "unit_cost": "45.00", "storage_location": "Warehouse A - Shelf 2"},
+        {"name": "Lubricant Oil 5W-30", "sku": "OIL-001", "category": "Lubricants", "quantity": 24, "min_quantity": 6, "unit": "liters", "unit_cost": "12.50", "storage_location": "Storage Room B"},
+        {"name": "Elevator Belt", "sku": "BELT-001", "category": "Elevator Parts", "quantity": 3, "min_quantity": 2, "unit": "pcs", "unit_cost": "250.00", "storage_location": "Parts Room"},
+        {"name": "Fire Extinguisher", "sku": "SAFETY-001", "category": "Safety Equipment", "quantity": 8, "min_quantity": 4, "unit": "pcs", "unit_cost": "89.99", "storage_location": "Safety Cabinet"},
+        {"name": "LED Light Bulbs", "sku": "ELEC-001", "category": "Electrical", "quantity": 100, "min_quantity": 20, "unit": "pcs", "unit_cost": "5.99", "storage_location": "Electrical Storage"},
+        {"name": "Pipe Fittings Kit", "sku": "PLUMB-001", "category": "Plumbing", "quantity": 5, "min_quantity": 10, "unit": "kits", "unit_cost": "75.00", "storage_location": "Plumbing Supplies"},
+    ]
+    
+    for inv_item in inventory_data:
+        item = InventoryItem(org_id=org.id, **inv_item)
+        db.add(item)
     await db.commit()
     
     return {

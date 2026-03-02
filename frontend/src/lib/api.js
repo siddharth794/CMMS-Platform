@@ -91,6 +91,17 @@ export const auditLogsApi = {
   list: (params) => api.get('/audit-logs', { params }),
 };
 
+// Inventory
+export const inventoryApi = {
+  list: (params) => api.get('/inventory', { params }),
+  get: (id) => api.get(`/inventory/${id}`),
+  create: (data) => api.post('/inventory', data),
+  update: (id, data) => api.put(`/inventory/${id}`, data),
+  delete: (id) => api.delete(`/inventory/${id}`),
+  getStats: () => api.get('/inventory/stats'),
+  getCategories: () => api.get('/inventory/categories'),
+};
+
 // Seed Demo Data
 export const seedDemoData = () => api.post('/seed-demo-data');
 
