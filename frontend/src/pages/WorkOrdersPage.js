@@ -63,7 +63,7 @@ const WorkOrdersPage = () => {
     description: '',
     asset_id: '',
     priority: 'medium',
-    category: '',
+    location: '',
   });
 
   useEffect(() => {
@@ -94,7 +94,7 @@ const WorkOrdersPage = () => {
       await workOrdersApi.create(formData);
       toast.success('Work order created');
       setCreateOpen(false);
-      setFormData({ title: '', description: '', asset_id: '', priority: 'medium', category: '' });
+      setFormData({ title: '', description: '', asset_id: '', priority: 'medium', location: '' });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create work order');
@@ -211,13 +211,13 @@ const WorkOrdersPage = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="location">Location</Label>
                 <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="e.g., HVAC, Plumbing, Electrical"
-                  data-testid="wo-category-input"
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="e.g., Room 101, Floor 2"
+                  data-testid="wo-location-input"
                 />
               </div>
               <DialogFooter>

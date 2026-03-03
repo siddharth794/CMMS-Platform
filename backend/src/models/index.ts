@@ -68,7 +68,7 @@ WorkOrder.init({
     requester_id: { type: DataTypes.UUID },
     status: { type: DataTypes.ENUM('new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled'), defaultValue: 'new' },
     priority: { type: DataTypes.ENUM('low', 'medium', 'high', 'critical'), defaultValue: 'medium' },
-    category: { type: DataTypes.STRING(100) },
+    location: { type: DataTypes.STRING(100) },
     scheduled_start: { type: DataTypes.DATE },
     scheduled_end: { type: DataTypes.DATE },
     actual_start: { type: DataTypes.DATE },
