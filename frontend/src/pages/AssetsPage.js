@@ -129,7 +129,7 @@ const AssetsPage = () => {
     setEditOpen(true);
   };
 
-  const AssetForm = ({ onSubmit, isEdit = false }) => (
+  const renderAssetForm = ({ onSubmit, isEdit = false }) => (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -153,7 +153,7 @@ const AssetsPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Type</Label>
@@ -178,7 +178,7 @@ const AssetsPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
         <Input
@@ -189,7 +189,7 @@ const AssetsPage = () => {
           data-testid="asset-location-input"
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -210,7 +210,7 @@ const AssetsPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -221,7 +221,7 @@ const AssetsPage = () => {
           data-testid="asset-description-input"
         />
       </div>
-      
+
       {isEdit && (
         <div className="space-y-2">
           <Label>Status</Label>
@@ -237,7 +237,7 @@ const AssetsPage = () => {
           </Select>
         </div>
       )}
-      
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => isEdit ? setEditOpen(false) : setCreateOpen(false)}>
           Cancel
@@ -270,7 +270,7 @@ const AssetsPage = () => {
               <DialogTitle>Add New Asset</DialogTitle>
               <DialogDescription>Enter the asset details</DialogDescription>
             </DialogHeader>
-            <AssetForm onSubmit={handleCreate} />
+            {renderAssetForm({ onSubmit: handleCreate })}
           </DialogContent>
         </Dialog>
       </div>
@@ -372,7 +372,7 @@ const AssetsPage = () => {
             <DialogTitle>Edit Asset</DialogTitle>
             <DialogDescription>Update the asset details</DialogDescription>
           </DialogHeader>
-          <AssetForm onSubmit={handleEdit} isEdit />
+          {renderAssetForm({ onSubmit: handleEdit, isEdit: true })}
         </DialogContent>
       </Dialog>
     </div>
