@@ -28,7 +28,8 @@ const InventoryPage = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
-  const { isManager } = useAuth();
+  const { isManager, hasRole } = useAuth();
+  const isRestricted = hasRole(['technician', 'requestor']);
   const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
@@ -269,6 +270,76 @@ const InventoryPage = () => {
       </DialogFooter>
     </form>
   );
+
+  // Simplified read-only view for technicians/requestors
+  if (isRestricted) {
+    return (
+      <div className="space-y-6" data-testid="inventory-page">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground">Browse spare parts and supplies</p>
+        </div>
+
+        {/* Search */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 rounded-lg border px-3 py-2 max-w-md">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search inventory..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border-0 p-0 focus-visible:ring-0"
+                data-testid="inv-search-input"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Simplified Table */}
+        <Card>
+          <CardContent className="pt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No inventory items found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((item) => (
+                    <TableRow key={item.id} data-testid={`inv-row-${item.id}`}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-sm">{item.sku || '-'}</TableCell>
+                      <TableCell>{item.category}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.storage_location}</TableCell>
+                      <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="inventory-page">
