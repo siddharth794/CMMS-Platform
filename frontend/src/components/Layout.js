@@ -16,18 +16,19 @@ import {
 
 const Sidebar = ({ className = '' }) => {
   const location = useLocation();
-  const { user, isTechnician } = useAuth();
+  const { user, isTechnician, hasRole } = useAuth();
   const isTech = isTechnician();
+  const isRestricted = hasRole(['technician', 'requestor']);
 
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
     { name: 'Assets', href: '/assets', icon: Box },
     { name: 'Inventory', href: '/inventory', icon: Package },
-    { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar },
+    { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/settings', icon: Settings },
-  ];
+  ].filter(item => !item.managerOnly || !isRestricted);
 
   return (
     <div className={`flex h-full flex-col ${className}`}>

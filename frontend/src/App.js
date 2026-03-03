@@ -63,6 +63,14 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+const ManagerRoute = ({ children }) => {
+  const { hasRole } = useAuth();
+  if (hasRole(['technician', 'requestor'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -87,7 +95,7 @@ const AppRoutes = () => {
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
         <Route path="assets" element={<AssetsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
-        <Route path="pm-schedules" element={<PMSchedulesPage />} />
+        <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
         <Route path="analytics" element={<RoleBasedAnalytics />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
