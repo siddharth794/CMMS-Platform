@@ -1,4 +1,4 @@
-# Facility Management System (FMS) PRD
+# Facility Management System (Spartans FMS) PRD
 
 ## Original Problem Statement
 Build a comprehensive web-based Facility Management System based on PDF specification with work order management, asset tracking, preventive maintenance scheduling, and analytics dashboard.

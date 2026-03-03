@@ -64,7 +64,7 @@ const LoginPage = () => {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
               <Building2 className="h-7 w-7 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">FMS</span>
+            <span className="text-2xl font-bold tracking-tight">Spartans FMS</span>
           </div>
 
           <div className="space-y-6">
@@ -78,7 +78,7 @@ const LoginPage = () => {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            © 2025 FMS. All rights reserved.
+            © 2025 Spartans FMS. All rights reserved.
           </p>
         </div>
       </div>
