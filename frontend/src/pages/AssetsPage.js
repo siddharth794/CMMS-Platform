@@ -310,21 +310,23 @@ const AssetsPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
           <p className="text-muted-foreground">Manage your facility equipment and infrastructure</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="create-asset-btn">
-              <Plus className="mr-2 h-4 w-4" />
-              New Asset
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Asset</DialogTitle>
-              <DialogDescription>Enter the asset details</DialogDescription>
-            </DialogHeader>
-            {renderAssetForm({ onSubmit: handleCreate })}
-          </DialogContent>
-        </Dialog>
+        {isManager() && (
+          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="create-asset-btn">
+                <Plus className="mr-2 h-4 w-4" />
+                New Asset
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Asset</DialogTitle>
+                <DialogDescription>Enter the asset details</DialogDescription>
+              </DialogHeader>
+              {renderAssetForm({ onSubmit: handleCreate })}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Search */}

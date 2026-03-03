@@ -36,7 +36,7 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', async (req: any, res, next) => {
+router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
     try {
         const assetData = { ...req.body, org_id: req.user.org_id };
         if (!assetData.asset_tag) assetData.asset_tag = generateAssetTag();
