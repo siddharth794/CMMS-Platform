@@ -371,17 +371,23 @@ const WorkOrdersPage = () => {
             <DialogDescription>Select a technician to assign this work order to</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            {users.filter(u => u.role?.name?.toLowerCase() === 'technician' || u.role?.name?.toLowerCase() === 'facility_manager').map((user) => (
-              <Button
-                key={user.id}
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleAssign(user.id)}
-                data-testid={`assign-user-${user.id}`}
-              >
-                {user.first_name} {user.last_name} ({user.role?.name?.replace('_', ' ')})
-              </Button>
-            ))}
+            {users.filter(u => {
+              const roleName = (u.role?.name || u.Role?.name)?.toLowerCase();
+              return roleName === 'technician' || roleName === 'facility_manager';
+            }).map((user) => {
+              const roleName = (user.role?.name || user.Role?.name)?.replace('_', ' ');
+              return (
+                <Button
+                  key={user.id}
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => handleAssign(user.id)}
+                  data-testid={`assign-user-${user.id}`}
+                >
+                  {user.first_name} {user.last_name} ({roleName})
+                </Button>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>
