@@ -58,8 +58,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasRole = (roles) => {
-    if (!user || !user.role) return false;
-    const userRole = user.role.name.toLowerCase();
+    const roleObj = user?.role || user?.Role;
+    if (!roleObj) return false;
+    const userRole = roleObj.name.toLowerCase();
     return roles.map(r => r.toLowerCase()).includes(userRole);
   };
 
