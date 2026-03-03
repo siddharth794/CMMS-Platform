@@ -21,6 +21,58 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
+router.get('/stats', async (req: any, res, next) => {
+    try {
+        const org_id = req.user.org_id;
+
+        // Use Sequelize to count and sum
+        const total_items = await InventoryItem.count({ where: { org_id, is_active: true } });
+
+        // Count low stock items where quantity <= min_quantity and min_quantity > 0
+        const { Op } = require('sequelize');
+        const low_stock_count = await InventoryItem.count({
+            where: {
+                org_id,
+                is_active: true,
+                min_quantity: { [Op.gt]: 0 },
+                quantity: { [Op.lte]: { [Op.col]: 'min_quantity' } }
+            }
+        });
+
+        // Calculate total value by summing (quantity * unit_cost)
+        // For simplicity with sqlite/mysql differences, we can fetch all and reduce in memory
+        // since inventory sizes are typically small enough for this demo
+        const allItems = await InventoryItem.findAll({ where: { org_id, is_active: true } });
+        const total_value = allItems.reduce((acc: number, item: any) => {
+            const qty = item.quantity || 0;
+            const cost = parseFloat(item.unit_cost) || 0;
+            return acc + (qty * cost);
+        }, 0);
+
+        res.json({ total_items, low_stock_count, total_value });
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.get('/categories', async (req: any, res, next) => {
+    try {
+        const org_id = req.user.org_id;
+
+        // Get distinct categories
+        const items = await InventoryItem.findAll({
+            attributes: ['category'],
+            where: { org_id, is_active: true },
+            group: ['category']
+        });
+
+        const categories = items.map((item: any) => item.category).filter(Boolean);
+        res.json({ categories });
+    } catch (err) {
+        next(err);
+    }
+});
+
 router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
     try {
         const itemData = { ...req.body, org_id: req.user.org_id };
