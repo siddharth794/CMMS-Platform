@@ -19,6 +19,7 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
@@ -404,6 +405,9 @@ const AssetsPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setSelectedAsset(asset); setViewOpen(true); }}>
+                            <Eye className="mr-2 h-4 w-4" />View
+                          </DropdownMenuItem>
                           {isManager() && (
                             <DropdownMenuItem onClick={() => openEditDialog(asset)}>
                               <Edit className="mr-2 h-4 w-4" />Edit
@@ -433,6 +437,75 @@ const AssetsPage = () => {
             <DialogDescription>Update the asset details</DialogDescription>
           </DialogHeader>
           {renderAssetForm({ onSubmit: handleEdit, isEdit: true })}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={viewOpen} onOpenChange={(open) => { setViewOpen(open); if (!open) setSelectedAsset(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Asset Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Name</span>
+                <span className="font-medium">{selectedAsset?.name || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Asset Tag</span>
+                <span className="font-medium">{selectedAsset?.asset_tag || '-'}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Type</span>
+                <span className="capitalize">{selectedAsset?.asset_type || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Category</span>
+                <span className="capitalize">{selectedAsset?.category || '-'}</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground block">Location</span>
+              <span>{selectedAsset?.location || '-'}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Manufacturer</span>
+                <span>{selectedAsset?.manufacturer || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Model</span>
+                <span>{selectedAsset?.model || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Serial Number</span>
+                <span>{selectedAsset?.serial_number || '-'}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Purchase Date</span>
+                <span>{selectedAsset?.purchase_date ? format(new Date(selectedAsset.purchase_date), 'MMM d, yyyy') : '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Warranty Expiry</span>
+                <span>{selectedAsset?.warranty_expiry ? format(new Date(selectedAsset.warranty_expiry), 'MMM d, yyyy') : '-'}</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground block">Description</span>
+              <p className="text-sm">{selectedAsset?.description || '-'}</p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground block mb-1">Status</span>
+              <span className={`status-badge ${selectedAsset?.status === 'active' ? 'status-completed' : selectedAsset?.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
+                {selectedAsset?.status || '-'}
+              </span>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
