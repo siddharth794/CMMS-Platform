@@ -84,6 +84,7 @@ export const pmSchedulesApi = {
 // Analytics
 export const analyticsApi = {
   getDashboard: (params) => api.get('/analytics/dashboard', { params }),
+  getTechnicianDashboard: (params) => api.get('/analytics/technician-dashboard', { params }),
 };
 
 // Audit Logs
