@@ -140,7 +140,7 @@ const InventoryPage = () => {
 
   const isLowStock = (item) => item.min_quantity > 0 && item.quantity <= item.min_quantity;
 
-  const InventoryForm = ({ onSubmit, isEdit = false }) => (
+  const renderInventoryForm = ({ onSubmit, isEdit = false }) => (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Item Name *</Label>
@@ -153,7 +153,7 @@ const InventoryPage = () => {
           data-testid="inv-name-input"
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -165,7 +165,7 @@ const InventoryPage = () => {
           data-testid="inv-description-input"
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Category *</Label>
@@ -191,7 +191,7 @@ const InventoryPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="quantity">Quantity *</Label>
@@ -230,7 +230,7 @@ const InventoryPage = () => {
           </Select>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="storage_location">Storage Location *</Label>
@@ -256,7 +256,7 @@ const InventoryPage = () => {
           />
         </div>
       </div>
-      
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => isEdit ? setEditOpen(false) : setCreateOpen(false)}>
           Cancel
@@ -289,7 +289,7 @@ const InventoryPage = () => {
               <DialogTitle>Add Inventory Item</DialogTitle>
               <DialogDescription>Add a new item to your inventory</DialogDescription>
             </DialogHeader>
-            <InventoryForm onSubmit={handleCreate} />
+            {renderInventoryForm({ onSubmit: handleCreate })}
           </DialogContent>
         </Dialog>
       </div>
@@ -307,7 +307,7 @@ const InventoryPage = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className={stats.low_stock_count > 0 ? 'border-amber-500/50' : ''} data-testid="stat-low-stock">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -321,7 +321,7 @@ const InventoryPage = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card data-testid="stat-total-value">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -456,7 +456,7 @@ const InventoryPage = () => {
             <DialogTitle>Edit Inventory Item</DialogTitle>
             <DialogDescription>Update item details</DialogDescription>
           </DialogHeader>
-          <InventoryForm onSubmit={handleEdit} isEdit />
+          {renderInventoryForm({ onSubmit: handleEdit, isEdit: true })}
         </DialogContent>
       </Dialog>
     </div>
