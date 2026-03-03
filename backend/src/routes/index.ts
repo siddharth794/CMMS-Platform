@@ -8,6 +8,7 @@ import assetRoutes from './assets';
 import woRoutes from './workOrders';
 import pmRoutes from './pmSchedules';
 import invRoutes from './inventory';
+import analyticsRoutes from './analytics';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/assets', assetRoutes);
 router.use('/work-orders', woRoutes);
 router.use('/pm-schedules', pmRoutes);
 router.use('/inventory', invRoutes);
+router.use('/analytics', analyticsRoutes);
 
 export default router;
