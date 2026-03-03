@@ -92,7 +92,7 @@ router.get('/:asset_id', async (req: any, res, next) => {
     }
 });
 
-router.put('/:asset_id', async (req: any, res, next) => {
+router.put('/:asset_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
     try {
         const asset: any = await Asset.findOne({
             where: { id: req.params.asset_id, org_id: req.user.org_id }
