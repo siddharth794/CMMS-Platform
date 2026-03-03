@@ -7,8 +7,26 @@ router.use(authenticate);
 
 router.get('/', async (req: any, res, next) => {
     try {
-        const { skip = 0, limit = 100 } = req.query;
+        const { skip = 0, limit = 100, search, category, low_stock_only } = req.query;
         let where: any = { org_id: req.user.org_id, is_active: true };
+
+        const { Op } = require('sequelize');
+
+        if (search) {
+            where[Op.or] = [
+                { name: { [Op.like]: `%${search}%` } },
+                { sku: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
+        if (category) {
+            where.category = category;
+        }
+
+        if (low_stock_only === 'true') {
+            where.min_quantity = { [Op.gt]: 0 };
+            where.quantity = { [Op.lte]: { [Op.col]: 'min_quantity' } };
+        }
 
         const items = await InventoryItem.findAll({
             where,

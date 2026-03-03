@@ -244,7 +244,7 @@ const InventoryPage = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="unit_cost">Unit Cost ($)</Label>
+          <Label htmlFor="unit_cost">Unit Cost (₹)</Label>
           <Input
             id="unit_cost"
             type="number"
@@ -277,21 +277,23 @@ const InventoryPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
           <p className="text-muted-foreground">Manage spare parts and supplies</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="add-item-btn">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add Inventory Item</DialogTitle>
-              <DialogDescription>Add a new item to your inventory</DialogDescription>
-            </DialogHeader>
-            {renderInventoryForm({ onSubmit: handleCreate })}
-          </DialogContent>
-        </Dialog>
+        {isManager() && (
+          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="add-item-btn">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Inventory Item</DialogTitle>
+                <DialogDescription>Add a new item to your inventory</DialogDescription>
+              </DialogHeader>
+              {renderInventoryForm({ onSubmit: handleCreate })}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -327,7 +329,7 @@ const InventoryPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-3xl font-bold">${stats.total_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <p className="text-3xl font-bold">₹{stats.total_value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
               </div>
               <DollarSign className="h-10 w-10 text-muted-foreground/50" />
             </div>
@@ -430,16 +432,18 @@ const InventoryPage = () => {
                         <span className="text-muted-foreground"> / {item.min_quantity} {item.unit}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">${parseFloat(item.unit_cost || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₹{parseFloat(item.unit_cost || 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} data-testid={`edit-${item.id}`}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="text-destructive hover:text-destructive" data-testid={`delete-${item.id}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {isManager() && (
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} data-testid={`edit-${item.id}`}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="text-destructive hover:text-destructive" data-testid={`delete-${item.id}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
