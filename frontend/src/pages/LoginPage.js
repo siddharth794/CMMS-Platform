@@ -63,21 +63,21 @@ const LoginPage = () => {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
               <Building2 className="h-7 w-7 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">OpsCommand</span>
+            <span className="text-2xl font-bold tracking-tight">FMS</span>
           </div>
-          
+
           <div className="space-y-6">
             <h1 className="text-4xl font-bold tracking-tight leading-tight">
               Facility Management<br />Made Simple
             </h1>
             <p className="text-lg text-muted-foreground max-w-md">
-              Streamline your facility operations with intelligent work order management, 
+              Streamline your facility operations with intelligent work order management,
               asset tracking, and preventive maintenance scheduling.
             </p>
           </div>
-          
+
           <p className="text-sm text-muted-foreground">
-            © 2025 OpsCommand. All rights reserved.
+            © 2025 FMS. All rights reserved.
           </p>
         </div>
       </div>
@@ -96,7 +96,7 @@ const LoginPage = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                 <Building2 className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">OpsCommand</span>
+              <span className="text-xl font-bold">CMMS</span>
             </div>
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
             <CardDescription>Enter your credentials to access your account</CardDescription>
@@ -137,9 +137,9 @@ const LoginPage = () => {
               <p className="text-sm text-muted-foreground text-center mb-4">
                 First time? Create demo data to explore the system
               </p>
-              <Button 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={handleSeedData}
                 disabled={seeding}
                 data-testid="seed-demo-btn"
@@ -147,7 +147,7 @@ const LoginPage = () => {
                 {seeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Initialize Demo Data
               </Button>
-              
+
               <div className="mt-4 text-xs text-muted-foreground space-y-1">
                 <p><strong>Demo Credentials:</strong></p>
                 <p>Admin: admin@demo.com / admin123</p>

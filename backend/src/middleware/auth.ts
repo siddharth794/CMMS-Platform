@@ -38,10 +38,19 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
 export const requireRole = (roles: string[]) => {
     return (req: AuthRequest, res: Response, next: NextFunction): void => {
-        if (!req.user || !req.user.Role || !roles.includes(req.user.Role.name)) {
+        if (!req.user || !req.user.Role) {
             res.status(403).json({ detail: 'Insufficient permissions' });
             return;
         }
+
+        const userRole = req.user.Role.name.toLowerCase();
+        const allowedRoles = roles.map(r => r.toLowerCase());
+
+        if (!allowedRoles.includes(userRole)) {
+            res.status(403).json({ detail: 'Insufficient permissions' });
+            return;
+        }
+
         next();
     };
 };

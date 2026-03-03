@@ -7,8 +7,8 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
-import { 
-  LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings, 
+import {
+  LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings,
   LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package
 } from 'lucide-react';
 
@@ -33,14 +33,14 @@ const Sidebar = ({ className = '' }) => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight">OpsCommand</span>
+          <span className="text-xl font-bold tracking-tight">FMS</span>
         </Link>
       </div>
-      
+
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-1">
           {navigation.map((item) => {
-            const isActive = location.pathname === item.href || 
+            const isActive = location.pathname === item.href ||
               (item.href !== '/' && location.pathname.startsWith(item.href));
             return (
               <Link
@@ -56,7 +56,7 @@ const Sidebar = ({ className = '' }) => {
           })}
         </nav>
       </ScrollArea>
-      
+
       <div className="border-t p-4">
         <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
           <Avatar className="h-9 w-9">
@@ -106,9 +106,9 @@ const Layout = () => {
             {/* Search */}
             <div className="hidden md:flex items-center gap-2 rounded-lg border bg-background px-3 py-2 w-80">
               <Search className="h-4 w-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search..." 
+              <input
+                type="text"
+                placeholder="Search..."
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 data-testid="search-input"
               />
