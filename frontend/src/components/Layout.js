@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNotification } from '../context/NotificationContext';
+import { formatDistanceToNow } from 'date-fns';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -77,6 +79,7 @@ const Sidebar = ({ className = '' }) => {
 const Layout = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotification();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -122,9 +125,59 @@ const Layout = () => {
             </Button>
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" data-testid="notifications-btn">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative" data-testid="notifications-btn">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="flex items-center justify-between px-4 py-2 border-b">
+                  <DropdownMenuLabel className="p-0 font-medium">Notifications</DropdownMenuLabel>
+                  {notifications.length > 0 && (
+                    <div className="flex gap-2">
+                      <button onClick={markAllAsRead} className="text-xs text-primary hover:underline">Mark all read</button>
+                      <button onClick={clearAll} className="text-xs text-destructive hover:underline">Clear</button>
+                    </div>
+                  )}
+                </div>
+                <ScrollArea className="h-[300px]">
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
+                      <Bell className="h-8 w-8 mb-2 opacity-20" />
+                      <p className="text-sm">No notifications</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`flex flex-col gap-1 p-3 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-primary/5' : ''}`}
+                          onClick={() => markAsRead(notification.id)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className={`text-sm ${!notification.read ? 'font-medium' : 'text-muted-foreground'}`}>
+                              {notification.message}
+                            </span>
+                            {!notification.read && (
+                              <span className="flex h-2 w-2 shrink-0 rounded-full bg-primary mt-1.5" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User Menu */}
             <DropdownMenu>
