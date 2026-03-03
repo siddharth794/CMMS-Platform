@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
 const StatusBadge = ({ status }) => {
@@ -57,6 +57,7 @@ const WorkOrdersPage = () => {
   const [filters, setFilters] = useState({ status: '', priority: '' });
   const { isManager } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -81,7 +82,7 @@ const WorkOrdersPage = () => {
       setAssets(assetsRes.data);
       setUsers(usersRes.data);
     } catch (error) {
-      toast.error('Failed to fetch data');
+      addNotification('error', 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -92,12 +93,12 @@ const WorkOrdersPage = () => {
     setSubmitting(true);
     try {
       await workOrdersApi.create(formData);
-      toast.success('Work order created');
+      addNotification('success', 'Work order created');
       setCreateOpen(false);
       setFormData({ title: '', description: '', asset_id: '', priority: 'medium', location: '' });
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to create work order');
     } finally {
       setSubmitting(false);
     }
@@ -107,22 +108,22 @@ const WorkOrdersPage = () => {
     if (!selectedWO) return;
     try {
       await workOrdersApi.assign(selectedWO.id, { assignee_id: assigneeId });
-      toast.success('Work order assigned');
+      addNotification('success', 'Work order assigned');
       setAssignOpen(false);
       setSelectedWO(null);
       fetchData();
     } catch (error) {
-      toast.error('Failed to assign work order');
+      addNotification('error', 'Failed to assign work order');
     }
   };
 
   const handleStatusChange = async (woId, status) => {
     try {
       await workOrdersApi.updateStatus(woId, { status });
-      toast.success('Status updated');
+      addNotification('success', 'Status updated');
       fetchData();
     } catch (error) {
-      toast.error('Failed to update status');
+      addNotification('error', 'Failed to update status');
     }
   };
 

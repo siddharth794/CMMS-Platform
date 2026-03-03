@@ -13,9 +13,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Plus, MoreHorizontal, Edit, Trash2, Loader2, CalendarIcon, AlertTriangle, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import { format, isBefore, addDays } from 'date-fns';
 import { cn } from '../lib/utils';
+import { useNotification } from '../context/NotificationContext';
 
 const PMSchedulesPage = () => {
   const [schedules, setSchedules] = useState([]);
@@ -26,6 +26,7 @@ const PMSchedulesPage = () => {
   const [selectedPM, setSelectedPM] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const { isManager } = useAuth();
+  const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -51,7 +52,7 @@ const PMSchedulesPage = () => {
       setSchedules(pmRes.data);
       setAssets(assetsRes.data);
     } catch (error) {
-      toast.error('Failed to fetch data');
+      addNotification('error', 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -81,12 +82,12 @@ const PMSchedulesPage = () => {
         next_due: formData.next_due.toISOString(),
       };
       await pmSchedulesApi.create(data);
-      toast.success('PM Schedule created');
+      addNotification('success', 'PM Schedule created');
       setCreateOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create schedule');
+      addNotification('error', error.response?.data?.detail || 'Failed to create schedule');
     } finally {
       setSubmitting(false);
     }
@@ -104,13 +105,13 @@ const PMSchedulesPage = () => {
         next_due: formData.next_due.toISOString(),
       };
       await pmSchedulesApi.update(selectedPM.id, data);
-      toast.success('PM Schedule updated');
+      addNotification('success', 'PM Schedule updated');
       setEditOpen(false);
       setSelectedPM(null);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error('Failed to update schedule');
+      addNotification('error', 'Failed to update schedule');
     } finally {
       setSubmitting(false);
     }
@@ -120,10 +121,10 @@ const PMSchedulesPage = () => {
     if (!confirm('Delete this PM schedule?')) return;
     try {
       await pmSchedulesApi.delete(pmId);
-      toast.success('PM Schedule deleted');
+      addNotification('success', 'PM Schedule deleted');
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete schedule');
+      addNotification('error', 'Failed to delete schedule');
     }
   };
 
@@ -157,7 +158,7 @@ const PMSchedulesPage = () => {
           data-testid="pm-name-input"
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label>Asset *</Label>
         <Select value={formData.asset_id} onValueChange={(v) => setFormData({ ...formData, asset_id: v })} required>
@@ -171,7 +172,7 @@ const PMSchedulesPage = () => {
           </SelectContent>
         </Select>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Frequency</Label>
@@ -211,7 +212,7 @@ const PMSchedulesPage = () => {
           </Select>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label>Next Due Date *</Label>
         <Popover>
@@ -235,7 +236,7 @@ const PMSchedulesPage = () => {
           </PopoverContent>
         </Popover>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="estimated_hours">Estimated Hours</Label>
         <Input
@@ -247,7 +248,7 @@ const PMSchedulesPage = () => {
           data-testid="pm-hours-input"
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -258,7 +259,7 @@ const PMSchedulesPage = () => {
           data-testid="pm-description-input"
         />
       </div>
-      
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => isEdit ? setEditOpen(false) : setCreateOpen(false)}>
           Cancel

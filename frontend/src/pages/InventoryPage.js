@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Plus, Search, Edit, Trash2, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotification } from '../context/NotificationContext';
 
 const UNITS = ['pcs', 'liters', 'kg', 'meters', 'kits', 'boxes', 'rolls', 'sets'];
 const DEFAULT_CATEGORIES = ['Filters', 'HVAC', 'Lubricants', 'Elevator Parts', 'Safety Equipment', 'Electrical', 'Plumbing', 'Tools', 'Other'];
@@ -29,6 +29,7 @@ const InventoryPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const { isManager } = useAuth();
+  const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -57,7 +58,7 @@ const InventoryPage = () => {
       setStats(statsRes.data);
       setCategories([...new Set([...DEFAULT_CATEGORIES, ...(categoriesRes.data.categories || [])])]);
     } catch (error) {
-      toast.error('Failed to fetch inventory');
+      addNotification('error', 'Failed to fetch inventory');
     } finally {
       setLoading(false);
     }
@@ -83,12 +84,12 @@ const InventoryPage = () => {
     setSubmitting(true);
     try {
       await inventoryApi.create(formData);
-      toast.success('Item added to inventory');
+      addNotification('success', 'Item added to inventory');
       setCreateOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add item');
+      addNotification('error', error.response?.data?.detail || 'Failed to add item');
     } finally {
       setSubmitting(false);
     }
@@ -100,12 +101,12 @@ const InventoryPage = () => {
     setSubmitting(true);
     try {
       await inventoryApi.update(selectedItem.id, formData);
-      toast.success('Item updated');
+      addNotification('success', 'Item updated');
       setEditOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error('Failed to update item');
+      addNotification('error', 'Failed to update item');
     } finally {
       setSubmitting(false);
     }
@@ -115,10 +116,10 @@ const InventoryPage = () => {
     if (!confirm('Delete this inventory item?')) return;
     try {
       await inventoryApi.delete(itemId);
-      toast.success('Item deleted');
+      addNotification('success', 'Item deleted');
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete item');
+      addNotification('error', 'Failed to delete item');
     }
   };
 

@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNotification } from '../context/NotificationContext';
 import { seedDemoData } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Building2, Sun, Moon, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +17,7 @@ const LoginPage = () => {
   const [seeding, setSeeding] = useState(false);
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -24,10 +25,10 @@ const LoginPage = () => {
     setLoading(true);
     try {
       await login(email, password);
-      toast.success('Welcome back!');
+      addNotification('success', 'Welcome back!');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Invalid credentials');
+      addNotification('error', error.response?.data?.detail || 'Invalid credentials');
     } finally {
       setLoading(false);
     }

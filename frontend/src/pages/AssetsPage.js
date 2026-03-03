@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
@@ -24,6 +24,7 @@ const AssetsPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const { isManager } = useAuth();
+  const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -47,7 +48,7 @@ const AssetsPage = () => {
       const response = await assetsApi.list({ search });
       setAssets(response.data);
     } catch (error) {
-      toast.error('Failed to fetch assets');
+      addNotification('error', 'Failed to fetch assets');
     } finally {
       setLoading(false);
     }
@@ -79,12 +80,12 @@ const AssetsPage = () => {
       if (!payload.warranty_expiry) payload.warranty_expiry = null;
 
       await assetsApi.create(payload);
-      toast.success('Asset created');
+      addNotification('success', 'Asset created');
       setCreateOpen(false);
       resetForm();
       fetchAssets();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create asset');
+      addNotification('error', error.response?.data?.detail || 'Failed to create asset');
     } finally {
       setSubmitting(false);
     }
@@ -100,13 +101,13 @@ const AssetsPage = () => {
       if (!payload.warranty_expiry) payload.warranty_expiry = null;
 
       await assetsApi.update(selectedAsset.id, payload);
-      toast.success('Asset updated');
+      addNotification('success', 'Asset updated');
       setEditOpen(false);
       setSelectedAsset(null);
       resetForm();
       fetchAssets();
     } catch (error) {
-      toast.error('Failed to update asset');
+      addNotification('error', 'Failed to update asset');
     } finally {
       setSubmitting(false);
     }
@@ -116,10 +117,10 @@ const AssetsPage = () => {
     if (!confirm('Delete this asset?')) return;
     try {
       await assetsApi.delete(assetId);
-      toast.success('Asset deleted');
+      addNotification('success', 'Asset deleted');
       fetchAssets();
     } catch (error) {
-      toast.error('Failed to delete asset');
+      addNotification('error', 'Failed to delete asset');
     }
   };
 
