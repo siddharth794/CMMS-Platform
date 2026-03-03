@@ -373,7 +373,7 @@ const WorkOrdersPage = () => {
           <div className="space-y-2">
             {users.filter(u => {
               const roleName = (u.role?.name || u.Role?.name)?.toLowerCase();
-              return roleName === 'technician' || roleName === 'facility_manager';
+              return roleName === 'technician';
             }).map((user) => {
               const roleName = (user.role?.name || user.Role?.name)?.replace('_', ' ');
               return (
