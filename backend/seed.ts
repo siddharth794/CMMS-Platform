@@ -46,25 +46,38 @@ async function seed() {
 
         console.log('Created standard roles.');
 
-        // 3. Create Super Admin User
-        const salt = bcrypt.genSaltSync(10);
-        const passwordHash = bcrypt.hashSync('admin123', salt); // Default password
-
-        const adminUser = await User.create({
-            org_id: org.id,
-            role_id: superAdminRole.id,
-            email: 'admin@example.com',
-            username: 'admin',
-            first_name: 'Super',
-            last_name: 'Admin',
-            password_hash: passwordHash,
-            is_active: true
-        });
-
-        console.log(`\nSeed Complete! Successfully created administrative user.`);
+        // 3. Create Demo Users for Each Role
+        console.log(`\nSeed Complete! Successfully created demo users.`);
         console.log(`-------------------------------------------------`);
-        console.log(`Email/Username: admin@example.com`);
-        console.log(`Password: admin123`);
+
+        const demoUsersData = [
+            { email: 'admin@demo.com', roleName: 'Super_Admin', username: 'admin', firstName: 'Admin', lastName: 'User', password: 'admin123' },
+            { email: 'manager@demo.com', roleName: 'Facility_Manager', username: 'manager', firstName: 'Facility', lastName: 'Manager', password: 'manager123' },
+            { email: 'tech@demo.com', roleName: 'Technician', username: 'tech', firstName: 'Tech', lastName: 'User', password: 'tech123' },
+            { email: 'requestor@demo.com', roleName: 'Requestor', username: 'requestor', firstName: 'Staff', lastName: 'Requestor', password: 'requestor123' } // Added requestor for completeness
+        ];
+
+        for (const demoDef of demoUsersData) {
+            // Find the actual role created from DB
+            const role = await Role.findOne({ where: { name: demoDef.roleName, org_id: org.id } });
+            if (!role) continue;
+
+            const salt = bcrypt.genSaltSync(10);
+            const passwordHash = bcrypt.hashSync(demoDef.password, salt);
+
+            await User.create({
+                org_id: org.id,
+                role_id: role.id,
+                email: demoDef.email,
+                username: demoDef.username,
+                first_name: demoDef.firstName,
+                last_name: demoDef.lastName,
+                password_hash: passwordHash,
+                is_active: true
+            });
+
+            console.log(`Created User: ${demoDef.email} / ${demoDef.password} (Role: ${demoDef.roleName})`);
+        }
         console.log(`-------------------------------------------------\n`);
 
         process.exit(0);
