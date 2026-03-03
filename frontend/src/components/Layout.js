@@ -17,7 +17,7 @@ const navigation = [
   { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
   { name: 'Assets', href: '/assets', icon: Box },
   { name: 'Inventory', href: '/inventory', icon: Package },
-  { name: 'Preventive Maintenance', href: '/pm-schedules', icon: Calendar },
+  { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

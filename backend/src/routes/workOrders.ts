@@ -50,6 +50,11 @@ router.post('/', async (req: any, res, next) => {
         woData.wo_number = generateWoNumber();
         woData.status = 'new';
 
+        // Ensure asset_id is null if sent as an empty string
+        if (woData.asset_id === "") {
+            woData.asset_id = null;
+        }
+
         const wo: any = await WorkOrder.create(woData);
 
         const fullyLoadedWo = await WorkOrder.findByPk(wo.id, {
@@ -107,7 +112,14 @@ router.put('/:wo_id', async (req: any, res, next) => {
         }
 
         const oldStatus = wo.status;
-        await wo.update(req.body);
+
+        // Ensure asset_id is null if sent as an empty string
+        const updateData = { ...req.body };
+        if (updateData.asset_id === "") {
+            updateData.asset_id = null;
+        }
+
+        await wo.update(updateData);
 
         if (req.body.status && req.body.status !== oldStatus) {
             if (req.body.status === 'in_progress' && !wo.actual_start) wo.actual_start = new Date();
