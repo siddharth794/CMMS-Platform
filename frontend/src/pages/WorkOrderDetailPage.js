@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { workOrdersApi, usersApi } from '../lib/api';
+import { workOrdersApi, usersApi, inventoryApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
@@ -9,7 +10,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Separator } from '../components/ui/separator';
-import { ArrowLeft, Clock, User, Box, AlertTriangle, Calendar, Edit, UserPlus, CheckCircle, Loader2, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, Clock, User, Box, AlertTriangle, Calendar, Edit, UserPlus, CheckCircle, Loader2, MessageSquare, Send, Paperclip, X, UploadCloud } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -47,9 +48,11 @@ const WorkOrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isManager } = useAuth();
+  const { socket } = useSocket();
   const { addNotification } = useNotification();
   const [workOrder, setWorkOrder] = useState(null);
   const [users, setUsers] = useState([]);
+  const [inventoryCatalog, setInventoryCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -57,23 +60,44 @@ const WorkOrderDetailPage = () => {
   const [statusNotes, setStatusNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Comments state
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  const [postingComment, setPostingComment] = useState(false);
+  // Inventory usage state
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [selectedPartQuantity, setSelectedPartQuantity] = useState(1);
+  const [addingPart, setAddingPart] = useState(false);
+
+  // Attachments state
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+
+    if (socket) {
+      socket.emit('join_wo_room', id);
+
+      const handleNewComment = (newCommentData) => {
+        setComments((prev) => [...prev, newCommentData]);
+      };
+
+      socket.on('new_comment', handleNewComment);
+
+      return () => {
+        socket.emit('leave_wo_room', id);
+        socket.off('new_comment', handleNewComment);
+      };
+    }
+  }, [id, socket]);
 
   const fetchData = async () => {
     try {
-      const [woRes, usersRes] = await Promise.all([
+      const [woRes, usersRes, invRes] = await Promise.all([
         workOrdersApi.get(id),
         usersApi.list(),
+        inventoryApi.list()
       ]);
       setWorkOrder(woRes.data);
       setUsers(usersRes.data);
+      setInventoryCatalog(invRes.data);
       await fetchComments();
     } catch (error) {
       addNotification('error', 'Failed to load work order');
@@ -93,6 +117,15 @@ const WorkOrderDetailPage = () => {
   };
 
   const handleStatusUpdate = async () => {
+    // Client-side validation for completion
+    if (newStatus === 'completed') {
+      const hasAttachments = workOrder.attachments && workOrder.attachments.length > 0;
+      if (!hasAttachments) {
+        addNotification('error', 'You must upload at least one image before completing the work order.');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       await workOrdersApi.updateStatus(id, { status: newStatus, notes: statusNotes });
@@ -124,12 +157,84 @@ const WorkOrderDetailPage = () => {
     try {
       await workOrdersApi.addComment(id, { message: newComment });
       setNewComment('');
-      await fetchComments();
+      // We don't need to fetchComments() here anymore as the socket will broadcast it back to us,
+      // but if we want to be safe in case of socket delay:
+      // await fetchComments(); 
       addNotification('success', 'Comment posted');
     } catch (error) {
       addNotification('error', 'Failed to post comment');
     } finally {
       setPostingComment(false);
+    }
+  };
+
+  const handleAddPart = async () => {
+    if (!selectedPartId || selectedPartQuantity <= 0) return;
+    setAddingPart(true);
+    try {
+      await workOrdersApi.addUsedPart(id, {
+        inventory_item_id: selectedPartId,
+        quantity_used: parseInt(selectedPartQuantity)
+      });
+      addNotification('success', 'Part added to work order');
+      setSelectedPartId('');
+      setSelectedPartQuantity(1);
+      fetchData(); // Refresh WO to get updated used_parts
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Failed to add part');
+    } finally {
+      setAddingPart(false);
+    }
+  };
+
+  const handleRemovePart = async (usageId) => {
+    try {
+      await workOrdersApi.removeUsedPart(id, usageId);
+      addNotification('success', 'Part removed from work order');
+      fetchData();
+    } catch (error) {
+      addNotification('error', 'Failed to remove part');
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+
+    // Validation
+    if (files.length + selectedFiles.length > 3) {
+      addNotification('error', 'Maximum 3 images allowed');
+      return;
+    }
+
+    const validFiles = files.filter(f => {
+      if (f.size > 1024 * 1024) {
+        addNotification('error', `${f.name} exceeds 1MB limit`);
+        return false;
+      }
+      return true;
+    });
+
+    setSelectedFiles(prev => [...prev, ...validFiles].slice(0, 3));
+  };
+
+  const handleUploadFiles = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    selectedFiles.forEach(file => {
+      formData.append('images', file);
+    });
+
+    try {
+      await workOrdersApi.uploadAttachments(id, formData);
+      addNotification('success', 'Images uploaded successfully');
+      setSelectedFiles([]);
+      fetchData();
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Failed to upload images');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -273,6 +378,170 @@ const WorkOrderDetailPage = () => {
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Parts & Inventory Used */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Box className="h-5 w-5" />
+                Parts & Inventory Used
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                {workOrder.used_parts?.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No parts have been added to this work order yet.</p>
+                ) : (
+                  <div className="rounded-md border divide-y">
+                    {workOrder.used_parts?.map((usage) => (
+                      <div key={usage.id} className="flex items-center justify-between p-3 text-sm">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{usage.item?.name}</span>
+                          <span className="text-xs text-muted-foreground">SKU: {usage.item?.sku} ({usage.item?.category})</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="bg-muted px-2 py-1 rounded-md">Qty: {usage.quantity_used}</span>
+                          {(workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive h-8 px-2"
+                              onClick={() => handleRemovePart(usage.id)}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {(workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                <>
+                  <Separator />
+                  <div className="flex gap-4 items-end pt-2">
+                    <div className="flex-1 space-y-2">
+                      <Label>Select Part</Label>
+                      <Select value={selectedPartId} onValueChange={setSelectedPartId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select inventory item..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {inventoryCatalog.map(item => (
+                            <SelectItem key={item.id} value={item.id} disabled={item.quantity <= 0}>
+                              {item.name} - {item.quantity} available
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-24 space-y-2">
+                      <Label>Qty</Label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={selectedPartQuantity}
+                        onChange={(e) => setSelectedPartQuantity(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleAddPart} disabled={!selectedPartId || addingPart}>
+                      {addingPart ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Part"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Attachments / Images */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Paperclip className="h-5 w-5" />
+                Images & Attachments
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Existing Attachments */}
+              {workOrder.attachments?.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {workOrder.attachments.map(att => (
+                    <div key={att.id} className="relative group rounded-md overflow-hidden border">
+                      <img
+                        src={`http://localhost:8000${att.file_path}`}
+                        alt="Work Order"
+                        className="w-full h-32 object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload New Attachments */}
+              {(workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                <div className="space-y-4">
+                  {workOrder.attachments?.length === 0 && (
+                    <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>At least one image is required before this work order can be marked as completed.</span>
+                    </p>
+                  )}
+
+                  <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center space-y-2 text-center">
+                    <UploadCloud className="h-8 w-8 text-muted-foreground" />
+                    <div className="text-sm border-b pb-1">
+                      <Label htmlFor="file-upload" className="cursor-pointer text-primary hover:underline font-medium">
+                        Click to upload
+                      </Label>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                        disabled={uploading || (workOrder.attachments?.length + selectedFiles.length >= 3)}
+                      />
+                      <span className="text-muted-foreground ml-1">or drag and drop</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">PNG, JPG up to 1MB. Max 3 files.</p>
+                  </div>
+
+                  {/* Selected Files Preview */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium">Selected Files</h4>
+                      <div className="space-y-2">
+                        {selectedFiles.map((file, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 text-sm bg-muted rounded-md pointer-events-none">
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                            <div className="flex gap-2 items-center pointer-events-auto">
+                              <span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button onClick={handleUploadFiles} disabled={uploading || selectedFiles.length === 0} className="w-full">
+                        {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+                        Upload {selectedFiles.length} Image{selectedFiles.length !== 1 && 's'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

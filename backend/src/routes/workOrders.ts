@@ -1,7 +1,23 @@
-import { Router } from 'express';
-import { WorkOrder, Asset, User, Role, AuditLog, WOComment } from '../models';
+import { WorkOrder, Asset, User, Role, AuditLog, WOComment, Notification, InventoryItem, WorkOrderInventoryItem, WOAttachment } from '../models';
 import { authenticate, requireRole } from '../middleware/auth';
 import { Op } from 'sequelize';
+import multer from 'multer';
+import path from 'path';
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, path.join(__dirname, '../../../../uploads/work-orders'));
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1024 * 1024, files: 3 } // 1MB, 3 files
+});
 
 const router = Router();
 router.use(authenticate);
@@ -32,7 +48,9 @@ router.get('/', async (req: any, res, next) => {
             include: [
                 { model: Asset },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
+                { model: User, as: 'requester', include: [{ model: Role }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
+                { model: WOAttachment, as: 'attachments' }
             ],
             order: [['created_at', 'DESC']],
             offset: Number(skip),
@@ -61,7 +79,9 @@ router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 's
             include: [
                 { model: Asset },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
+                { model: User, as: 'requester', include: [{ model: Role }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
+                { model: WOAttachment, as: 'attachments' }
             ]
         });
 
@@ -88,7 +108,9 @@ router.get('/:wo_id', async (req: any, res, next) => {
             include: [
                 { model: Asset },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
+                { model: User, as: 'requester', include: [{ model: Role }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
+                { model: WOAttachment, as: 'attachments' }
             ]
         });
         if (!wo) {
@@ -131,7 +153,9 @@ router.put('/:wo_id', async (req: any, res, next) => {
             include: [
                 { model: Asset },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
+                { model: User, as: 'requester', include: [{ model: Role }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
+                { model: WOAttachment, as: 'attachments' }
             ]
         });
 
@@ -162,8 +186,17 @@ router.patch('/:wo_id/status', async (req: any, res, next) => {
             return;
         }
 
-        const oldStatus = wo.status;
         const newStatus = req.body.status;
+
+        if (newStatus === 'completed') {
+            const attachmentCount = await WOAttachment.count({ where: { work_order_id: wo.id } });
+            if (attachmentCount === 0) {
+                res.status(400).json({ detail: 'Cannot mark as completed without uploading at least one image/attachment.' });
+                return;
+            }
+        }
+
+        const oldStatus = wo.status;
         wo.status = newStatus;
 
         if (req.body.notes) {
@@ -179,7 +212,9 @@ router.patch('/:wo_id/status', async (req: any, res, next) => {
             include: [
                 { model: Asset },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
+                { model: User, as: 'requester', include: [{ model: Role }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
+                { model: WOAttachment, as: 'attachments' }
             ]
         });
 
@@ -219,7 +254,9 @@ router.patch('/:wo_id/assign', requireRole(['Super_Admin', 'Org_Admin', 'Facilit
             include: [
                 { model: Asset },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
+                { model: User, as: 'requester', include: [{ model: Role }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
+                { model: WOAttachment, as: 'attachments' }
             ]
         });
 
@@ -289,7 +326,7 @@ router.get('/:wo_id/comments', async (req: any, res, next) => {
 // Add a comment to a WO
 router.post('/:wo_id/comments', async (req: any, res, next) => {
     try {
-        const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
+        const wo: any = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
         if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
 
         const { message } = req.body;
@@ -305,9 +342,160 @@ router.post('/:wo_id/comments', async (req: any, res, next) => {
             include: [{ model: User, attributes: ['id', 'first_name', 'last_name', 'email'], include: [{ model: Role, attributes: ['name'] }] }]
         });
 
+        const io = req.app.get('io');
+
+        // Emit comment to the work order room
+        if (io) {
+            io.to(`wo_${req.params.wo_id}`).emit('new_comment', fullComment);
+        }
+
+        // Determine who needs a notification (Assignee or Requester)
+        const commentersId = req.user.id;
+        const notificationRecipients = [];
+        if (wo.assignee_id && wo.assignee_id !== commentersId) {
+            notificationRecipients.push(wo.assignee_id);
+        }
+        if (wo.requester_id && wo.requester_id !== commentersId && wo.requester_id !== wo.assignee_id) {
+            notificationRecipients.push(wo.requester_id);
+        }
+
+        // Create notification & emit socket to them
+        const commenterName = `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim();
+        for (const targetUserId of notificationRecipients) {
+            const notif = await Notification.create({
+                user_id: targetUserId,
+                title: 'New Comment',
+                message: `${commenterName} commented on Work Order ${wo.wo_number}`,
+                link: `/work-orders/${wo.id}`
+            });
+
+            if (io) {
+                // To get activesockets securely, export from server.ts and look it up
+                // A simpler way: just emit to a user-specific room if we joined it, or emit to all and let client filter
+                // Actually the standard way is socket.join(`user_${user.id}`) in server.ts
+                // I will just emit gloabally for now and let the client UI filter unless I add user rooms.
+                // Let's emit a global event and filter by user ID on frontend.
+                io.emit('new_notification', {
+                    ...notif.toJSON(),
+                    target_user_id: targetUserId
+                });
+            }
+        }
+
         res.status(201).json(fullComment);
     } catch (err) {
         next(err);
+    }
+});
+
+// --- Work Order Inventory (Parts Used) ---
+
+// Get used parts
+router.get('/:wo_id/inventory', async (req: any, res, next) => {
+    try {
+        const parts = await WorkOrderInventoryItem.findAll({
+            where: { work_order_id: req.params.wo_id },
+            include: [{ model: InventoryItem, as: 'item' }],
+            order: [['created_at', 'ASC']]
+        });
+        res.json(parts);
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Add a part to a WO (consumes stock)
+router.post('/:wo_id/inventory', async (req: any, res, next) => {
+    try {
+        const { inventory_item_id, quantity_used } = req.body;
+        if (!inventory_item_id || !quantity_used || quantity_used <= 0) {
+            res.status(400).json({ detail: 'Valid inventory_item_id and quantity_used are required' });
+            return;
+        }
+
+        const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
+        if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
+
+        const item: any = await InventoryItem.findOne({ where: { id: inventory_item_id, org_id: req.user.org_id } });
+        if (!item) { res.status(404).json({ detail: 'Inventory item not found' }); return; }
+
+        if (item.quantity < quantity_used) {
+            res.status(400).json({ detail: `Not enough stock. Only ${item.quantity} available.` });
+            return;
+        }
+
+        // Deduct quantity
+        item.quantity -= quantity_used;
+        await item.save();
+
+        // Create usage record
+        const usage: any = await WorkOrderInventoryItem.create({
+            work_order_id: req.params.wo_id,
+            inventory_item_id,
+            quantity_used
+        });
+
+        const fullUsage = await WorkOrderInventoryItem.findByPk(usage.id, {
+            include: [{ model: InventoryItem, as: 'item' }]
+        });
+
+        res.status(201).json(fullUsage);
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Remove a part from a WO (restores stock)
+router.delete('/:wo_id/inventory/:usage_id', async (req: any, res, next) => {
+    try {
+        const usage: any = await WorkOrderInventoryItem.findOne({
+            where: { id: req.params.usage_id, work_order_id: req.params.wo_id }
+        });
+        if (!usage) { res.status(404).json({ detail: 'Usage record not found' }); return; }
+
+        const item: any = await InventoryItem.findByPk(usage.inventory_item_id);
+        if (item) {
+            item.quantity += usage.quantity_used;
+            await item.save();
+        }
+
+        await usage.destroy();
+        res.json({ message: 'Part usage removed, stock restored.' });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// --- Attachments / Image Uploads ---
+
+router.post('/:wo_id/attachments', upload.array('images', 3), async (req: any, res, next) => {
+    try {
+        const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
+        if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
+
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+            res.status(400).json({ detail: 'No files uploaded. Ensure images are < 1MB and max 3 files.' });
+            return;
+        }
+
+        const attachments = [];
+        for (const file of files) {
+            const attachment = await WOAttachment.create({
+                work_order_id: wo.id,
+                file_path: `/uploads/work-orders/${file.filename}`
+            });
+            attachments.push(attachment);
+        }
+
+        res.status(201).json(attachments);
+    } catch (err) {
+        // Multer errors (e.g., LIMIT_FILE_SIZE) are usually caught here
+        if (err instanceof multer.MulterError) {
+            res.status(400).json({ detail: err.message });
+        } else {
+            next(err);
+        }
     }
 });
 
