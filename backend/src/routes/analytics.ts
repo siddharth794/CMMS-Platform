@@ -82,4 +82,73 @@ router.get('/dashboard', async (req: any, res, next) => {
     }
 });
 
+// Technician-specific dashboard
+router.get('/technician-dashboard', async (req: any, res, next) => {
+    try {
+        const orgId = req.user.org_id;
+        const userId = req.user.id;
+
+        // --- My Work Order counts ---
+        const myAssigned = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId } });
+        const myCompleted = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: 'completed' } });
+        const myInProgress = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: 'in_progress' } });
+        const myPending = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: { [Op.in]: ['new', 'open'] } } });
+
+        const myCompletionRate = myAssigned > 0
+            ? Math.round((myCompleted / myAssigned) * 1000) / 10
+            : 0;
+
+        // --- My Overdue WOs (past scheduled_end but not completed/cancelled) ---
+        const myOverdue = await WorkOrder.count({
+            where: {
+                org_id: orgId,
+                assignee_id: userId,
+                status: { [Op.notIn]: ['completed', 'cancelled'] },
+                scheduled_end: { [Op.lt]: new Date(), [Op.ne]: null }
+            }
+        });
+
+        // --- My WOs by status ---
+        const myWoByStatus = [];
+        for (const status of WO_STATUSES) {
+            const count = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status } });
+            myWoByStatus.push({ status, count });
+        }
+
+        // --- My WOs by priority ---
+        const myWoByPriority = [];
+        for (const priority of PRIORITIES) {
+            const count = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, priority } });
+            myWoByPriority.push({ priority, count });
+        }
+
+        // --- My recent work orders ---
+        const myRecentWorkOrders = await WorkOrder.findAll({
+            where: { org_id: orgId, assignee_id: userId },
+            include: [
+                { model: Asset },
+                { model: User, as: 'requester', include: [{ model: Role }] }
+            ],
+            order: [['created_at', 'DESC']],
+            limit: 10
+        });
+
+        res.json({
+            stats: {
+                my_assigned: myAssigned,
+                my_completed: myCompleted,
+                my_in_progress: myInProgress,
+                my_pending: myPending,
+                my_completion_rate: myCompletionRate,
+                my_overdue: myOverdue
+            },
+            my_wo_by_status: myWoByStatus,
+            my_wo_by_priority: myWoByPriority,
+            my_recent_work_orders: myRecentWorkOrders
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
 export default router;
