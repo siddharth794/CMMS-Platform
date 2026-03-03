@@ -44,7 +44,7 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', async (req: any, res, next) => {
+router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
     try {
         const woData = { ...req.body, org_id: req.user.org_id, requester_id: req.user.id };
         woData.wo_number = generateWoNumber();
