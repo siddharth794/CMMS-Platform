@@ -125,6 +125,14 @@ InventoryItem.init({
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
+class WOComment extends Model { public id!: string; }
+WOComment.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    work_order_id: { type: DataTypes.UUID, allowNull: false },
+    user_id: { type: DataTypes.UUID, allowNull: false },
+    message: { type: DataTypes.TEXT, allowNull: false },
+}, { sequelize, tableName: 'wo_comments', timestamps: true, createdAt: 'created_at', updatedAt: false });
+
 // Associations
 Organization.hasMany(User, { foreignKey: 'org_id' });
 User.belongsTo(Organization, { foreignKey: 'org_id' });
@@ -159,6 +167,12 @@ WorkOrder.belongsTo(User, { as: 'assignee', foreignKey: 'assignee_id' });
 User.hasMany(WorkOrder, { as: 'created_work_orders', foreignKey: 'requester_id' });
 WorkOrder.belongsTo(User, { as: 'requester', foreignKey: 'requester_id' });
 
+WorkOrder.hasMany(WOComment, { as: 'comments', foreignKey: 'work_order_id' });
+WOComment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+User.hasMany(WOComment, { foreignKey: 'user_id' });
+WOComment.belongsTo(User, { foreignKey: 'user_id' });
+
 export {
     Organization,
     Role,
@@ -168,5 +182,6 @@ export {
     PMSchedule,
     AuditLog,
     InventoryItem,
+    WOComment,
     sequelize
 };

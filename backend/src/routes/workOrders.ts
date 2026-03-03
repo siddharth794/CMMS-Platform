@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { WorkOrder, Asset, User, Role, AuditLog } from '../models';
+import { WorkOrder, Asset, User, Role, AuditLog, WOComment } from '../models';
 import { authenticate, requireRole } from '../middleware/auth';
 import { Op } from 'sequelize';
 
@@ -262,6 +262,50 @@ router.delete('/:wo_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Mana
         });
 
         res.json({ message: 'Work order cancelled' });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// --- Work Order Comments ---
+
+// List comments for a WO
+router.get('/:wo_id/comments', async (req: any, res, next) => {
+    try {
+        const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
+        if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
+
+        const comments = await WOComment.findAll({
+            where: { work_order_id: req.params.wo_id },
+            include: [{ model: User, attributes: ['id', 'first_name', 'last_name', 'email'], include: [{ model: Role, attributes: ['name'] }] }],
+            order: [['created_at', 'ASC']]
+        });
+        res.json(comments);
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Add a comment to a WO
+router.post('/:wo_id/comments', async (req: any, res, next) => {
+    try {
+        const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
+        if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
+
+        const { message } = req.body;
+        if (!message || !message.trim()) { res.status(400).json({ detail: 'Message is required' }); return; }
+
+        const comment: any = await WOComment.create({
+            work_order_id: req.params.wo_id,
+            user_id: req.user.id,
+            message: message.trim()
+        });
+
+        const fullComment = await WOComment.findByPk(comment.id, {
+            include: [{ model: User, attributes: ['id', 'first_name', 'last_name', 'email'], include: [{ model: Role, attributes: ['name'] }] }]
+        });
+
+        res.status(201).json(fullComment);
     } catch (err) {
         next(err);
     }

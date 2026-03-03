@@ -9,9 +9,9 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Separator } from '../components/ui/separator';
-import { ArrowLeft, Clock, User, Box, AlertTriangle, Calendar, Edit, UserPlus, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, User, Box, AlertTriangle, Calendar, Edit, UserPlus, CheckCircle, Loader2, MessageSquare, Send } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
@@ -57,6 +57,11 @@ const WorkOrderDetailPage = () => {
   const [statusNotes, setStatusNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Comments state
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -69,11 +74,21 @@ const WorkOrderDetailPage = () => {
       ]);
       setWorkOrder(woRes.data);
       setUsers(usersRes.data);
+      await fetchComments();
     } catch (error) {
       addNotification('error', 'Failed to load work order');
       navigate('/work-orders');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const res = await workOrdersApi.getComments(id);
+      setComments(res.data);
+    } catch (error) {
+      console.error('Failed to load comments:', error);
     }
   };
 
@@ -100,6 +115,21 @@ const WorkOrderDetailPage = () => {
       fetchData();
     } catch (error) {
       addNotification('error', 'Failed to assign');
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!newComment.trim()) return;
+    setPostingComment(true);
+    try {
+      await workOrdersApi.addComment(id, { message: newComment });
+      setNewComment('');
+      await fetchComments();
+      addNotification('success', 'Comment posted');
+    } catch (error) {
+      addNotification('error', 'Failed to post comment');
+    } finally {
+      setPostingComment(false);
     }
   };
 
@@ -170,6 +200,81 @@ const WorkOrderDetailPage = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Comments Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Comments & Conversation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Comment List */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {comments.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4 text-sm">
+                    No comments yet. Start the conversation!
+                  </p>
+                ) : (
+                  comments.map((comment) => (
+                    <div key={comment.id} className="flex gap-4">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
+                        {comment.User?.first_name?.[0]}{comment.User?.last_name?.[0]}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">
+                            {comment.User?.first_name} {comment.User?.last_name}
+                            <span className="text-muted-foreground font-normal ml-2">
+                              ({comment.User?.Role?.name?.replace('_', ' ')})
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <div className="text-sm rounded-lg bg-muted p-3 whitespace-pre-wrap">
+                          {comment.message}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add Comment Input */}
+              <Separator />
+              <div className="flex gap-4 items-end pt-2">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="comment" className="sr-only">New comment</Label>
+                  <Textarea
+                    id="comment"
+                    placeholder="Type your comment here..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={2}
+                    className="resize-none"
+                    data-testid="comment-input"
+                  />
+                </div>
+                <Button
+                  onClick={handlePostComment}
+                  disabled={!newComment.trim() || postingComment}
+                  data-testid="post-comment-btn"
+                >
+                  {postingComment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}

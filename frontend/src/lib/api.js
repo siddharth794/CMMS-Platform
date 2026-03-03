@@ -70,6 +70,8 @@ export const workOrdersApi = {
   updateStatus: (id, data) => api.patch(`/work-orders/${id}/status`, data),
   assign: (id, data) => api.patch(`/work-orders/${id}/assign`, data),
   delete: (id) => api.delete(`/work-orders/${id}`),
+  getComments: (id) => api.get(`/work-orders/${id}/comments`),
+  addComment: (id, data) => api.post(`/work-orders/${id}/comments`, data),
 };
 
 // PM Schedules
