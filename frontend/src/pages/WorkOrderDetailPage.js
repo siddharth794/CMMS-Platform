@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Separator } from '../components/ui/separator';
 import { ArrowLeft, Clock, User, Box, AlertTriangle, Calendar, Edit, UserPlus, CheckCircle, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
 const StatusBadge = ({ status }) => {
@@ -47,6 +47,7 @@ const WorkOrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isManager } = useAuth();
+  const { addNotification } = useNotification();
   const [workOrder, setWorkOrder] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,7 @@ const WorkOrderDetailPage = () => {
       setWorkOrder(woRes.data);
       setUsers(usersRes.data);
     } catch (error) {
-      toast.error('Failed to load work order');
+      addNotification('error', 'Failed to load work order');
       navigate('/work-orders');
     } finally {
       setLoading(false);
@@ -80,12 +81,12 @@ const WorkOrderDetailPage = () => {
     setSubmitting(true);
     try {
       await workOrdersApi.updateStatus(id, { status: newStatus, notes: statusNotes });
-      toast.success('Status updated');
+      addNotification('success', 'Status updated');
       setStatusDialogOpen(false);
       setStatusNotes('');
       fetchData();
     } catch (error) {
-      toast.error('Failed to update status');
+      addNotification('error', 'Failed to update status');
     } finally {
       setSubmitting(false);
     }
@@ -94,11 +95,11 @@ const WorkOrderDetailPage = () => {
   const handleAssign = async (assigneeId) => {
     try {
       await workOrdersApi.assign(id, { assignee_id: assigneeId });
-      toast.success('Work order assigned');
+      addNotification('success', 'Work order assigned');
       setAssignDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error('Failed to assign');
+      addNotification('error', 'Failed to assign');
     }
   };
 
@@ -183,29 +184,29 @@ const WorkOrderDetailPage = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Assignee</p>
                   <p className="font-medium">
-                    {workOrder.assignee 
+                    {workOrder.assignee
                       ? `${workOrder.assignee.first_name} ${workOrder.assignee.last_name}`
                       : 'Unassigned'}
                   </p>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="flex items-center gap-3">
                 <User className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Requester</p>
                   <p className="font-medium">
-                    {workOrder.requester 
+                    {workOrder.requester
                       ? `${workOrder.requester.first_name} ${workOrder.requester.last_name}`
                       : '-'}
                   </p>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="flex items-center gap-3">
                 <Box className="h-5 w-5 text-muted-foreground" />
                 <div>
@@ -216,9 +217,9 @@ const WorkOrderDetailPage = () => {
                   )}
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
@@ -226,7 +227,7 @@ const WorkOrderDetailPage = () => {
                   <p className="font-medium">{format(new Date(workOrder.created_at), 'PPP')}</p>
                 </div>
               </div>
-              
+
               {workOrder.actual_start && (
                 <>
                   <Separator />
@@ -239,7 +240,7 @@ const WorkOrderDetailPage = () => {
                   </div>
                 </>
               )}
-              
+
               {workOrder.actual_end && (
                 <>
                   <Separator />

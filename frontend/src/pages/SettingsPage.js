@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { useNotification } from '../context/NotificationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -12,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Switch } from '../components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Plus, MoreHorizontal, Edit, Trash2, Loader2, Users, Shield, Building2, User } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 const SettingsPage = () => {
@@ -23,6 +23,7 @@ const SettingsPage = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const { user: currentUser, isAdmin } = useAuth();
+  const { addNotification } = useNotification();
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -47,7 +48,7 @@ const SettingsPage = () => {
       setUsers(usersRes.data);
       setRoles(rolesRes.data);
     } catch (error) {
-      toast.error('Failed to fetch data');
+      addNotification('error', 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -71,12 +72,12 @@ const SettingsPage = () => {
     setSubmitting(true);
     try {
       await usersApi.create({ ...userForm, role_id: parseInt(userForm.role_id) });
-      toast.success('User created');
+      addNotification('success', 'User created');
       setUserDialogOpen(false);
       resetUserForm();
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create user');
+      addNotification('error', error.response?.data?.detail || 'Failed to create user');
     } finally {
       setSubmitting(false);
     }

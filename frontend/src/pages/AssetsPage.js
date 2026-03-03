@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
@@ -19,10 +19,12 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const { isManager } = useAuth();
+  const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,7 +48,7 @@ const AssetsPage = () => {
       const response = await assetsApi.list({ search });
       setAssets(response.data);
     } catch (error) {
-      toast.error('Failed to fetch assets');
+      addNotification('error', 'Failed to fetch assets');
     } finally {
       setLoading(false);
     }
@@ -63,6 +65,8 @@ const AssetsPage = () => {
       manufacturer: '',
       model: '',
       serial_number: '',
+      purchase_date: '',
+      warranty_expiry: '',
       status: 'active',
     });
   };
@@ -71,13 +75,17 @@ const AssetsPage = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await assetsApi.create(formData);
-      toast.success('Asset created');
+      const payload = { ...formData };
+      if (!payload.purchase_date) payload.purchase_date = null;
+      if (!payload.warranty_expiry) payload.warranty_expiry = null;
+
+      await assetsApi.create(payload);
+      addNotification('success', 'Asset created');
       setCreateOpen(false);
       resetForm();
       fetchAssets();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create asset');
+      addNotification('error', error.response?.data?.detail || 'Failed to create asset');
     } finally {
       setSubmitting(false);
     }
@@ -88,14 +96,18 @@ const AssetsPage = () => {
     if (!selectedAsset) return;
     setSubmitting(true);
     try {
-      await assetsApi.update(selectedAsset.id, formData);
-      toast.success('Asset updated');
+      const payload = { ...formData };
+      if (!payload.purchase_date) payload.purchase_date = null;
+      if (!payload.warranty_expiry) payload.warranty_expiry = null;
+
+      await assetsApi.update(selectedAsset.id, payload);
+      addNotification('success', 'Asset updated');
       setEditOpen(false);
       setSelectedAsset(null);
       resetForm();
       fetchAssets();
     } catch (error) {
-      toast.error('Failed to update asset');
+      addNotification('error', 'Failed to update asset');
     } finally {
       setSubmitting(false);
     }
@@ -105,10 +117,10 @@ const AssetsPage = () => {
     if (!confirm('Delete this asset?')) return;
     try {
       await assetsApi.delete(assetId);
-      toast.success('Asset deleted');
+      addNotification('success', 'Asset deleted');
       fetchAssets();
     } catch (error) {
-      toast.error('Failed to delete asset');
+      addNotification('error', 'Failed to delete asset');
     }
   };
 
@@ -124,12 +136,14 @@ const AssetsPage = () => {
       manufacturer: asset.manufacturer || '',
       model: asset.model || '',
       serial_number: asset.serial_number || '',
+      purchase_date: asset.purchase_date ? new Date(asset.purchase_date).toISOString().split('T')[0] : '',
+      warranty_expiry: asset.warranty_expiry ? new Date(asset.warranty_expiry).toISOString().split('T')[0] : '',
       status: asset.status,
     });
     setEditOpen(true);
   };
 
-  const AssetForm = ({ onSubmit, isEdit = false }) => (
+  const renderAssetForm = ({ onSubmit, isEdit = false }) => (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -153,7 +167,7 @@ const AssetsPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Type</Label>
@@ -168,17 +182,25 @@ const AssetsPage = () => {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Input
-            id="category"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            placeholder="e.g., HVAC, Elevator"
-            data-testid="asset-category-input"
-          />
+          <Label>Category</Label>
+          <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+            <SelectTrigger data-testid="asset-category-select">
+              <SelectValue placeholder="Select Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="HVAC">HVAC</SelectItem>
+              <SelectItem value="Electrical">Electrical</SelectItem>
+              <SelectItem value="Plumbing">Plumbing</SelectItem>
+              <SelectItem value="Fire safety">Fire safety</SelectItem>
+              <SelectItem value="elevator">Elevator</SelectItem>
+              <SelectItem value="security">Security</SelectItem>
+              <SelectItem value="it equipments">IT Equipments</SelectItem>
+              <SelectItem value="others">Others</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
         <Input
@@ -189,8 +211,8 @@ const AssetsPage = () => {
           data-testid="asset-location-input"
         />
       </div>
-      
-      <div className="grid grid-cols-2 gap-4">
+
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="manufacturer">Manufacturer</Label>
           <Input
@@ -209,8 +231,40 @@ const AssetsPage = () => {
             data-testid="asset-model-input"
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="serial_number">Serial Number</Label>
+          <Input
+            id="serial_number"
+            value={formData.serial_number}
+            onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+            data-testid="asset-serial-input"
+          />
+        </div>
       </div>
-      
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="purchase_date">Purchase Date</Label>
+          <Input
+            id="purchase_date"
+            type="date"
+            value={formData.purchase_date}
+            onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+            data-testid="asset-purchase-date-input"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="warranty_expiry">Warranty Expire</Label>
+          <Input
+            id="warranty_expiry"
+            type="date"
+            value={formData.warranty_expiry}
+            onChange={(e) => setFormData({ ...formData, warranty_expiry: e.target.value })}
+            data-testid="asset-warranty-input"
+          />
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -221,7 +275,7 @@ const AssetsPage = () => {
           data-testid="asset-description-input"
         />
       </div>
-      
+
       {isEdit && (
         <div className="space-y-2">
           <Label>Status</Label>
@@ -237,7 +291,7 @@ const AssetsPage = () => {
           </Select>
         </div>
       )}
-      
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => isEdit ? setEditOpen(false) : setCreateOpen(false)}>
           Cancel
@@ -258,21 +312,23 @@ const AssetsPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
           <p className="text-muted-foreground">Manage your facility equipment and infrastructure</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="create-asset-btn">
-              <Plus className="mr-2 h-4 w-4" />
-              New Asset
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Asset</DialogTitle>
-              <DialogDescription>Enter the asset details</DialogDescription>
-            </DialogHeader>
-            <AssetForm onSubmit={handleCreate} />
-          </DialogContent>
-        </Dialog>
+        {isManager() && (
+          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="create-asset-btn">
+                <Plus className="mr-2 h-4 w-4" />
+                New Asset
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Asset</DialogTitle>
+                <DialogDescription>Enter the asset details</DialogDescription>
+              </DialogHeader>
+              {renderAssetForm({ onSubmit: handleCreate })}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Search */}
@@ -301,6 +357,7 @@ const AssetsPage = () => {
                 <TableHead>Type</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Purchase Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -308,13 +365,13 @@ const AssetsPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : assets.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No assets found
                   </TableCell>
                 </TableRow>
@@ -333,6 +390,9 @@ const AssetsPage = () => {
                         {asset.location || '-'}
                       </div>
                     </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {asset.purchase_date ? format(new Date(asset.purchase_date), 'MMM d, yyyy') : '-'}
+                    </TableCell>
                     <TableCell>
                       <span className={`status-badge ${asset.status === 'active' ? 'status-completed' : asset.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
                         {asset.status}
@@ -346,9 +406,14 @@ const AssetsPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(asset)}>
-                            <Edit className="mr-2 h-4 w-4" />Edit
+                          <DropdownMenuItem onClick={() => { setSelectedAsset(asset); setViewOpen(true); }}>
+                            <Eye className="mr-2 h-4 w-4" />View
                           </DropdownMenuItem>
+                          {isManager() && (
+                            <DropdownMenuItem onClick={() => openEditDialog(asset)}>
+                              <Edit className="mr-2 h-4 w-4" />Edit
+                            </DropdownMenuItem>
+                          )}
                           {isManager() && (
                             <DropdownMenuItem onClick={() => handleDelete(asset.id)} className="text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />Delete
@@ -372,7 +437,76 @@ const AssetsPage = () => {
             <DialogTitle>Edit Asset</DialogTitle>
             <DialogDescription>Update the asset details</DialogDescription>
           </DialogHeader>
-          <AssetForm onSubmit={handleEdit} isEdit />
+          {renderAssetForm({ onSubmit: handleEdit, isEdit: true })}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={viewOpen} onOpenChange={(open) => { setViewOpen(open); if (!open) setSelectedAsset(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Asset Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Name</span>
+                <span className="font-medium">{selectedAsset?.name || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Asset Tag</span>
+                <span className="font-medium">{selectedAsset?.asset_tag || '-'}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Type</span>
+                <span className="capitalize">{selectedAsset?.asset_type || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Category</span>
+                <span className="capitalize">{selectedAsset?.category || '-'}</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground block">Location</span>
+              <span>{selectedAsset?.location || '-'}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Manufacturer</span>
+                <span>{selectedAsset?.manufacturer || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Model</span>
+                <span>{selectedAsset?.model || '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Serial Number</span>
+                <span>{selectedAsset?.serial_number || '-'}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Purchase Date</span>
+                <span>{selectedAsset?.purchase_date ? format(new Date(selectedAsset.purchase_date), 'MMM d, yyyy') : '-'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Warranty Expiry</span>
+                <span>{selectedAsset?.warranty_expiry ? format(new Date(selectedAsset.warranty_expiry), 'MMM d, yyyy') : '-'}</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground block">Description</span>
+              <p className="text-sm">{selectedAsset?.description || '-'}</p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground block mb-1">Status</span>
+              <span className={`status-badge ${selectedAsset?.status === 'active' ? 'status-completed' : selectedAsset?.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
+                {selectedAsset?.status || '-'}
+              </span>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

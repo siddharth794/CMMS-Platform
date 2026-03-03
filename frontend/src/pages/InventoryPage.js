@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Plus, Search, Edit, Trash2, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNotification } from '../context/NotificationContext';
 
 const UNITS = ['pcs', 'liters', 'kg', 'meters', 'kits', 'boxes', 'rolls', 'sets'];
 const DEFAULT_CATEGORIES = ['Filters', 'HVAC', 'Lubricants', 'Elevator Parts', 'Safety Equipment', 'Electrical', 'Plumbing', 'Tools', 'Other'];
@@ -29,6 +29,7 @@ const InventoryPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const { isManager } = useAuth();
+  const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -57,7 +58,7 @@ const InventoryPage = () => {
       setStats(statsRes.data);
       setCategories([...new Set([...DEFAULT_CATEGORIES, ...(categoriesRes.data.categories || [])])]);
     } catch (error) {
-      toast.error('Failed to fetch inventory');
+      addNotification('error', 'Failed to fetch inventory');
     } finally {
       setLoading(false);
     }
@@ -83,12 +84,12 @@ const InventoryPage = () => {
     setSubmitting(true);
     try {
       await inventoryApi.create(formData);
-      toast.success('Item added to inventory');
+      addNotification('success', 'Item added to inventory');
       setCreateOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add item');
+      addNotification('error', error.response?.data?.detail || 'Failed to add item');
     } finally {
       setSubmitting(false);
     }
@@ -100,12 +101,12 @@ const InventoryPage = () => {
     setSubmitting(true);
     try {
       await inventoryApi.update(selectedItem.id, formData);
-      toast.success('Item updated');
+      addNotification('success', 'Item updated');
       setEditOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error('Failed to update item');
+      addNotification('error', 'Failed to update item');
     } finally {
       setSubmitting(false);
     }
@@ -115,10 +116,10 @@ const InventoryPage = () => {
     if (!confirm('Delete this inventory item?')) return;
     try {
       await inventoryApi.delete(itemId);
-      toast.success('Item deleted');
+      addNotification('success', 'Item deleted');
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete item');
+      addNotification('error', 'Failed to delete item');
     }
   };
 
@@ -140,7 +141,7 @@ const InventoryPage = () => {
 
   const isLowStock = (item) => item.min_quantity > 0 && item.quantity <= item.min_quantity;
 
-  const InventoryForm = ({ onSubmit, isEdit = false }) => (
+  const renderInventoryForm = ({ onSubmit, isEdit = false }) => (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Item Name *</Label>
@@ -153,7 +154,7 @@ const InventoryPage = () => {
           data-testid="inv-name-input"
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -165,7 +166,7 @@ const InventoryPage = () => {
           data-testid="inv-description-input"
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Category *</Label>
@@ -191,7 +192,7 @@ const InventoryPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="quantity">Quantity *</Label>
@@ -230,7 +231,7 @@ const InventoryPage = () => {
           </Select>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="storage_location">Storage Location *</Label>
@@ -244,7 +245,7 @@ const InventoryPage = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="unit_cost">Unit Cost ($)</Label>
+          <Label htmlFor="unit_cost">Unit Cost (₹)</Label>
           <Input
             id="unit_cost"
             type="number"
@@ -256,7 +257,7 @@ const InventoryPage = () => {
           />
         </div>
       </div>
-      
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => isEdit ? setEditOpen(false) : setCreateOpen(false)}>
           Cancel
@@ -277,21 +278,23 @@ const InventoryPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
           <p className="text-muted-foreground">Manage spare parts and supplies</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="add-item-btn">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add Inventory Item</DialogTitle>
-              <DialogDescription>Add a new item to your inventory</DialogDescription>
-            </DialogHeader>
-            <InventoryForm onSubmit={handleCreate} />
-          </DialogContent>
-        </Dialog>
+        {isManager() && (
+          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="add-item-btn">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Inventory Item</DialogTitle>
+                <DialogDescription>Add a new item to your inventory</DialogDescription>
+              </DialogHeader>
+              {renderInventoryForm({ onSubmit: handleCreate })}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -307,7 +310,7 @@ const InventoryPage = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className={stats.low_stock_count > 0 ? 'border-amber-500/50' : ''} data-testid="stat-low-stock">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -321,13 +324,13 @@ const InventoryPage = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card data-testid="stat-total-value">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-3xl font-bold">${stats.total_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <p className="text-3xl font-bold">₹{stats.total_value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
               </div>
               <DollarSign className="h-10 w-10 text-muted-foreground/50" />
             </div>
@@ -430,16 +433,18 @@ const InventoryPage = () => {
                         <span className="text-muted-foreground"> / {item.min_quantity} {item.unit}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">${parseFloat(item.unit_cost || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₹{parseFloat(item.unit_cost || 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} data-testid={`edit-${item.id}`}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="text-destructive hover:text-destructive" data-testid={`delete-${item.id}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {isManager() && (
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} data-testid={`edit-${item.id}`}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="text-destructive hover:text-destructive" data-testid={`delete-${item.id}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -456,7 +461,7 @@ const InventoryPage = () => {
             <DialogTitle>Edit Inventory Item</DialogTitle>
             <DialogDescription>Update item details</DialogDescription>
           </DialogHeader>
-          <InventoryForm onSubmit={handleEdit} isEdit />
+          {renderInventoryForm({ onSubmit: handleEdit, isEdit: true })}
         </DialogContent>
       </Dialog>
     </div>

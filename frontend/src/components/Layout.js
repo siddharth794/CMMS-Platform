@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNotification } from '../context/NotificationContext';
+import { formatDistanceToNow } from 'date-fns';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
-import { 
-  LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings, 
+import {
+  LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings,
   LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package
 } from 'lucide-react';
 
@@ -17,7 +19,7 @@ const navigation = [
   { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
   { name: 'Assets', href: '/assets', icon: Box },
   { name: 'Inventory', href: '/inventory', icon: Package },
-  { name: 'Preventive Maintenance', href: '/pm-schedules', icon: Calendar },
+  { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -33,14 +35,14 @@ const Sidebar = ({ className = '' }) => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight">OpsCommand</span>
+          <span className="text-xl font-bold tracking-tight">FMS</span>
         </Link>
       </div>
-      
+
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-1">
           {navigation.map((item) => {
-            const isActive = location.pathname === item.href || 
+            const isActive = location.pathname === item.href ||
               (item.href !== '/' && location.pathname.startsWith(item.href));
             return (
               <Link
@@ -56,7 +58,7 @@ const Sidebar = ({ className = '' }) => {
           })}
         </nav>
       </ScrollArea>
-      
+
       <div className="border-t p-4">
         <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
           <Avatar className="h-9 w-9">
@@ -77,6 +79,7 @@ const Sidebar = ({ className = '' }) => {
 const Layout = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotification();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -106,9 +109,9 @@ const Layout = () => {
             {/* Search */}
             <div className="hidden md:flex items-center gap-2 rounded-lg border bg-background px-3 py-2 w-80">
               <Search className="h-4 w-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search..." 
+              <input
+                type="text"
+                placeholder="Search..."
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 data-testid="search-input"
               />
@@ -122,9 +125,59 @@ const Layout = () => {
             </Button>
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" data-testid="notifications-btn">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative" data-testid="notifications-btn">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="flex items-center justify-between px-4 py-2 border-b">
+                  <DropdownMenuLabel className="p-0 font-medium">Notifications</DropdownMenuLabel>
+                  {notifications.length > 0 && (
+                    <div className="flex gap-2">
+                      <button onClick={markAllAsRead} className="text-xs text-primary hover:underline">Mark all read</button>
+                      <button onClick={clearAll} className="text-xs text-destructive hover:underline">Clear</button>
+                    </div>
+                  )}
+                </div>
+                <ScrollArea className="h-[300px]">
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
+                      <Bell className="h-8 w-8 mb-2 opacity-20" />
+                      <p className="text-sm">No notifications</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`flex flex-col gap-1 p-3 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-primary/5' : ''}`}
+                          onClick={() => markAsRead(notification.id)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className={`text-sm ${!notification.read ? 'font-medium' : 'text-muted-foreground'}`}>
+                              {notification.message}
+                            </span>
+                            {!notification.read && (
+                              <span className="flex h-2 w-2 shrink-0 rounded-full bg-primary mt-1.5" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User Menu */}
             <DropdownMenu>
