@@ -63,6 +63,8 @@ const AssetsPage = () => {
       manufacturer: '',
       model: '',
       serial_number: '',
+      purchase_date: '',
+      warranty_expiry: '',
       status: 'active',
     });
   };
@@ -71,7 +73,11 @@ const AssetsPage = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await assetsApi.create(formData);
+      const payload = { ...formData };
+      if (!payload.purchase_date) payload.purchase_date = null;
+      if (!payload.warranty_expiry) payload.warranty_expiry = null;
+
+      await assetsApi.create(payload);
       toast.success('Asset created');
       setCreateOpen(false);
       resetForm();
@@ -88,7 +94,11 @@ const AssetsPage = () => {
     if (!selectedAsset) return;
     setSubmitting(true);
     try {
-      await assetsApi.update(selectedAsset.id, formData);
+      const payload = { ...formData };
+      if (!payload.purchase_date) payload.purchase_date = null;
+      if (!payload.warranty_expiry) payload.warranty_expiry = null;
+
+      await assetsApi.update(selectedAsset.id, payload);
       toast.success('Asset updated');
       setEditOpen(false);
       setSelectedAsset(null);
@@ -124,6 +134,8 @@ const AssetsPage = () => {
       manufacturer: asset.manufacturer || '',
       model: asset.model || '',
       serial_number: asset.serial_number || '',
+      purchase_date: asset.purchase_date ? new Date(asset.purchase_date).toISOString().split('T')[0] : '',
+      warranty_expiry: asset.warranty_expiry ? new Date(asset.warranty_expiry).toISOString().split('T')[0] : '',
       status: asset.status,
     });
     setEditOpen(true);
@@ -168,14 +180,22 @@ const AssetsPage = () => {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Input
-            id="category"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            placeholder="e.g., HVAC, Elevator"
-            data-testid="asset-category-input"
-          />
+          <Label>Category</Label>
+          <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+            <SelectTrigger data-testid="asset-category-select">
+              <SelectValue placeholder="Select Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="HVAC">HVAC</SelectItem>
+              <SelectItem value="Electrical">Electrical</SelectItem>
+              <SelectItem value="Plumbing">Plumbing</SelectItem>
+              <SelectItem value="Fire safety">Fire safety</SelectItem>
+              <SelectItem value="elevator">Elevator</SelectItem>
+              <SelectItem value="security">Security</SelectItem>
+              <SelectItem value="it equipments">IT Equipments</SelectItem>
+              <SelectItem value="others">Others</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -190,7 +210,7 @@ const AssetsPage = () => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="manufacturer">Manufacturer</Label>
           <Input
@@ -207,6 +227,38 @@ const AssetsPage = () => {
             value={formData.model}
             onChange={(e) => setFormData({ ...formData, model: e.target.value })}
             data-testid="asset-model-input"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="serial_number">Serial Number</Label>
+          <Input
+            id="serial_number"
+            value={formData.serial_number}
+            onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+            data-testid="asset-serial-input"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="purchase_date">Purchase Date</Label>
+          <Input
+            id="purchase_date"
+            type="date"
+            value={formData.purchase_date}
+            onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+            data-testid="asset-purchase-date-input"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="warranty_expiry">Warranty Expire</Label>
+          <Input
+            id="warranty_expiry"
+            type="date"
+            value={formData.warranty_expiry}
+            onChange={(e) => setFormData({ ...formData, warranty_expiry: e.target.value })}
+            data-testid="asset-warranty-input"
           />
         </div>
       </div>
@@ -301,6 +353,7 @@ const AssetsPage = () => {
                 <TableHead>Type</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Purchase Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -308,13 +361,13 @@ const AssetsPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : assets.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No assets found
                   </TableCell>
                 </TableRow>
@@ -332,6 +385,9 @@ const AssetsPage = () => {
                         <MapPin className="h-3 w-3" />
                         {asset.location || '-'}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {asset.purchase_date ? format(new Date(asset.purchase_date), 'MMM d, yyyy') : '-'}
                     </TableCell>
                     <TableCell>
                       <span className={`status-badge ${asset.status === 'active' ? 'status-completed' : asset.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
