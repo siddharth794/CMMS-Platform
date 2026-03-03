@@ -7,13 +7,25 @@ import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import WorkOrdersPage from './pages/WorkOrdersPage';
 import WorkOrderDetailPage from './pages/WorkOrderDetailPage';
 import AssetsPage from './pages/AssetsPage';
 import InventoryPage from './pages/InventoryPage';
 import PMSchedulesPage from './pages/PMSchedulesPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import TechnicianAnalyticsPage from './pages/TechnicianAnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
+
+const RoleBasedDashboard = () => {
+  const { isTechnician } = useAuth();
+  return isTechnician() ? <TechnicianDashboardPage /> : <DashboardPage />;
+};
+
+const RoleBasedAnalytics = () => {
+  const { isTechnician } = useAuth();
+  return isTechnician() ? <TechnicianAnalyticsPage /> : <AnalyticsPage />;
+};
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -70,13 +82,13 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<DashboardPage />} />
+        <Route index element={<RoleBasedDashboard />} />
         <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
         <Route path="assets" element={<AssetsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="pm-schedules" element={<PMSchedulesPage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="analytics" element={<RoleBasedAnalytics />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

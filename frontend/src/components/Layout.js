@@ -14,19 +14,20 @@ import {
   LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
-  { name: 'Assets', href: '/assets', icon: Box },
-  { name: 'Inventory', href: '/inventory', icon: Package },
-  { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
-
 const Sidebar = ({ className = '' }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isTechnician } = useAuth();
+  const isTech = isTechnician();
+
+  const navigation = [
+    { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
+    { name: 'Assets', href: '/assets', icon: Box },
+    { name: 'Inventory', href: '/inventory', icon: Package },
+    { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar },
+    { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
 
   return (
     <div className={`flex h-full flex-col ${className}`}>
