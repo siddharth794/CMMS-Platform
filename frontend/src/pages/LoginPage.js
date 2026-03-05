@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNotification } from '../context/NotificationContext';
-import { seedDemoData } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -14,7 +13,6 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { addNotification } = useNotification();
@@ -33,27 +31,6 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
-
-  const handleSeedData = async () => {
-    setSeeding(true);
-    try {
-      const response = await seedDemoData();
-      addNotification('success', 'Demo data created! Use admin@demo.com / admin123 to login');
-      setEmail('admin@demo.com');
-      setPassword('admin123');
-    } catch (error) {
-      if (error.response?.data?.detail?.includes('already exists')) {
-        addNotification('info', 'Demo data already exists. Use admin@demo.com / admin123');
-        setEmail('admin@demo.com');
-        setPassword('admin123');
-      } else {
-        addNotification('error', 'Failed to seed demo data');
-      }
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Image/Branding */}
@@ -133,29 +110,6 @@ const LoginPage = () => {
                 Sign In
               </Button>
             </form>
-
-            <div className="mt-6 pt-6 border-t">
-              <p className="text-sm text-muted-foreground text-center mb-4">
-                First time? Create demo data to explore the system
-              </p>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleSeedData}
-                disabled={seeding}
-                data-testid="seed-demo-btn"
-              >
-                {seeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Initialize Demo Data
-              </Button>
-
-              <div className="mt-4 text-xs text-muted-foreground space-y-1">
-                <p><strong>Demo Credentials:</strong></p>
-                <p>Admin: admin@demo.com / admin123</p>
-                <p>Manager: manager@demo.com / manager123</p>
-                <p>Technician: tech@demo.com / tech123</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
