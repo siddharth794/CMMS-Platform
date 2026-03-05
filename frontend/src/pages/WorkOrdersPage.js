@@ -128,13 +128,13 @@ const WorkOrdersPage = () => {
   };
 
   const handleDelete = async (woId) => {
-    if (!confirm('Cancel this work order?')) return;
+    if (!window.confirm('Cancel this work order?')) return;
     try {
       await workOrdersApi.delete(woId);
-      toast.success('Work order cancelled');
+      addNotification('success', 'Work order cancelled');
       fetchData();
     } catch (error) {
-      toast.error('Failed to cancel work order');
+      addNotification('error', 'Failed to cancel work order');
     }
   };
 
