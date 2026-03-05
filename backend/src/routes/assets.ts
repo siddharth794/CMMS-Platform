@@ -25,12 +25,17 @@ router.get('/', async (req: any, res, next) => {
         if (asset_type) where.asset_type = asset_type;
         if (status) where.status = status;
 
-        const assets = await Asset.findAll({
+        const assets = await Asset.findAndCountAll({
             where,
             offset: Number(skip),
             limit: Number(limit)
         });
-        res.json(assets);
+        res.json({
+            data: assets.rows,
+            total: assets.count,
+            skip: Number(skip),
+            limit: Number(limit)
+        });
     } catch (err) {
         next(err);
     }

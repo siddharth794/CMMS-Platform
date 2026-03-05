@@ -125,6 +125,40 @@ InventoryItem.init({
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
+class WOComment extends Model { public id!: string; }
+WOComment.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    work_order_id: { type: DataTypes.UUID, allowNull: false },
+    user_id: { type: DataTypes.UUID, allowNull: false },
+    message: { type: DataTypes.TEXT, allowNull: false },
+}, { sequelize, tableName: 'wo_comments', timestamps: true, createdAt: 'created_at', updatedAt: false });
+
+class Notification extends Model { public id!: string; }
+Notification.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    user_id: { type: DataTypes.UUID, allowNull: false },
+    title: { type: DataTypes.STRING, allowNull: false },
+    message: { type: DataTypes.TEXT, allowNull: false },
+    is_read: { type: DataTypes.BOOLEAN, defaultValue: false },
+    link: { type: DataTypes.STRING },
+}, { sequelize, tableName: 'notifications', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+
+class WorkOrderInventoryItem extends Model { public id!: string; public quantity_used!: number; }
+WorkOrderInventoryItem.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    work_order_id: { type: DataTypes.UUID, allowNull: false },
+    inventory_item_id: { type: DataTypes.UUID, allowNull: false },
+    quantity_used: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+}, { sequelize, tableName: 'work_order_inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: false });
+
+class WOAttachment extends Model { public id!: string; public file_path!: string; }
+WOAttachment.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    work_order_id: { type: DataTypes.UUID, allowNull: false },
+    file_path: { type: DataTypes.STRING, allowNull: false },
+}, { sequelize, tableName: 'wo_attachments', timestamps: true, createdAt: 'created_at', updatedAt: false });
+
+
 // Associations
 Organization.hasMany(User, { foreignKey: 'org_id' });
 User.belongsTo(Organization, { foreignKey: 'org_id' });
@@ -159,6 +193,27 @@ WorkOrder.belongsTo(User, { as: 'assignee', foreignKey: 'assignee_id' });
 User.hasMany(WorkOrder, { as: 'created_work_orders', foreignKey: 'requester_id' });
 WorkOrder.belongsTo(User, { as: 'requester', foreignKey: 'requester_id' });
 
+WorkOrder.hasMany(WOComment, { as: 'comments', foreignKey: 'work_order_id' });
+WOComment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+User.hasMany(WOComment, { foreignKey: 'user_id' });
+WOComment.belongsTo(User, { foreignKey: 'user_id' });
+
+User.hasMany(Notification, { foreignKey: 'user_id' });
+Notification.belongsTo(User, { foreignKey: 'user_id' });
+
+WorkOrder.hasMany(WorkOrderInventoryItem, { as: 'used_parts', foreignKey: 'work_order_id' });
+WorkOrderInventoryItem.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+InventoryItem.hasMany(WorkOrderInventoryItem, { foreignKey: 'inventory_item_id' });
+WorkOrderInventoryItem.belongsTo(InventoryItem, { as: 'item', foreignKey: 'inventory_item_id' });
+
+WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id' });
+WOAttachment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+
+
+
 export {
     Organization,
     Role,
@@ -168,5 +223,9 @@ export {
     PMSchedule,
     AuditLog,
     InventoryItem,
+    WOComment,
+    Notification,
+    WorkOrderInventoryItem,
+    WOAttachment,
     sequelize
 };

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Plus, Search, Edit, Trash2, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
+import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
 const UNITS = ['pcs', 'liters', 'kg', 'meters', 'kits', 'boxes', 'rolls', 'sets'];
@@ -28,7 +29,10 @@ const InventoryPage = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
-  const { isManager } = useAuth();
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const { isManager, hasRole } = useAuth();
+  const isRestricted = hasRole(['technician', 'requestor']);
   const { addNotification } = useNotification();
 
   const [formData, setFormData] = useState({
@@ -45,16 +49,17 @@ const InventoryPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [search, categoryFilter, lowStockOnly]);
+  }, [search, categoryFilter, lowStockOnly, page]);
 
   const fetchData = async () => {
     try {
       const [itemsRes, statsRes, categoriesRes] = await Promise.all([
-        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly }),
+        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly, skip: (page - 1) * 10, limit: 10 }),
         inventoryApi.getStats(),
         inventoryApi.getCategories(),
       ]);
-      setItems(itemsRes.data);
+      setItems(itemsRes.data.data);
+      setTotal(itemsRes.data.total);
       setStats(statsRes.data);
       setCategories([...new Set([...DEFAULT_CATEGORIES, ...(categoriesRes.data.categories || [])])]);
     } catch (error) {
@@ -270,6 +275,81 @@ const InventoryPage = () => {
     </form>
   );
 
+  // Simplified read-only view for technicians/requestors
+  if (isRestricted) {
+    return (
+      <div className="space-y-6" data-testid="inventory-page">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground">Browse spare parts and supplies</p>
+        </div>
+
+        {/* Search */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 rounded-lg border px-3 py-2 max-w-md">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search inventory..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="border-0 p-0 focus-visible:ring-0"
+                data-testid="inv-search-input"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Simplified Table */}
+        <Card>
+          <CardContent className="pt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No inventory items found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((item) => (
+                    <TableRow key={item.id} data-testid={`inv-row-${item.id}`}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-sm">{item.sku || '-'}</TableCell>
+                      <TableCell>{item.category}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.storage_location}</TableCell>
+                      <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <Pagination
+              currentPage={page}
+              totalItems={total}
+              onPageChange={setPage}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" data-testid="inventory-page">
       {/* Header */}
@@ -347,13 +427,13 @@ const InventoryPage = () => {
               <Input
                 placeholder="Search inventory..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="border-0 p-0 focus-visible:ring-0"
                 data-testid="inv-search-input"
               />
             </div>
             <div className="w-[180px]">
-              <Select value={categoryFilter || "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}>
+              <Select value={categoryFilter || "all"} onValueChange={(v) => { setCategoryFilter(v === "all" ? "" : v); setPage(1); }}>
                 <SelectTrigger data-testid="filter-category">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
@@ -369,7 +449,7 @@ const InventoryPage = () => {
               <Switch
                 id="low-stock"
                 checked={lowStockOnly}
-                onCheckedChange={setLowStockOnly}
+                onCheckedChange={(v) => { setLowStockOnly(v); setPage(1); }}
                 data-testid="low-stock-toggle"
               />
               <Label htmlFor="low-stock" className="flex items-center gap-1 cursor-pointer">
@@ -451,6 +531,11 @@ const InventoryPage = () => {
               )}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

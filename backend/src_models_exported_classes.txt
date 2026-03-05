@@ -1,0 +1,12 @@
+Organization
+Role
+User
+Asset
+WorkOrder
+PMSchedule
+AuditLog
+InventoryItem
+WOComment
+Notification
+WorkOrderInventoryItem
+;

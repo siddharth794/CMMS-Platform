@@ -22,8 +22,9 @@ const SettingsPage = () => {
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const { user: currentUser, isAdmin } = useAuth();
+  const { user: currentUser, isAdmin, hasRole } = useAuth();
   const { addNotification } = useNotification();
+  const isRestricted = hasRole(['technician', 'requestor']);
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -127,6 +128,48 @@ const SettingsPage = () => {
     });
     setUserDialogOpen(true);
   };
+
+  // Profile-only view for technicians/requestors
+  if (isRestricted) {
+    return (
+      <div className="space-y-8" data-testid="settings-page">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+          <p className="text-muted-foreground">Your account information</p>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Details</CardTitle>
+            <CardDescription>Your personal account information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">Name</Label>
+                <p className="font-medium">{currentUser?.first_name} {currentUser?.last_name}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Email</Label>
+                <p className="font-medium">{currentUser?.email}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Username</Label>
+                <p className="font-medium">{currentUser?.username}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Role</Label>
+                <p className="font-medium">{currentUser?.role?.name?.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Phone</Label>
+                <p className="font-medium">{currentUser?.phone || '-'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8" data-testid="settings-page">
@@ -233,11 +276,19 @@ const SettingsPage = () => {
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={role.id} value={role.id.toString()}>
-                              {role.name.replace('_', ' ')}
-                            </SelectItem>
-                          ))}
+                          {roles
+                            .filter(role => {
+                              const roleName = role.name.toLowerCase();
+                              if (currentUser?.role?.name?.toLowerCase() === 'org_admin') {
+                                return !['super_admin', 'org_admin'].includes(roleName);
+                              }
+                              return true;
+                            })
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.id.toString()}>
+                                {role.name.replace('_', ' ')}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>

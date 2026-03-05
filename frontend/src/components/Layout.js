@@ -14,19 +14,25 @@ import {
   LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
-  { name: 'Assets', href: '/assets', icon: Box },
-  { name: 'Inventory', href: '/inventory', icon: Package },
-  { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
-
 const Sidebar = ({ className = '' }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isTechnician, hasRole } = useAuth();
+  const isTech = isTechnician();
+  const isRestricted = hasRole(['technician', 'requestor']);
+
+  const navigation = [
+    { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true },
+    { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
+    { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
+    { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
+    { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3, hideFromRequester: true },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ].filter(item => {
+    if (item.managerOnly && isRestricted) return false;
+    if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
+    return true;
+  });
 
   return (
     <div className={`flex h-full flex-col ${className}`}>
@@ -35,7 +41,7 @@ const Sidebar = ({ className = '' }) => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight">FMS</span>
+          <span className="text-xl font-bold tracking-tight">Spartans FMS</span>
         </Link>
       </div>
 

@@ -70,6 +70,15 @@ export const workOrdersApi = {
   updateStatus: (id, data) => api.patch(`/work-orders/${id}/status`, data),
   assign: (id, data) => api.patch(`/work-orders/${id}/assign`, data),
   delete: (id) => api.delete(`/work-orders/${id}`),
+  export: () => api.get('/work-orders/export', { responseType: 'blob' }),
+  getComments: (id) => api.get(`/work-orders/${id}/comments`),
+  addComment: (id, data) => api.post(`/work-orders/${id}/comments`, data),
+  getUsedParts: (id) => api.get(`/work-orders/${id}/inventory`),
+  addUsedPart: (id, data) => api.post(`/work-orders/${id}/inventory`, data),
+  removeUsedPart: (id, usageId) => api.delete(`/work-orders/${id}/inventory/${usageId}`),
+  uploadAttachments: (id, formData) => api.post(`/work-orders/${id}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 // PM Schedules
@@ -84,6 +93,7 @@ export const pmSchedulesApi = {
 // Analytics
 export const analyticsApi = {
   getDashboard: (params) => api.get('/analytics/dashboard', { params }),
+  getTechnicianDashboard: (params) => api.get('/analytics/technician-dashboard', { params }),
 };
 
 // Audit Logs

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { workOrdersApi, assetsApi, usersApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -11,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2 } from 'lucide-react';
+import { Pagination } from '../components/ui/pagination';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
@@ -55,7 +57,10 @@ const WorkOrdersPage = () => {
   const [selectedWO, setSelectedWO] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ status: '', priority: '' });
-  const { isManager } = useAuth();
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const { isManager, isRequester } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
 
@@ -69,20 +74,21 @@ const WorkOrdersPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filters]);
+  }, [filters, search, page]);
 
   const fetchData = async () => {
     try {
       const [woRes, assetsRes, usersRes] = await Promise.all([
-        workOrdersApi.list({ ...filters }),
-        assetsApi.list(),
-        usersApi.list(),
+        workOrdersApi.list({ ...filters, search, skip: (page - 1) * 10, limit: 10 }),
+        assetsApi.list({ limit: 1000 }),
+        usersApi.list({ limit: 1000 }),
       ]);
-      setWorkOrders(woRes.data);
-      setAssets(assetsRes.data);
-      setUsers(usersRes.data);
+      setWorkOrders(woRes.data.data);
+      setTotal(woRes.data.total);
+      setAssets(assetsRes.data.data || assetsRes.data);
+      setUsers(usersRes.data.data || usersRes.data);
     } catch (error) {
-      addNotification('error', 'Failed to fetch data');
+      addNotification('error', error.response?.data?.detail || 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -113,7 +119,7 @@ const WorkOrdersPage = () => {
       setSelectedWO(null);
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to assign work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to assign work order');
     }
   };
 
@@ -123,19 +129,46 @@ const WorkOrdersPage = () => {
       addNotification('success', 'Status updated');
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to update status');
+      addNotification('error', error.response?.data?.detail || 'Failed to update status');
     }
   };
 
   const handleDelete = async (woId) => {
-    if (!confirm('Cancel this work order?')) return;
+    if (!window.confirm('Cancel this work order?')) return;
     try {
       await workOrdersApi.delete(woId);
-      toast.success('Work order cancelled');
+      addNotification('success', 'Work order cancelled');
       fetchData();
     } catch (error) {
-      toast.error('Failed to cancel work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to cancel work order');
     }
+  };
+
+  const handleExport = () => {
+    if (workOrders.length === 0) {
+      addNotification('info', 'No work orders to export');
+      return;
+    }
+
+    const exportData = workOrders.map(wo => ({
+      'WO Number': wo.id,
+      'Title': wo.title,
+      'Description': wo.description || '',
+      'Status': wo.status?.replace('_', ' ') || '',
+      'Priority': wo.priority || '',
+      'Asset Name': wo.asset?.name || '',
+      'Asset Tag': wo.asset?.asset_tag || '',
+      'Location': wo.location || wo.asset?.location || '',
+      'Assignee': wo.assignee ? `${wo.assignee.first_name || ''} ${wo.assignee.last_name || ''}`.trim() : 'Unassigned',
+      'Created By': wo.creator ? `${wo.creator.first_name || ''} ${wo.creator.last_name || ''}`.trim() : '',
+      'Created At': wo.created_at ? format(new Date(wo.created_at), 'MMM d, yyyy HH:mm') : '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Work Orders');
+    XLSX.writeFile(wb, `Work_Orders_Export_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+    addNotification('success', 'Work orders exported successfully');
   };
 
   return (
@@ -146,7 +179,11 @@ const WorkOrdersPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
           <p className="text-muted-foreground">Manage maintenance requests and tasks</p>
         </div>
-        {isManager() && (
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} data-testid="export-wo-btn">
+            <Download className="mr-2 h-4 w-4" />
+            Export to Excel
+          </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button data-testid="create-wo-btn">
@@ -232,31 +269,39 @@ const WorkOrdersPage = () => {
               </form>
             </DialogContent>
           </Dialog>
-        )}
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters & Search */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
+            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search work orders..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                data-testid="wo-search-input"
+              />
+            </div>
+            <div className="w-[180px]">
+              <Select value={filters.status} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-status">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <Select value={filters.priority || "all"} onValueChange={(v) => setFilters({ ...filters, priority: v === "all" ? "" : v })}>
+            <div className="w-[180px]">
+              <Select value={filters.priority} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-priority">
                   <SelectValue placeholder="Filter by priority" />
                 </SelectTrigger>
@@ -286,19 +331,20 @@ const WorkOrdersPage = () => {
                 <TableHead>Asset</TableHead>
                 <TableHead>Assignee</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                {false && <TableHead className="w-[50px]"></TableHead>}
+                {!isRequester() && <TableHead className="w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : workOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center text-muted-foreground py-8">
                     No work orders found
                   </TableCell>
                 </TableRow>
@@ -306,9 +352,13 @@ const WorkOrdersPage = () => {
                 workOrders.map((wo) => (
                   <TableRow key={wo.id} data-testid={`wo-row-${wo.id}`}>
                     <TableCell>
-                      <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
-                        {wo.wo_number}
-                      </Link>
+                      {isRequester() ? (
+                        <span className="font-medium">{wo.wo_number}</span>
+                      ) : (
+                        <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
+                          {wo.wo_number}
+                        </Link>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                     <TableCell><StatusBadge status={wo.status} /></TableCell>
@@ -320,49 +370,56 @@ const WorkOrdersPage = () => {
                     <TableCell className="text-muted-foreground">
                       {format(new Date(wo.created_at), 'MMM d, yyyy')}
                     </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
-                            <Eye className="mr-2 h-4 w-4" />View
-                          </DropdownMenuItem>
-                          {isManager() && (
-                            <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
-                              <UserPlus className="mr-2 h-4 w-4" />Assign
+                    {!isRequester() && (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />View
                             </DropdownMenuItem>
-                          )}
-                          {wo.status !== 'completed' && wo.status !== 'cancelled' && (
-                            <>
-                              {wo.status !== 'in_progress' && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
-                                  Start Work
-                                </DropdownMenuItem>
-                              )}
-                              {wo.status === 'in_progress' && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
-                                  Complete
-                                </DropdownMenuItem>
-                              )}
-                            </>
-                          )}
-                          {isManager() && wo.status !== 'cancelled' && (
-                            <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />Cancel
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                            {isManager() && (
+                              <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
+                                <UserPlus className="mr-2 h-4 w-4" />Assign
+                              </DropdownMenuItem>
+                            )}
+                            {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                              <>
+                                {wo.status !== 'in_progress' && (
+                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
+                                    Start Work
+                                  </DropdownMenuItem>
+                                )}
+                                {wo.status === 'in_progress' && (
+                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
+                                    Complete
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
+                            {isManager() && wo.status !== 'cancelled' && (
+                              <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />Cancel
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 
