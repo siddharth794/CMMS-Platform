@@ -276,11 +276,19 @@ const SettingsPage = () => {
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={role.id} value={role.id.toString()}>
-                              {role.name.replace('_', ' ')}
-                            </SelectItem>
-                          ))}
+                          {roles
+                            .filter(role => {
+                              const roleName = role.name.toLowerCase();
+                              if (currentUser?.role?.name?.toLowerCase() === 'org_admin') {
+                                return !['super_admin', 'org_admin'].includes(roleName);
+                              }
+                              return true;
+                            })
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.id.toString()}>
+                                {role.name.replace('_', ' ')}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>

@@ -37,6 +37,12 @@ router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_ad
             return;
         }
 
+        const requestorRole = req.user.Role?.name?.toLowerCase() || req.user.role?.name?.toLowerCase();
+        if (requestorRole === 'org_admin' && ['super_admin', 'org_admin'].includes(role.name.toLowerCase())) {
+            res.status(403).json({ detail: 'Org Admins cannot assign Super Admin or Org Admin roles' });
+            return;
+        }
+
         const salt = bcrypt.genSaltSync(10);
         const password_hash = bcrypt.hashSync(password, salt);
 
@@ -98,6 +104,18 @@ router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 
         }
 
         const updateData = req.body;
+
+        if (updateData.role_id) {
+            const role = await Role.findOne({ where: { id: updateData.role_id, org_id: req.user.org_id } });
+            if (role) {
+                const requestorRole = req.user.Role?.name?.toLowerCase() || req.user.role?.name?.toLowerCase();
+                if (requestorRole === 'org_admin' && ['super_admin', 'org_admin'].includes(role.name.toLowerCase())) {
+                    res.status(403).json({ detail: 'Org Admins cannot assign Super Admin or Org Admin roles' });
+                    return;
+                }
+            }
+        }
+
         if (updateData.password) {
             const salt = bcrypt.genSaltSync(10);
             updateData.password_hash = bcrypt.hashSync(updateData.password, salt);
