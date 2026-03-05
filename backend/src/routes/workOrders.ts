@@ -3,6 +3,7 @@ import { authenticate, requireRole } from '../middleware/auth';
 import { Op } from 'sequelize';
 import multer from 'multer';
 import path from 'path';
+import { Router } from 'express';
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {

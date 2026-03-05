@@ -4,6 +4,8 @@ import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { SocketProvider } from './context/SocketContext';
+import { SocketEvents } from './context/SocketEvents';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -110,19 +112,22 @@ function App() {
       <NotificationProvider>
         <AuthProvider>
           <BrowserRouter>
-            <AppRoutes />
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-              toastOptions={{
-                style: {
-                  background: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  color: 'hsl(var(--foreground))',
-                },
-              }}
-            />
+            <SocketProvider>
+              <SocketEvents />
+              <AppRoutes />
+              <Toaster
+                position="top-right"
+                richColors
+                closeButton
+                toastOptions={{
+                  style: {
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    color: 'hsl(var(--foreground))',
+                  },
+                }}
+              />
+            </SocketProvider>
           </BrowserRouter>
         </AuthProvider>
       </NotificationProvider>

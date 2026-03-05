@@ -226,5 +226,6 @@ export {
     WOComment,
     Notification,
     WorkOrderInventoryItem,
+    WOAttachment,
     sequelize
 };
