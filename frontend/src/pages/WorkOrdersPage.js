@@ -82,7 +82,7 @@ const WorkOrdersPage = () => {
       setAssets(assetsRes.data);
       setUsers(usersRes.data);
     } catch (error) {
-      addNotification('error', 'Failed to fetch data');
+      addNotification('error', error.response?.data?.detail || 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,7 @@ const WorkOrdersPage = () => {
       setSelectedWO(null);
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to assign work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to assign work order');
     }
   };
 
@@ -123,7 +123,7 @@ const WorkOrdersPage = () => {
       addNotification('success', 'Status updated');
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to update status');
+      addNotification('error', error.response?.data?.detail || 'Failed to update status');
     }
   };
 
@@ -134,7 +134,7 @@ const WorkOrdersPage = () => {
       addNotification('success', 'Work order cancelled');
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to cancel work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to cancel work order');
     }
   };
 

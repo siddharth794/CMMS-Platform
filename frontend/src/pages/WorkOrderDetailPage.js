@@ -105,7 +105,7 @@ const WorkOrderDetailPage = () => {
       setInventoryCatalog(invRes.data);
       await fetchComments();
     } catch (error) {
-      addNotification('error', 'Failed to load work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to load work order');
       navigate('/work-orders');
     } finally {
       setLoading(false);
@@ -139,7 +139,7 @@ const WorkOrderDetailPage = () => {
       setStatusNotes('');
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to update status');
+      addNotification('error', error.response?.data?.detail || 'Failed to update status');
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +152,7 @@ const WorkOrderDetailPage = () => {
       setAssignDialogOpen(false);
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to assign');
+      addNotification('error', error.response?.data?.detail || 'Failed to assign');
     }
   };
 
@@ -167,7 +167,7 @@ const WorkOrderDetailPage = () => {
       // await fetchComments(); 
       addNotification('success', 'Comment posted');
     } catch (error) {
-      addNotification('error', 'Failed to post comment');
+      addNotification('error', error.response?.data?.detail || 'Failed to post comment');
     } finally {
       setPostingComment(false);
     }
@@ -198,7 +198,7 @@ const WorkOrderDetailPage = () => {
       addNotification('success', 'Part removed from work order');
       fetchData();
     } catch (error) {
-      addNotification('error', 'Failed to remove part');
+      addNotification('error', error.response?.data?.detail || 'Failed to remove part');
     }
   };
 
