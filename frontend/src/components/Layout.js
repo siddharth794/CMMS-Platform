@@ -23,12 +23,16 @@ const Sidebar = ({ className = '' }) => {
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
-    { name: 'Assets', href: '/assets', icon: Box },
-    { name: 'Inventory', href: '/inventory', icon: Package },
+    { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
+    { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/settings', icon: Settings },
-  ].filter(item => !item.managerOnly || !isRestricted);
+  ].filter(item => {
+    if (item.managerOnly && isRestricted) return false;
+    if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
+    return true;
+  });
 
   return (
     <div className={`flex h-full flex-col ${className}`}>

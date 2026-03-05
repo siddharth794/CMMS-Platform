@@ -67,7 +67,15 @@ const PublicRoute = ({ children }) => {
 
 const ManagerRoute = ({ children }) => {
   const { hasRole } = useAuth();
-  if (hasRole(['technician', 'requestor'])) {
+  if (hasRole(['technician', 'requestor', 'requester'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+const HideFromRequesterRoute = ({ children }) => {
+  const { hasRole } = useAuth();
+  if (hasRole(['requestor', 'requester'])) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -95,8 +103,8 @@ const AppRoutes = () => {
         <Route index element={<RoleBasedDashboard />} />
         <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
-        <Route path="assets" element={<AssetsPage />} />
-        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
+        <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
         <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
         <Route path="analytics" element={<RoleBasedAnalytics />} />
         <Route path="settings" element={<SettingsPage />} />
