@@ -60,6 +60,11 @@ const WorkOrderDetailPage = () => {
   const [statusNotes, setStatusNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Comments state
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+
   // Inventory usage state
   const [selectedPartId, setSelectedPartId] = useState('');
   const [selectedPartQuantity, setSelectedPartQuantity] = useState(1);
