@@ -55,6 +55,7 @@ const WorkOrdersPage = () => {
   const [selectedWO, setSelectedWO] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ status: '', priority: '' });
+  const [search, setSearch] = useState('');
   const { isManager } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
@@ -69,12 +70,12 @@ const WorkOrdersPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filters]);
+  }, [filters, search]);
 
   const fetchData = async () => {
     try {
       const [woRes, assetsRes, usersRes] = await Promise.all([
-        workOrdersApi.list({ ...filters }),
+        workOrdersApi.list({ ...filters, search }),
         assetsApi.list(),
         usersApi.list(),
       ]);
@@ -235,10 +236,19 @@ const WorkOrdersPage = () => {
         )}
       </div>
 
-      {/* Filters */}
+      {/* Filters & Search */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search work orders..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                data-testid="wo-search-input"
+              />
+            </div>
             <div className="flex-1 min-w-[200px]">
               <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
                 <SelectTrigger data-testid="filter-status">

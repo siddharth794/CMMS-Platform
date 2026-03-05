@@ -32,7 +32,7 @@ function generateWoNumber() {
 
 router.get('/', async (req: any, res, next) => {
     try {
-        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id } = req.query;
+        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search } = req.query;
         let where: any = { org_id: req.user.org_id };
 
         const roleName = req.user.Role?.name?.toLowerCase();
@@ -43,6 +43,14 @@ router.get('/', async (req: any, res, next) => {
         if (priority) where.priority = priority;
         if (assignee_id) where.assignee_id = assignee_id;
         if (asset_id) where.asset_id = asset_id;
+
+        if (search) {
+            where[Op.or] = [
+                { wo_number: { [Op.like]: `%${search}%` } },
+                { title: { [Op.like]: `%${search}%` } },
+                { description: { [Op.like]: `%${search}%` } }
+            ];
+        }
 
         const wos = await WorkOrder.findAll({
             where,
