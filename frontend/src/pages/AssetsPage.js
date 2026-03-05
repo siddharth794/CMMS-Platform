@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import AssetsBulkUploadDialog from '../components/AssetsBulkUploadDialog';
+import { Pagination } from '../components/ui/pagination';
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
@@ -40,14 +41,18 @@ const AssetsPage = () => {
     status: 'active',
   });
 
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
   useEffect(() => {
     fetchAssets();
-  }, [search]);
+  }, [search, page]);
 
   const fetchAssets = async () => {
     try {
-      const response = await assetsApi.list({ search });
-      setAssets(response.data);
+      const response = await assetsApi.list({ search, skip: (page - 1) * 10, limit: 10 });
+      setAssets(response.data.data);
+      setTotal(response.data.total);
     } catch (error) {
       addNotification('error', 'Failed to fetch assets');
     } finally {
@@ -343,7 +348,7 @@ const AssetsPage = () => {
             <Input
               placeholder="Search assets by name, tag, or location..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               data-testid="asset-search-input"
             />
           </div>
@@ -431,6 +436,11 @@ const AssetsPage = () => {
               )}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

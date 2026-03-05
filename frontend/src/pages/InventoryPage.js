@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Plus, Search, Edit, Trash2, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
+import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
 const UNITS = ['pcs', 'liters', 'kg', 'meters', 'kits', 'boxes', 'rolls', 'sets'];
@@ -28,6 +29,8 @@ const InventoryPage = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const { isManager, hasRole } = useAuth();
   const isRestricted = hasRole(['technician', 'requestor']);
   const { addNotification } = useNotification();
@@ -46,16 +49,17 @@ const InventoryPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [search, categoryFilter, lowStockOnly]);
+  }, [search, categoryFilter, lowStockOnly, page]);
 
   const fetchData = async () => {
     try {
       const [itemsRes, statsRes, categoriesRes] = await Promise.all([
-        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly }),
+        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly, skip: (page - 1) * 10, limit: 10 }),
         inventoryApi.getStats(),
         inventoryApi.getCategories(),
       ]);
-      setItems(itemsRes.data);
+      setItems(itemsRes.data.data);
+      setTotal(itemsRes.data.total);
       setStats(statsRes.data);
       setCategories([...new Set([...DEFAULT_CATEGORIES, ...(categoriesRes.data.categories || [])])]);
     } catch (error) {
@@ -288,7 +292,7 @@ const InventoryPage = () => {
               <Input
                 placeholder="Search inventory..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="border-0 p-0 focus-visible:ring-0"
                 data-testid="inv-search-input"
               />
@@ -335,6 +339,11 @@ const InventoryPage = () => {
                 )}
               </TableBody>
             </Table>
+            <Pagination
+              currentPage={page}
+              totalItems={total}
+              onPageChange={setPage}
+            />
           </CardContent>
         </Card>
       </div>
@@ -418,13 +427,13 @@ const InventoryPage = () => {
               <Input
                 placeholder="Search inventory..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="border-0 p-0 focus-visible:ring-0"
                 data-testid="inv-search-input"
               />
             </div>
             <div className="w-[180px]">
-              <Select value={categoryFilter || "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}>
+              <Select value={categoryFilter || "all"} onValueChange={(v) => { setCategoryFilter(v === "all" ? "" : v); setPage(1); }}>
                 <SelectTrigger data-testid="filter-category">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
@@ -440,7 +449,7 @@ const InventoryPage = () => {
               <Switch
                 id="low-stock"
                 checked={lowStockOnly}
-                onCheckedChange={setLowStockOnly}
+                onCheckedChange={(v) => { setLowStockOnly(v); setPage(1); }}
                 data-testid="low-stock-toggle"
               />
               <Label htmlFor="low-stock" className="flex items-center gap-1 cursor-pointer">
@@ -522,6 +531,11 @@ const InventoryPage = () => {
               )}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

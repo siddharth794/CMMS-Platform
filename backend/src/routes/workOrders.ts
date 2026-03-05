@@ -58,7 +58,7 @@ router.get('/', async (req: any, res, next) => {
             ];
         }
 
-        const wos = await WorkOrder.findAll({
+        const wos = await WorkOrder.findAndCountAll({
             where,
             include: [
                 { model: Asset },
@@ -69,9 +69,15 @@ router.get('/', async (req: any, res, next) => {
             ],
             order: [['created_at', 'DESC']],
             offset: Number(skip),
+            limit: Number(limit),
+            distinct: true // Ensure count is correct despite joined tables
+        });
+        res.json({
+            data: wos.rows,
+            total: wos.count,
+            skip: Number(skip),
             limit: Number(limit)
         });
-        res.json(wos);
     } catch (err) {
         next(err);
     }

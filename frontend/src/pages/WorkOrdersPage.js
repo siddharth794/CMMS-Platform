@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { Pagination } from '../components/ui/pagination';
 import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
@@ -57,6 +58,8 @@ const WorkOrdersPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ status: '', priority: '' });
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const { isManager, isRequester } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
@@ -71,18 +74,19 @@ const WorkOrdersPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filters, search]);
+  }, [filters, search, page]);
 
   const fetchData = async () => {
     try {
       const [woRes, assetsRes, usersRes] = await Promise.all([
-        workOrdersApi.list({ ...filters, search }),
-        assetsApi.list(),
-        usersApi.list(),
+        workOrdersApi.list({ ...filters, search, skip: (page - 1) * 10, limit: 10 }),
+        assetsApi.list({ limit: 1000 }),
+        usersApi.list({ limit: 1000 }),
       ]);
-      setWorkOrders(woRes.data);
-      setAssets(assetsRes.data);
-      setUsers(usersRes.data);
+      setWorkOrders(woRes.data.data);
+      setTotal(woRes.data.total);
+      setAssets(assetsRes.data.data || assetsRes.data);
+      setUsers(usersRes.data.data || usersRes.data);
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to fetch data');
     } finally {
@@ -277,28 +281,27 @@ const WorkOrdersPage = () => {
               <Input
                 placeholder="Search work orders..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 data-testid="wo-search-input"
               />
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
+            <div className="w-[180px]">
+              <Select value={filters.status} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-status">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <Select value={filters.priority || "all"} onValueChange={(v) => setFilters({ ...filters, priority: v === "all" ? "" : v })}>
+            <div className="w-[180px]">
+              <Select value={filters.priority} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-priority">
                   <SelectValue placeholder="Filter by priority" />
                 </SelectTrigger>
@@ -412,6 +415,11 @@ const WorkOrdersPage = () => {
               )}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

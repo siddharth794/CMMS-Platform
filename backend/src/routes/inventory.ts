@@ -28,12 +28,17 @@ router.get('/', async (req: any, res, next) => {
             where.quantity = { [Op.lte]: { [Op.col]: 'min_quantity' } };
         }
 
-        const items = await InventoryItem.findAll({
+        const items = await InventoryItem.findAndCountAll({
             where,
             offset: Number(skip),
             limit: Number(limit)
         });
-        res.json(items);
+        res.json({
+            data: items.rows,
+            total: items.count,
+            skip: Number(skip),
+            limit: Number(limit)
+        });
     } catch (err) {
         next(err);
     }
