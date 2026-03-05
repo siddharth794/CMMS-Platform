@@ -294,19 +294,20 @@ const WorkOrdersPage = () => {
                 <TableHead>Asset</TableHead>
                 <TableHead>Assignee</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                {false && <TableHead className="w-[50px]"></TableHead>}
+                {!isRequester() && <TableHead className="w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : workOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center text-muted-foreground py-8">
                     No work orders found
                   </TableCell>
                 </TableRow>
@@ -314,9 +315,13 @@ const WorkOrdersPage = () => {
                 workOrders.map((wo) => (
                   <TableRow key={wo.id} data-testid={`wo-row-${wo.id}`}>
                     <TableCell>
-                      <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
-                        {wo.wo_number}
-                      </Link>
+                      {isRequester() ? (
+                        <span className="font-medium">{wo.wo_number}</span>
+                      ) : (
+                        <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
+                          {wo.wo_number}
+                        </Link>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                     <TableCell><StatusBadge status={wo.status} /></TableCell>
@@ -328,46 +333,46 @@ const WorkOrdersPage = () => {
                     <TableCell className="text-muted-foreground">
                       {format(new Date(wo.created_at), 'MMM d, yyyy')}
                     </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {!isRequester() && (
+                    {!isRequester() && (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
                               <Eye className="mr-2 h-4 w-4" />View
                             </DropdownMenuItem>
-                          )}
-                          {isManager() && (
-                            <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
-                              <UserPlus className="mr-2 h-4 w-4" />Assign
-                            </DropdownMenuItem>
-                          )}
-                          {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
-                            <>
-                              {wo.status !== 'in_progress' && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
-                                  Start Work
-                                </DropdownMenuItem>
-                              )}
-                              {wo.status === 'in_progress' && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
-                                  Complete
-                                </DropdownMenuItem>
-                              )}
-                            </>
-                          )}
-                          {isManager() && wo.status !== 'cancelled' && (
-                            <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />Cancel
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                            {isManager() && (
+                              <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
+                                <UserPlus className="mr-2 h-4 w-4" />Assign
+                              </DropdownMenuItem>
+                            )}
+                            {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                              <>
+                                {wo.status !== 'in_progress' && (
+                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
+                                    Start Work
+                                  </DropdownMenuItem>
+                                )}
+                                {wo.status === 'in_progress' && (
+                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
+                                    Complete
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
+                            {isManager() && wo.status !== 'cancelled' && (
+                              <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />Cancel
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
