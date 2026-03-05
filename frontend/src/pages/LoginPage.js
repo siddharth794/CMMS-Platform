@@ -38,16 +38,16 @@ const LoginPage = () => {
     setSeeding(true);
     try {
       const response = await seedDemoData();
-      toast.success('Demo data created! Use admin@demo.com / admin123 to login');
+      addNotification('success', 'Demo data created! Use admin@demo.com / admin123 to login');
       setEmail('admin@demo.com');
       setPassword('admin123');
     } catch (error) {
       if (error.response?.data?.detail?.includes('already exists')) {
-        toast.info('Demo data already exists. Use admin@demo.com / admin123');
+        addNotification('info', 'Demo data already exists. Use admin@demo.com / admin123');
         setEmail('admin@demo.com');
         setPassword('admin123');
       } else {
-        toast.error('Failed to seed demo data');
+        addNotification('error', 'Failed to seed demo data');
       }
     } finally {
       setSeeding(false);
