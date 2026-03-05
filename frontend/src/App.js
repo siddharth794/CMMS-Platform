@@ -104,7 +104,7 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<RoleBasedDashboard />} />
-        <Route path="work-orders" element={<WorkOrdersPage />} />
+        <Route path="work-orders" element={<HideFromRequesterRoute><WorkOrdersPage /></HideFromRequesterRoute>} />
         <Route path="work-orders/:id" element={<HideFromRequesterRoute><WorkOrderDetailPage /></HideFromRequesterRoute>} />
         <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
         <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />

@@ -22,7 +22,7 @@ const Sidebar = ({ className = '' }) => {
 
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList },
+    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true },
     { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
     { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
