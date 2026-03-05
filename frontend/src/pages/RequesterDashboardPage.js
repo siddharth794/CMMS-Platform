@@ -77,8 +77,8 @@ const RequesterDashboardPage = () => {
 
     const fetchWorkOrders = async () => {
         try {
-            const response = await workOrdersApi.getAll();
-            setWorkOrders(response.data.workOrders || []);
+            const response = await workOrdersApi.list({ limit: 100 });
+            setWorkOrders(response.data.data || []);
         } catch (error) {
             console.error('Failed to fetch work orders:', error);
         } finally {
