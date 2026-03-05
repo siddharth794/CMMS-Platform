@@ -56,7 +56,7 @@ const WorkOrdersPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ status: '', priority: '' });
   const [search, setSearch] = useState('');
-  const { isManager } = useAuth();
+  const { isManager, isRequester } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
 
@@ -346,7 +346,7 @@ const WorkOrdersPage = () => {
                               <UserPlus className="mr-2 h-4 w-4" />Assign
                             </DropdownMenuItem>
                           )}
-                          {wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                          {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
                             <>
                               {wo.status !== 'in_progress' && (
                                 <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>

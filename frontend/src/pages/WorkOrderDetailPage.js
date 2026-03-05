@@ -47,7 +47,7 @@ const PriorityBadge = ({ priority }) => {
 const WorkOrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isManager } = useAuth();
+  const { isManager, isRequester } = useAuth();
   const { socket } = useSocket();
   const { addNotification } = useNotification();
   const [workOrder, setWorkOrder] = useState(null);
@@ -275,7 +275,7 @@ const WorkOrderDetailPage = () => {
               Assign
             </Button>
           )}
-          {workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
+          {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
             <Button onClick={() => { setNewStatus(workOrder.status); setStatusDialogOpen(true); }} data-testid="update-status-btn">
               <Edit className="mr-2 h-4 w-4" />
               Update Status
@@ -354,35 +354,39 @@ const WorkOrderDetailPage = () => {
               </div>
 
               {/* Add Comment Input */}
-              <Separator />
-              <div className="flex gap-4 items-end pt-2">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="comment" className="sr-only">New comment</Label>
-                  <Textarea
-                    id="comment"
-                    placeholder="Type your comment here..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={2}
-                    className="resize-none"
-                    data-testid="comment-input"
-                  />
-                </div>
-                <Button
-                  onClick={handlePostComment}
-                  disabled={!newComment.trim() || postingComment}
-                  data-testid="post-comment-btn"
-                >
-                  {postingComment ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send
-                    </>
-                  )}
-                </Button>
-              </div>
+              {!isRequester() && (
+                <>
+                  <Separator />
+                  <div className="flex gap-4 items-end pt-2">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="comment" className="sr-only">New comment</Label>
+                      <Textarea
+                        id="comment"
+                        placeholder="Type your comment here..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        rows={2}
+                        className="resize-none"
+                        data-testid="comment-input"
+                      />
+                    </div>
+                    <Button
+                      onClick={handlePostComment}
+                      disabled={!newComment.trim() || postingComment}
+                      data-testid="post-comment-btn"
+                    >
+                      {postingComment ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -408,7 +412,7 @@ const WorkOrderDetailPage = () => {
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="bg-muted px-2 py-1 rounded-md">Qty: {usage.quantity_used}</span>
-                          {(workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                          {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -425,7 +429,7 @@ const WorkOrderDetailPage = () => {
                 )}
               </div>
 
-              {(workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+              {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
                 <>
                   <Separator />
                   <div className="flex gap-4 items-end pt-2">
@@ -488,7 +492,7 @@ const WorkOrderDetailPage = () => {
               )}
 
               {/* Upload New Attachments */}
-              {(workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+              {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
                 <div className="space-y-4">
                   {workOrder.attachments?.length === 0 && (
                     <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200 flex items-start gap-2">
