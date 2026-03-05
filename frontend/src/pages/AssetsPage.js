@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import AssetsBulkUploadDialog from '../components/AssetsBulkUploadDialog';
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
@@ -313,21 +314,24 @@ const AssetsPage = () => {
           <p className="text-muted-foreground">Manage your facility equipment and infrastructure</p>
         </div>
         {isManager() && (
-          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button data-testid="create-asset-btn">
-                <Plus className="mr-2 h-4 w-4" />
-                New Asset
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add New Asset</DialogTitle>
-                <DialogDescription>Enter the asset details</DialogDescription>
-              </DialogHeader>
-              {renderAssetForm({ onSubmit: handleCreate })}
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <AssetsBulkUploadDialog onUploadSuccess={fetchAssets} />
+            <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button data-testid="create-asset-btn">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Asset
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add New Asset</DialogTitle>
+                  <DialogDescription>Enter the asset details</DialogDescription>
+                </DialogHeader>
+                {renderAssetForm({ onSubmit: handleCreate })}
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 
