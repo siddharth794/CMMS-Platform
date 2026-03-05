@@ -336,9 +336,11 @@ const WorkOrdersPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
-                            <Eye className="mr-2 h-4 w-4" />View
-                          </DropdownMenuItem>
+                          {!isRequester() && (
+                            <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />View
+                            </DropdownMenuItem>
+                          )}
                           {isManager() && (
                             <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
                               <UserPlus className="mr-2 h-4 w-4" />Assign
