@@ -3,11 +3,17 @@ import { authenticate, requireRole } from '../middleware/auth';
 import { Op } from 'sequelize';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { Router } from 'express';
+
+const uploadDir = path.join(__dirname, '../../uploads/work-orders');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../../../../uploads/work-orders'));
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
