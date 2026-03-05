@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { workOrdersApi, assetsApi, usersApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
@@ -139,6 +140,33 @@ const WorkOrdersPage = () => {
     }
   };
 
+  const handleExport = () => {
+    if (workOrders.length === 0) {
+      addNotification('info', 'No work orders to export');
+      return;
+    }
+
+    const exportData = workOrders.map(wo => ({
+      'WO Number': wo.id,
+      'Title': wo.title,
+      'Description': wo.description || '',
+      'Status': wo.status?.replace('_', ' ') || '',
+      'Priority': wo.priority || '',
+      'Asset Name': wo.asset?.name || '',
+      'Asset Tag': wo.asset?.asset_tag || '',
+      'Location': wo.location || wo.asset?.location || '',
+      'Assignee': wo.assignee ? `${wo.assignee.first_name || ''} ${wo.assignee.last_name || ''}`.trim() : 'Unassigned',
+      'Created By': wo.creator ? `${wo.creator.first_name || ''} ${wo.creator.last_name || ''}`.trim() : '',
+      'Created At': wo.created_at ? format(new Date(wo.created_at), 'MMM d, yyyy HH:mm') : '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Work Orders');
+    XLSX.writeFile(wb, `Work_Orders_Export_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+    addNotification('success', 'Work orders exported successfully');
+  };
+
   return (
     <div className="space-y-6" data-testid="work-orders-page">
       {/* Header */}
@@ -147,91 +175,97 @@ const WorkOrdersPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
           <p className="text-muted-foreground">Manage maintenance requests and tasks</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="create-wo-btn">
-              <Plus className="mr-2 h-4 w-4" />
-              New Work Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Create Work Order</DialogTitle>
-              <DialogDescription>Fill in the details for the new work order</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Brief description of the issue"
-                  required
-                  data-testid="wo-title-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Detailed description..."
-                  rows={3}
-                  data-testid="wo-description-input"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} data-testid="export-wo-btn">
+            <Download className="mr-2 h-4 w-4" />
+            Export to Excel
+          </Button>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="create-wo-btn">
+                <Plus className="mr-2 h-4 w-4" />
+                New Work Order
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create Work Order</DialogTitle>
+                <DialogDescription>Fill in the details for the new work order</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Asset</Label>
-                  <Select value={formData.asset_id || "none"} onValueChange={(v) => setFormData({ ...formData, asset_id: v === "none" ? "" : v })}>
-                    <SelectTrigger data-testid="wo-asset-select">
-                      <SelectValue placeholder="Select asset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {assets.map((asset) => (
-                        <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Brief description of the issue"
+                    required
+                    data-testid="wo-title-input"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
-                    <SelectTrigger data-testid="wo-priority-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Detailed description..."
+                    rows={3}
+                    data-testid="wo-description-input"
+                  />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g., Room 101, Floor 2"
-                  data-testid="wo-location-input"
-                />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={submitting} data-testid="wo-submit-btn">
-                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Asset</Label>
+                    <Select value={formData.asset_id || "none"} onValueChange={(v) => setFormData({ ...formData, asset_id: v === "none" ? "" : v })}>
+                      <SelectTrigger data-testid="wo-asset-select">
+                        <SelectValue placeholder="Select asset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {assets.map((asset) => (
+                          <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Priority</Label>
+                    <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
+                      <SelectTrigger data-testid="wo-priority-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g., Room 101, Floor 2"
+                    data-testid="wo-location-input"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={submitting} data-testid="wo-submit-btn">
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters & Search */}
