@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
+import RequesterDashboardPage from './pages/RequesterDashboardPage';
 import WorkOrdersPage from './pages/WorkOrdersPage';
 import WorkOrderDetailPage from './pages/WorkOrderDetailPage';
 import AssetsPage from './pages/AssetsPage';
@@ -20,8 +21,10 @@ import TechnicianAnalyticsPage from './pages/TechnicianAnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 
 const RoleBasedDashboard = () => {
-  const { isTechnician } = useAuth();
-  return isTechnician() ? <TechnicianDashboardPage /> : <DashboardPage />;
+  const { isTechnician, isRequester } = useAuth();
+  if (isTechnician()) return <TechnicianDashboardPage />;
+  if (isRequester()) return <RequesterDashboardPage />;
+  return <DashboardPage />;
 };
 
 const RoleBasedAnalytics = () => {

@@ -37,7 +37,7 @@ router.get('/', async (req: any, res, next) => {
 
         const roleName = req.user.Role?.name?.toLowerCase();
         if (roleName === "technician") where.assignee_id = req.user.id;
-        else if (roleName === "requestor") where.requester_id = req.user.id;
+        else if (['requestor', 'requester'].includes(roleName)) where.requester_id = req.user.id;
 
         if (status) where.status = status;
         if (priority) where.priority = priority;
