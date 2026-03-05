@@ -88,7 +88,7 @@ const PORT = process.env.PORT || 8000;
 
 sequelize.sync({ alter: true }).then(() => {
     console.log('Database synced successfully.');
-    httpServer.listen(PORT, () => {
+    httpServer.listen(Number(PORT), '0.0.0.0', () => {
         console.log(`Server and Socket.IO are running on port ${PORT}`);
     });
 }).catch(err => {

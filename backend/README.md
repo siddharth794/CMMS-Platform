@@ -1,90 +1,154 @@
-# CMMS Platform - Backend
+# CMMS Platform — Backend
 
-This is the Node.js Express backend for the CMMS (Computerized Maintenance Management System) Platform.
+Node.js/Express REST API for the **Computerized Maintenance Management System (CMMS)** platform. Handles authentication, asset management, work orders, preventive maintenance scheduling, inventory tracking, analytics, and real-time notifications.
 
 ## Tech Stack
 
-*   **Runtime**: [Node.js](https://nodejs.org/)
-*   **Framework**: [Express.js](https://expressjs.com/)
-*   **Language**: [TypeScript](https://www.typescriptlang.org/)
-*   **Database**: [MySQL](https://www.mysql.com/)
-*   **ORM**: [Sequelize](https://sequelize.org/)
-*   **Authentication**: JSON Web Tokens (JWT)
+| Layer | Technology |
+|-------|-----------|
+| Runtime | [Node.js](https://nodejs.org/) v18+ |
+| Framework | [Express.js](https://expressjs.com/) v5 |
+| Language | [TypeScript](https://www.typescriptlang.org/) |
+| Database | [MySQL 8.0](https://www.mysql.com/) |
+| ORM | [Sequelize](https://sequelize.org/) v6 |
+| Auth | JSON Web Tokens (JWT) via `jsonwebtoken` |
+| Real-time | [Socket.IO](https://socket.io/) v4 |
+| File Uploads | [Multer](https://github.com/expressjs/multer) |
 
 ## Prerequisites
 
-*   Node.js (v18 or higher recommended)
-*   npm or yarn
-*   Docker and Docker Compose (optional, for running the MySQL database locally)
+- Node.js v18+
+- npm
+- Docker & Docker Compose (for MySQL)
 
 ## Getting Started
 
 ### 1. Start the Database
 
-If you don't have a local MySQL instance running, you can use the provided `docker-compose.yml` file in the root of the project to spin up a MySQL container.
-
 ```bash
-# Run this from the project root directory
+# From the project root
 docker compose up -d
 ```
 
+This spins up a MySQL 8.0 container on port `3306`.
+
 ### 2. Environment Variables
 
-Create a `.env` file in the `backend` directory. You can use the following variables as a template:
+Create a `.env` file in the `backend/` directory:
 
 ```env
 PORT=8000
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=root
-DB_NAME=cmms
+DB_USER=cmms_user
+DB_PASSWORD=cmms_password
+DB_NAME=cmms_dev
 JWT_SECRET=your_super_secret_jwt_key
 ```
 
 ### 3. Install Dependencies
-
-Navigate to the `backend` directory and install the necessary dependencies:
 
 ```bash
 cd backend
 npm install
 ```
 
-### 4. Running the Development Server
-
-Start the development server using `nodemon` and `ts-node`:
+### 4. Run the Dev Server
 
 ```bash
 npm run dev
 ```
 
-The server will be running on `http://localhost:8000` (or whatever port you specified in `.env`). The database tables will be automatically synchronized with Sequelize's `sync({ alter: true })` feature.
+Server starts at **http://localhost:8000**. Database tables are auto-synchronized via Sequelize `sync({ alter: true })`.
 
-### 5. Seeding the Database
-
-To populate the database with initial dummy data (organizations, roles, users, assets, work orders, etc.), run the seed script:
+### 5. Seed the Database
 
 ```bash
 npm run seed
 ```
 
+Populates the DB with sample organizations, roles, users, assets, work orders, and inventory items.
+
 ## Available Scripts
 
-*   `npm run dev`: Starts the server in watch mode using `nodemon` for development.
-*   `npm run build`: Compiles the TypeScript code into JavaScript in the `dist` folder.
-*   `npm start`: Runs the compiled JavaScript server from the `dist` folder.
-*   `npm run seed`: Seeds the database with sample initial data.
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start dev server with `nodemon` + `ts-node` (hot-reload) |
+| `npm run build` | Compile TypeScript → `dist/` |
+| `npm start` | Run compiled JS from `dist/` |
+| `npm run seed` | Seed database with sample data |
 
-## API Structure
+## API Endpoints
 
-The backend features a RESTful API structure under the `/api` prefix, including:
+All routes are prefixed with `/api`.
 
-*   `/api/auth` - Authentication and login.
-*   `/api/users` - User management.
-*   `/api/organizations` - Organization management.
-*   `/api/roles` - Role management.
-*   `/api/assets` - Asset management.
-*   `/api/work-orders` - Work order creation and tracking.
-*   `/api/pm-schedules` - Preventive maintenance scheduling.
-*   `/api/inventory` - Inventory tracking.
+| Route | Description |
+|-------|-------------|
+| `/api/auth` | Login, JWT token generation |
+| `/api/users` | User CRUD, role assignment |
+| `/api/organizations` | Organization management |
+| `/api/roles` | Role definitions (Super Admin, Org Admin, Manager, Technician, Requestor) |
+| `/api/assets` | Asset CRUD, bulk import |
+| `/api/work-orders` | Work order lifecycle (create → assign → complete), file attachments, parts used |
+| `/api/pm-schedules` | Preventive maintenance schedules |
+| `/api/inventory` | Inventory items, stock tracking, stats |
+| `/api/analytics` | Dashboard analytics (work order stats, asset health, team performance) |
+
+### Pagination
+
+List endpoints (`GET /api/work-orders`, `GET /api/assets`, `GET /api/inventory`) support server-side pagination via query parameters:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `skip` | `0` | Number of records to skip |
+| `limit` | `10` | Number of records to return |
+
+Response format:
+```json
+{
+  "data": [...],
+  "total": 42,
+  "skip": 0,
+  "limit": 10
+}
+```
+
+### File Uploads
+
+Work order attachments are stored in `uploads/work-orders/` and served statically at `/uploads/`.
+
+## Project Structure
+
+```
+backend/
+├── src/
+│   ├── server.ts          # Express app entry point + Socket.IO setup
+│   ├── models/            # Sequelize model definitions & associations
+│   ├── routes/            # API route handlers
+│   │   ├── auth.ts
+│   │   ├── users.ts
+│   │   ├── organizations.ts
+│   │   ├── roles.ts
+│   │   ├── assets.ts
+│   │   ├── workOrders.ts
+│   │   ├── pmSchedules.ts
+│   │   ├── inventory.ts
+│   │   └── analytics.ts
+│   └── middleware/        # Auth middleware (JWT verification)
+├── seed.ts                # Database seeding script
+├── package.json
+├── tsconfig.json
+└── .env
+```
+
+## Role-Based Access Control
+
+| Role | Permissions |
+|------|------------|
+| **Super Admin** | Full system access across all organizations |
+| **Org Admin** | Full access within their organization |
+| **Manager** | Create/edit assets, work orders, inventory; assign technicians |
+| **Technician** | View assigned work orders, update status, log parts used |
+| **Requestor** | Submit work order requests, view own requests |
+
+> **Note:** Org Admins are restricted from creating Super Admin or Org Admin roles.
