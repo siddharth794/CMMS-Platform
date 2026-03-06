@@ -17,12 +17,11 @@ React single-page application for the **Computerized Maintenance Management Syst
 | Icons | [Lucide React](https://lucide.dev/) |
 | Excel Import/Export | [SheetJS (xlsx)](https://sheetjs.com/) |
 | Date Utilities | [date-fns](https://date-fns.org/) |
-| Package Manager | Yarn |
+| Package Manager | NPM |
 
 ## Prerequisites
 
 - Node.js v18+
-- Yarn (`npm install -g yarn` if not installed)
 - Backend server running on `http://localhost:8000`
 
 ## Getting Started
@@ -31,10 +30,10 @@ React single-page application for the **Computerized Maintenance Management Syst
 
 ```bash
 cd frontend
-yarn install
+npm install --legacy-peer-deps
 ```
 
-> **Note:** Use `yarn`, not `npm install`. This project uses Yarn as its package manager.
+> **Note:** Use `--legacy-peer-deps` with `npm install` to handle date-fns peer dependency conflicts.
 
 ### 2. Environment Variables
 
@@ -47,7 +46,7 @@ REACT_APP_BACKEND_URL=http://localhost:8000
 ### 3. Start the Dev Server
 
 ```bash
-yarn start
+npm start
 ```
 
 Opens **http://localhost:3000** in your browser with hot-reload enabled.
@@ -56,9 +55,9 @@ Opens **http://localhost:3000** in your browser with hot-reload enabled.
 
 | Script | Description |
 |--------|-------------|
-| `yarn start` | Start dev server on port 3000 |
-| `yarn build` | Production build → `build/` |
-| `yarn test` | Run tests in watch mode |
+| `npm start` | Start dev server on port 3000 |
+| `npm run build` | Production build → `build/` |
+| `npm test` | Run tests in watch mode |
 
 ## Application Pages
 
