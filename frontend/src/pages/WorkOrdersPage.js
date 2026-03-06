@@ -272,10 +272,10 @@ const WorkOrdersPage = () => {
         </div>
       </div>
 
-      {/* Filters & Search */}
+      {/* Filters, Search & Table */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4">
+        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+          <div className="flex flex-wrap items-center gap-4 w-full">
             <div className="flex items-center gap-2 flex-1 min-w-[250px]">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
@@ -303,7 +303,7 @@ const WorkOrdersPage = () => {
             <div className="w-[180px]">
               <Select value={filters.priority} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-priority">
-                  <SelectValue placeholder="Filter by priority" />
+                  <SelectValue placeholder="All Priorities" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Priorities</SelectItem>
@@ -315,11 +315,7 @@ const WorkOrdersPage = () => {
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
+        </div>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
