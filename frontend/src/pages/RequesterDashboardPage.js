@@ -115,13 +115,16 @@ const RequesterDashboardPage = () => {
         );
     }
 
-    // Calculate stats based on fetched work orders
-    const total = workOrders.length;
-    const pending = workOrders.filter(wo => ['new', 'open'].includes(wo.status)).length;
-    const inProgress = workOrders.filter(wo => wo.status === 'in_progress').length;
-    const completed = workOrders.filter(wo => wo.status === 'completed').length;
+    // Ensure workOrders is an array before using array methods
+    const safeWorkOrders = Array.isArray(workOrders) ? workOrders : (workOrders?.data || []);
 
-    const recentWorkOrders = [...workOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+    // Calculate stats based on fetched work orders
+    const total = safeWorkOrders.length;
+    const pending = safeWorkOrders.filter(wo => ['new', 'open'].includes(wo.status)).length;
+    const inProgress = safeWorkOrders.filter(wo => wo.status === 'in_progress').length;
+    const completed = safeWorkOrders.filter(wo => wo.status === 'completed').length;
+
+    const recentWorkOrders = [...safeWorkOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
 
     return (
         <div className="space-y-8 animate-fade-in">

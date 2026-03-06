@@ -24,7 +24,7 @@ const SettingsPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const { user: currentUser, isAdmin, hasRole } = useAuth();
   const { addNotification } = useNotification();
-  const isRestricted = hasRole(['technician', 'requestor']);
+  const isRestricted = hasRole(['technician', 'requestor', 'facility_manager']);
 
   const [userForm, setUserForm] = useState({
     email: '',
