@@ -25,6 +25,7 @@ const SettingsPage = () => {
   const { user: currentUser, isAdmin, hasRole } = useAuth();
   const { addNotification } = useNotification();
   const isRestricted = hasRole(['technician', 'requestor', 'facility_manager']);
+  const isSuperAdmin = (currentUser?.role?.name || currentUser?.Role?.name || '').toLowerCase() === 'super_admin';
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -185,10 +186,12 @@ const SettingsPage = () => {
             <Users className="mr-2 h-4 w-4" />
             Users
           </TabsTrigger>
-          <TabsTrigger value="roles" data-testid="tab-roles">
-            <Shield className="mr-2 h-4 w-4" />
-            Roles
-          </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="roles" data-testid="tab-roles">
+              <Shield className="mr-2 h-4 w-4" />
+              Roles
+            </TabsTrigger>
+          )}
           <TabsTrigger value="profile" data-testid="tab-profile">
             <User className="mr-2 h-4 w-4" />
             My Profile
@@ -276,14 +279,14 @@ const SettingsPage = () => {
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles
-                            .filter(role => {
-                              const roleName = role.name.toLowerCase();
-                              if (currentUser?.role?.name?.toLowerCase() === 'org_admin') {
+                            {roles
+                              .filter(role => {
+                                const roleName = role.name.toLowerCase();
+                                if (isSuperAdmin) {
+                                  return roleName !== 'super_admin';
+                                }
                                 return !['super_admin', 'org_admin'].includes(roleName);
-                              }
-                              return true;
-                            })
+                              })
                             .map((role) => (
                               <SelectItem key={role.id} value={role.id.toString()}>
                                 {role.name.replace('_', ' ')}
@@ -345,7 +348,7 @@ const SettingsPage = () => {
                         <TableCell className="text-muted-foreground">{user.email}</TableCell>
                         <TableCell>
                           <span className="status-badge status-open">
-                            {user.role?.name?.replace('_', ' ')}
+                            {(user.role?.name || user.Role?.name || '').replace('_', ' ')}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -384,40 +387,42 @@ const SettingsPage = () => {
           </Card>
         </TabsContent>
 
-        {/* Roles Tab */}
-        <TabsContent value="roles" className="space-y-4">
-          <h2 className="text-xl font-semibold">Role Management</h2>
-          <Card>
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Role Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Users</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {roles.map((role) => (
-                    <TableRow key={role.id} data-testid={`role-row-${role.id}`}>
-                      <TableCell className="font-medium">{role.name.replace('_', ' ')}</TableCell>
-                      <TableCell className="text-muted-foreground">{role.description || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`status-badge ${role.is_system_role ? 'status-open' : 'status-new'}`}>
-                          {role.is_system_role ? 'System' : 'Custom'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {users.filter(u => u.role_id === role.id).length}
-                      </TableCell>
+        {/* Roles Tab - Super Admin only */}
+        {isSuperAdmin && (
+          <TabsContent value="roles" className="space-y-4">
+            <h2 className="text-xl font-semibold">Role Management</h2>
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Role Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Users</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  </TableHeader>
+                  <TableBody>
+                    {roles.map((role) => (
+                      <TableRow key={role.id} data-testid={`role-row-${role.id}`}>
+                        <TableCell className="font-medium">{role.name.replace('_', ' ')}</TableCell>
+                        <TableCell className="text-muted-foreground">{role.description || '-'}</TableCell>
+                        <TableCell>
+                          <span className={`status-badge ${role.is_system_role ? 'status-open' : 'status-new'}`}>
+                            {role.is_system_role ? 'System' : 'Custom'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {users.filter(u => u.role_id === role.id).length}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
