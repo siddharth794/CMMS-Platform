@@ -159,7 +159,7 @@ const SettingsPage = () => {
               </div>
               <div>
                 <Label className="text-muted-foreground">Role</Label>
-                <p className="font-medium">{currentUser?.role?.name?.replace('_', ' ')}</p>
+                <p className="font-medium">{(currentUser?.role?.name || currentUser?.Role?.name || '').replace('_', ' ')}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Phone</Label>
@@ -447,7 +447,7 @@ const SettingsPage = () => {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Role</Label>
-                  <p className="font-medium">{currentUser?.role?.name?.replace('_', ' ')}</p>
+                  <p className="font-medium">{(currentUser?.role?.name || currentUser?.Role?.name || '').replace('_', ' ')}</p>
                 </div>
               </div>
             </CardContent>
