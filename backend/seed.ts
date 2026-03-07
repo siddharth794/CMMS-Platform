@@ -17,6 +17,8 @@ async function seed() {
             defaults: {
                 description: 'Default organization for CMMS Platform',
                 address: '123 Tech Lane',
+                owner_name: 'John Doe',
+                website_url: 'https://demo-corp.com'
             }
         });
 

@@ -1,10 +1,14 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import sequelize from '../config/database';
 
-class Organization extends Model { public id!: string; public name!: string; }
+class Organization extends Model { public id!: string; public name!: string; public owner_name?: string; public website_url?: string; public email?: string; public phone?: string; }
 Organization.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false, unique: true },
+    owner_name: { type: DataTypes.STRING },
+    website_url: { type: DataTypes.STRING },
+    email: { type: DataTypes.STRING },
+    phone: { type: DataTypes.STRING },
     description: { type: DataTypes.TEXT },
     address: { type: DataTypes.TEXT },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
