@@ -1,6 +1,10 @@
 import { Router } from 'express';
-import { PMSchedule, Asset, AuditLog } from '../models';
+import { PMSchedule, Asset } from '../models';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { CreatePMScheduleSchema, UpdatePMScheduleSchema } from '../validators/pmSchedule.validator';
+import { auditService } from '../services/audit.service';
+import { MANAGER_ROLES } from '../constants/roles';
 
 const router = Router();
 router.use(authenticate);
@@ -24,21 +28,21 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+router.post('/', requireRole(MANAGER_ROLES), validate(CreatePMScheduleSchema), async (req: any, res, next) => {
     try {
         const pmData = { ...req.body, org_id: req.user.org_id };
         const pm: any = await PMSchedule.create(pmData);
 
         const fullyLoadedPm = await PMSchedule.findByPk(pm.id, { include: [{ model: Asset }] });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'PMSchedule',
-            entity_id: pm.id,
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'PMSchedule',
+            entityId: pm.id,
             action: 'create',
-            new_values: { name: pm.name }
+            newValues: { name: pm.name }
         });
 
         res.status(201).json(fullyLoadedPm);
@@ -63,7 +67,7 @@ router.get('/:pm_id', async (req: any, res, next) => {
     }
 });
 
-router.put('/:pm_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+router.put('/:pm_id', requireRole(MANAGER_ROLES), validate(UpdatePMScheduleSchema), async (req: any, res, next) => {
     try {
         const pm: any = await PMSchedule.findOne({
             where: { id: req.params.pm_id, org_id: req.user.org_id }
@@ -82,7 +86,7 @@ router.put('/:pm_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager
     }
 });
 
-router.delete('/:pm_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+router.delete('/:pm_id', requireRole(MANAGER_ROLES), async (req: any, res, next) => {
     try {
         const pm: any = await PMSchedule.findOne({
             where: { id: req.params.pm_id, org_id: req.user.org_id }

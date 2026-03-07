@@ -1,66 +1,80 @@
 import { Router } from 'express';
 import { WorkOrder, Asset, PMSchedule, User, Role } from '../models';
 import { authenticate } from '../middleware/auth';
-import { Op, fn, col, literal } from 'sequelize';
+import { Op, fn, col } from 'sequelize';
 
 const router = Router();
 router.use(authenticate);
-
-const WO_STATUSES = ['new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled'];
-const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
 router.get('/dashboard', async (req: any, res, next) => {
     try {
         const orgId = req.user.org_id;
 
-        // --- Work Order counts ---
-        const totalWorkOrders = await WorkOrder.count({ where: { org_id: orgId } });
-        const completedWorkOrders = await WorkOrder.count({ where: { org_id: orgId, status: 'completed' } });
-        const pendingWorkOrders = await WorkOrder.count({ where: { org_id: orgId, status: { [Op.in]: ['new', 'open'] } } });
-        const inProgressWorkOrders = await WorkOrder.count({ where: { org_id: orgId, status: 'in_progress' } });
+        // ─── Parallel execution of independent queries ───────────────
+        const [
+            totalWorkOrders,
+            completedWorkOrders,
+            pendingWorkOrders,
+            inProgressWorkOrders,
+            totalAssets,
+            activePmSchedules,
+            overduePms,
+            woByStatusRaw,
+            woByPriorityRaw,
+            recentWorkOrders,
+        ] = await Promise.all([
+            WorkOrder.count({ where: { org_id: orgId } }),
+            WorkOrder.count({ where: { org_id: orgId, status: 'completed' } }),
+            WorkOrder.count({ where: { org_id: orgId, status: { [Op.in]: ['new', 'open'] } } }),
+            WorkOrder.count({ where: { org_id: orgId, status: 'in_progress' } }),
+            Asset.count({ where: { org_id: orgId, is_active: true } }),
+            PMSchedule.count({ where: { org_id: orgId, is_active: true } }),
+            PMSchedule.count({
+                where: {
+                    org_id: orgId,
+                    is_active: true,
+                    next_due: { [Op.lt]: new Date() }
+                }
+            }),
+            // GROUP BY replaces N+1 loop (was 6 individual queries)
+            WorkOrder.findAll({
+                attributes: ['status', [fn('COUNT', col('id')), 'count']],
+                where: { org_id: orgId },
+                group: ['status'],
+                raw: true,
+            }),
+            // GROUP BY replaces N+1 loop (was 4 individual queries)
+            WorkOrder.findAll({
+                attributes: ['priority', [fn('COUNT', col('id')), 'count']],
+                where: { org_id: orgId },
+                group: ['priority'],
+                raw: true,
+            }),
+            WorkOrder.findAll({
+                where: { org_id: orgId },
+                include: [
+                    { model: Asset },
+                    { model: User, as: 'assignee', include: [{ model: Role }] },
+                    { model: User, as: 'requester', include: [{ model: Role }] }
+                ],
+                order: [['created_at', 'DESC']],
+                limit: 10
+            }),
+        ]);
 
         const completionRate = totalWorkOrders > 0
             ? Math.round((completedWorkOrders / totalWorkOrders) * 1000) / 10
             : 0;
 
-        // --- Asset count ---
-        const totalAssets = await Asset.count({ where: { org_id: orgId, is_active: true } });
+        // Normalize GROUP BY results to include all statuses/priorities (even with 0 count)
+        const WO_STATUSES = ['new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+        const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
-        // --- PM Schedule counts ---
-        const activePmSchedules = await PMSchedule.count({ where: { org_id: orgId, is_active: true } });
-        const overduePms = await PMSchedule.count({
-            where: {
-                org_id: orgId,
-                is_active: true,
-                next_due: { [Op.lt]: new Date() }
-            }
-        });
+        const statusMap = new Map((woByStatusRaw as any[]).map(r => [r.status, parseInt(r.count)]));
+        const woByStatus = WO_STATUSES.map(status => ({ status, count: statusMap.get(status) || 0 }));
 
-        // --- Work orders by status ---
-        const woByStatus = [];
-        for (const status of WO_STATUSES) {
-            const count = await WorkOrder.count({ where: { org_id: orgId, status } });
-            woByStatus.push({ status, count });
-        }
-
-        // --- Work orders by priority ---
-        const woByPriority = [];
-        for (const priority of PRIORITIES) {
-            const count = await WorkOrder.count({ where: { org_id: orgId, priority } });
-            woByPriority.push({ priority, count });
-        }
-
-        // --- Recent work orders ---
-        const recentWorkOrders = await WorkOrder.findAll({
-            where: { org_id: orgId },
-            include: [
-                { model: Asset },
-                { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] }
-            ],
-            order: [['created_at', 'DESC']],
-            limit: 10
-        });
+        const priorityMap = new Map((woByPriorityRaw as any[]).map(r => [r.priority, parseInt(r.count)]));
+        const woByPriority = PRIORITIES.map(priority => ({ priority, count: priorityMap.get(priority) || 0 }));
 
         res.json({
             stats: {
@@ -88,50 +102,64 @@ router.get('/technician-dashboard', async (req: any, res, next) => {
         const orgId = req.user.org_id;
         const userId = req.user.id;
 
-        // --- My Work Order counts ---
-        const myAssigned = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId } });
-        const myCompleted = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: 'completed' } });
-        const myInProgress = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: 'in_progress' } });
-        const myPending = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: { [Op.in]: ['new', 'open'] } } });
+        const [
+            myAssigned,
+            myCompleted,
+            myInProgress,
+            myPending,
+            myOverdue,
+            myWoByStatusRaw,
+            myWoByPriorityRaw,
+            myRecentWorkOrders,
+        ] = await Promise.all([
+            WorkOrder.count({ where: { org_id: orgId, assignee_id: userId } }),
+            WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: 'completed' } }),
+            WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: 'in_progress' } }),
+            WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status: { [Op.in]: ['new', 'open'] } } }),
+            WorkOrder.count({
+                where: {
+                    org_id: orgId,
+                    assignee_id: userId,
+                    status: { [Op.notIn]: ['completed', 'cancelled'] },
+                    scheduled_end: { [Op.lt]: new Date(), [Op.ne]: null as any }
+                }
+            }),
+            // GROUP BY replaces N+1 loop
+            WorkOrder.findAll({
+                attributes: ['status', [fn('COUNT', col('id')), 'count']],
+                where: { org_id: orgId, assignee_id: userId },
+                group: ['status'],
+                raw: true,
+            }),
+            WorkOrder.findAll({
+                attributes: ['priority', [fn('COUNT', col('id')), 'count']],
+                where: { org_id: orgId, assignee_id: userId },
+                group: ['priority'],
+                raw: true,
+            }),
+            WorkOrder.findAll({
+                where: { org_id: orgId, assignee_id: userId },
+                include: [
+                    { model: Asset },
+                    { model: User, as: 'requester', include: [{ model: Role }] }
+                ],
+                order: [['created_at', 'DESC']],
+                limit: 10
+            }),
+        ]);
 
         const myCompletionRate = myAssigned > 0
             ? Math.round((myCompleted / myAssigned) * 1000) / 10
             : 0;
 
-        // --- My Overdue WOs (past scheduled_end but not completed/cancelled) ---
-        const myOverdue = await WorkOrder.count({
-            where: {
-                org_id: orgId,
-                assignee_id: userId,
-                status: { [Op.notIn]: ['completed', 'cancelled'] },
-                scheduled_end: { [Op.lt]: new Date(), [Op.ne]: null }
-            }
-        });
+        const WO_STATUSES = ['new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+        const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
-        // --- My WOs by status ---
-        const myWoByStatus = [];
-        for (const status of WO_STATUSES) {
-            const count = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, status } });
-            myWoByStatus.push({ status, count });
-        }
+        const statusMap = new Map((myWoByStatusRaw as any[]).map(r => [r.status, parseInt(r.count)]));
+        const myWoByStatus = WO_STATUSES.map(status => ({ status, count: statusMap.get(status) || 0 }));
 
-        // --- My WOs by priority ---
-        const myWoByPriority = [];
-        for (const priority of PRIORITIES) {
-            const count = await WorkOrder.count({ where: { org_id: orgId, assignee_id: userId, priority } });
-            myWoByPriority.push({ priority, count });
-        }
-
-        // --- My recent work orders ---
-        const myRecentWorkOrders = await WorkOrder.findAll({
-            where: { org_id: orgId, assignee_id: userId },
-            include: [
-                { model: Asset },
-                { model: User, as: 'requester', include: [{ model: Role }] }
-            ],
-            order: [['created_at', 'DESC']],
-            limit: 10
-        });
+        const priorityMap = new Map((myWoByPriorityRaw as any[]).map(r => [r.priority, parseInt(r.count)]));
+        const myWoByPriority = PRIORITIES.map(priority => ({ priority, count: priorityMap.get(priority) || 0 }));
 
         res.json({
             stats: {
