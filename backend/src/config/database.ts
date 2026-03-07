@@ -10,7 +10,13 @@ const sequelize = new Sequelize(
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '3306'),
         dialect: 'mysql',
-        logging: false, // Set to console.log to see SQL queries
+        logging: false,
+        pool: {
+            max: 20,
+            min: 5,
+            acquire: 30000,
+            idle: 10000,
+        },
     }
 );
 

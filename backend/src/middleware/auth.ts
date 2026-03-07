@@ -1,10 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User, Role } from '../models';
+import logger from '../config/logger';
 
 export interface AuthRequest extends Request {
     user?: any;
 }
+
+const getJwtSecret = (): string => {
+    const secret = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET;
+    if (!secret) {
+        logger.fatal('JWT_SECRET environment variable is required. Exiting.');
+        process.exit(1);
+    }
+    return secret;
+};
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -16,10 +26,8 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
             return;
         }
 
-        const secret = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || 'supersecretkey';
-        const decoded = jwt.verify(token, secret) as any;
+        const decoded = jwt.verify(token, getJwtSecret()) as any;
 
-        // Also load user role if needed
         const user = await User.findByPk(decoded.sub || decoded.id, {
             include: [{ model: Role }]
         });
@@ -36,6 +44,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 };
 
+/**
+ * RBAC middleware. All role comparisons are done in lowercase.
+ * Use centralized role constants from constants/roles.ts.
+ */
 export const requireRole = (roles: string[]) => {
     return (req: AuthRequest, res: Response, next: NextFunction): void => {
         if (!req.user || !req.user.Role) {
