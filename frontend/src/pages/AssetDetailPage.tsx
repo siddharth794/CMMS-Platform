@@ -263,7 +263,7 @@ const AssetDetailPage = () => {
                   </Popover>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="purchase_cost">Purchase Cost ($)</Label>
+                  <Label htmlFor="purchase_cost">Purchase Cost (₹)</Label>
                   <Input
                     id="purchase_cost"
                     type="number"

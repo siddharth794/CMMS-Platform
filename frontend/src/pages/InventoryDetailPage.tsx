@@ -184,7 +184,7 @@ const InventoryDetailPage = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unit_cost">Unit Cost ($)</Label>
+                  <Label htmlFor="unit_cost">Unit Cost (₹)</Label>
                   <Input
                     id="unit_cost"
                     type="number"
@@ -234,11 +234,11 @@ const InventoryDetailPage = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label className="text-muted-foreground">Unit Cost</Label>
-                <p className="font-medium">${parseFloat(formData.unit_cost || 0).toFixed(2)}</p>
+                <p className="font-medium">₹{parseFloat(formData.unit_cost || 0).toFixed(2)}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Total Value</Label>
-                <p className="font-medium">${(formData.quantity * parseFloat(formData.unit_cost || 0)).toFixed(2)}</p>
+                <p className="font-medium">₹{(formData.quantity * parseFloat(formData.unit_cost || 0)).toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>
