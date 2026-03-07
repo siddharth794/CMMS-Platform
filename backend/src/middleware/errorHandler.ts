@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import logger from '../config/logger';
 
 export class AppError extends Error {
     public statusCode: number;
@@ -12,7 +13,7 @@ export class AppError extends Error {
 }
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-    console.error(`[Error] ${err.name}: ${err.message}`);
+    logger.error({ err, requestId: (req as any).id }, `[Error] ${err.name}: ${err.message}`);
 
     if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
         return res.status(400).json({
