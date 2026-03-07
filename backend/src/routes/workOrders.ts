@@ -38,8 +38,14 @@ function generateWoNumber() {
 
 router.get('/', async (req: any, res, next) => {
     try {
-        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search } = req.query;
+        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search, record_status } = req.query;
         let where: any = { org_id: req.user.org_id };
+
+        let paranoid = true;
+        if (record_status === 'inactive') {
+            paranoid = false;
+            where.deleted_at = { [Op.not]: null };
+        }
 
         const roleName = req.user.Role?.name?.toLowerCase();
         if (roleName === "technician") where.assignee_id = req.user.id;
@@ -60,12 +66,13 @@ router.get('/', async (req: any, res, next) => {
 
         const wos = await WorkOrder.findAndCountAll({
             where,
+            paranoid,
             include: [
-                { model: Asset },
-                { model: User, as: 'assignee', include: [{ model: Role }] },
-                { model: User, as: 'requester', include: [{ model: Role }] },
-                { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
-                { model: WOAttachment, as: 'attachments' }
+                { model: Asset, paranoid: false },
+                { model: User, as: 'assignee', required: false, paranoid: false, include: [{ model: Role, required: false }] },
+                { model: User, as: 'requester', required: false, paranoid: false, include: [{ model: Role, required: false }] },
+                { model: WorkOrderInventoryItem, as: 'used_parts', required: false, include: [{ model: InventoryItem, as: 'item', required: false }] },
+                { model: WOAttachment, as: 'attachments', required: false }
             ],
             order: [['created_at', 'DESC']],
             offset: Number(skip),
@@ -300,26 +307,73 @@ router.patch('/:wo_id/assign', requireRole(['Super_Admin', 'Org_Admin', 'Facilit
 router.delete('/:wo_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
     try {
         const wo: any = await WorkOrder.findOne({
-            where: { id: req.params.wo_id, org_id: req.user.org_id }
+            where: { id: req.params.wo_id, org_id: req.user.org_id },
+            paranoid: false // Allow finding it even if already soft-deleted
         });
         if (!wo) {
             res.status(404).json({ detail: 'Work order not found' });
             return;
         }
 
-        wo.status = 'cancelled';
-        await wo.save();
+        if (wo.deleted_at === null) {
+            // It's active, soft delete it
+            await wo.destroy();
+            await AuditLog.create({
+                org_id: req.user.org_id,
+                user_id: req.user.id,
+                user_email: req.user.email,
+                entity_type: 'WorkOrder',
+                entity_id: wo.id,
+                action: 'delete' // Soft delete
+            });
+            res.json({ message: 'Work order deactivated (soft delete)' });
+        } else {
+            // It's already soft-deleted, hard delete it
+            await wo.destroy({ force: true });
+            await AuditLog.create({
+                org_id: req.user.org_id,
+                user_id: req.user.id,
+                user_email: req.user.email,
+                entity_type: 'WorkOrder',
+                entity_id: wo.id,
+                action: 'hard_delete'
+            });
+            res.json({ message: 'Work order permanently deleted' });
+        }
+    } catch (err) {
+        next(err);
+    }
+});
 
+router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+    try {
+        const { ids, force } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({ detail: 'No Work Order IDs provided for bulk delete.' });
+            return;
+        }
+
+        // Only delete Work Orders belonging to the user's organization
+        const deletedCount = await WorkOrder.destroy({
+            where: {
+                id: { [Op.in]: ids },
+                org_id: req.user.org_id
+            },
+            force: force // true = hard delete, false/undefined = soft delete
+        });
+
+        // Optional: create An Audit log for bulk delete
         await AuditLog.create({
             org_id: req.user.org_id,
             user_id: req.user.id,
             user_email: req.user.email,
             entity_type: 'WorkOrder',
-            entity_id: wo.id,
-            action: 'cancel'
+            entity_id: ids[0], // Arbitrary ID from list to fulfill non-null constraint
+            action: force ? 'bulk_hard_delete' : 'bulk_delete',
+            new_values: { deleted_ids: ids, count: deletedCount }
         });
 
-        res.json({ message: 'Work order cancelled' });
+        res.json({ message: `${deletedCount} Work Orders successfully ${force ? 'permanently deleted' : 'deactivated'}.` });
     } catch (err) {
         next(err);
     }

@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Pagination } from '../components/ui/pagination';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download, Trash } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
@@ -60,6 +61,8 @@ const WorkOrdersPage = () => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState([]);
   const { isManager, isRequester } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
@@ -74,12 +77,13 @@ const WorkOrdersPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filters, search, page]);
+  }, [filters, search, page, recordStatus]);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [woRes, assetsRes, usersRes] = await Promise.all([
-        workOrdersApi.list({ ...filters, search, skip: (page - 1) * 10, limit: 10 }),
+        workOrdersApi.list({ ...filters, search, record_status: recordStatus, skip: (page - 1) * 10, limit: 10 }),
         assetsApi.list({ limit: 1000 }),
         usersApi.list({ limit: 1000 }),
       ]);
@@ -87,6 +91,7 @@ const WorkOrdersPage = () => {
       setTotal(woRes.data.total);
       setAssets(assetsRes.data.data || assetsRes.data);
       setUsers(usersRes.data.data || usersRes.data);
+      setSelectedIds([]); // Reset selection when data changes
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to fetch data');
     } finally {
@@ -134,14 +139,44 @@ const WorkOrdersPage = () => {
   };
 
   const handleDelete = async (woId) => {
-    if (!window.confirm('Cancel this work order?')) return;
+    if (!window.confirm(recordStatus === 'active' ? 'Delete this work order?' : 'Permanently delete this work order?')) return;
     try {
       await workOrdersApi.delete(woId);
-      addNotification('success', 'Work order cancelled');
+      addNotification('success', recordStatus === 'active' ? 'Work order deactivated' : 'Work order permanently deleted');
       fetchData();
     } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to cancel work order');
+      addNotification('error', error.response?.data?.detail || 'Failed to delete work order');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} work orders?`)) return;
+    
+    setSubmitting(true);
+    try {
+      await workOrdersApi.bulkDelete({ ids: selectedIds, force: recordStatus === 'inactive' });
+      addNotification('success', `${selectedIds.length} work orders ${recordStatus === 'active' ? 'deactivated' : 'permanently deleted'}`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Failed to bulk delete work orders');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === workOrders.length && workOrders.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(workOrders.map((wo) => wo.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
   };
 
   const handleExport = () => {
@@ -285,6 +320,23 @@ const WorkOrdersPage = () => {
                 data-testid="wo-search-input"
               />
             </div>
+            {isManager() && selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
+            <div className="w-[180px]">
+              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
+                <SelectTrigger data-testid="filter-record-status">
+                  <SelectValue placeholder="Record Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active records</SelectItem>
+                  <SelectItem value="inactive">Deleted / Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="w-[180px]">
               <Select value={filters.status} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-status">
@@ -320,6 +372,14 @@ const WorkOrdersPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                {isManager() && (
+                  <TableHead className="w-[40px]">
+                    <Checkbox 
+                      checked={workOrders.length > 0 && selectedIds.length === workOrders.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>WO Number</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Status</TableHead>
@@ -347,6 +407,14 @@ const WorkOrdersPage = () => {
               ) : (
                 workOrders.map((wo) => (
                   <TableRow key={wo.id} data-testid={`wo-row-${wo.id}`}>
+                    {isManager() && (
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedIds.includes(wo.id)}
+                          onCheckedChange={() => toggleSelect(wo.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       {isRequester() ? (
                         <span className="font-medium">{wo.wo_number}</span>
@@ -397,9 +465,9 @@ const WorkOrdersPage = () => {
                                 )}
                               </>
                             )}
-                            {isManager() && wo.status !== 'cancelled' && (
+                            {isManager() && (
                               <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />Cancel
+                                <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
