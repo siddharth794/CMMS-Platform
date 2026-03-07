@@ -19,7 +19,7 @@ export const useAsset = (id: string) => {
       const { data } = await assetsApi.get(id);
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && id !== 'new',
   });
 };
 

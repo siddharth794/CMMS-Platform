@@ -19,7 +19,7 @@ export const useInventoryItem = (id: string) => {
       const { data } = await inventoryApi.get(id);
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && id !== 'new',
   });
 };
 

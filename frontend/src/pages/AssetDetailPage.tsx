@@ -1,12 +1,13 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAsset, useUpdateAsset, useDeleteAsset } from '../hooks/api/useAssets';
+import { useAsset, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../hooks/api/useAssets';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Save, Trash2, Package } from 'lucide-react';
 import { format } from 'date-fns';
@@ -14,14 +15,17 @@ import { format } from 'date-fns';
 const AssetDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isNew = id === 'new';
   const { addNotification } = useNotification();
   const { data: asset, isLoading, isError } = useAsset(id);
+  const createMutation = useCreateAsset();
   const updateMutation = useUpdateAsset();
   const deleteMutation = useDeleteAsset();
 
   const [formData, setFormData] = useState({
     name: '',
     asset_tag: '',
+    asset_type: 'movable',
     description: '',
     location: '',
     category: '',
@@ -33,10 +37,11 @@ const AssetDetailPage = () => {
   });
 
   useEffect(() => {
-    if (asset) {
+    if (asset && !isNew) {
       setFormData({
         name: asset.name || '',
         asset_tag: asset.asset_tag || '',
+        asset_type: asset.asset_type || 'movable',
         description: asset.description || '',
         location: asset.location || '',
         category: asset.category || '',
@@ -47,18 +52,24 @@ const AssetDetailPage = () => {
         purchase_cost: asset.purchase_cost || '',
       });
     }
-  }, [asset]);
+  }, [asset, isNew]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateMutation.mutateAsync({
-        id,
-        data: formData
-      });
-      addNotification('success', 'Asset updated successfully');
+      if (isNew) {
+        await createMutation.mutateAsync(formData);
+        addNotification('success', 'Asset created successfully');
+        navigate('/assets');
+      } else {
+        await updateMutation.mutateAsync({
+          id,
+          data: formData
+        });
+        addNotification('success', 'Asset updated successfully');
+      }
     } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to update asset');
+      addNotification('error', error.response?.data?.detail || 'Failed to save asset');
     }
   };
 
@@ -73,7 +84,7 @@ const AssetDetailPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !isNew) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -81,7 +92,7 @@ const AssetDetailPage = () => {
     );
   }
 
-  if (isError || !asset) {
+  if ((isError || !asset) && !isNew) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold">Asset not found</h2>
@@ -89,6 +100,8 @@ const AssetDetailPage = () => {
       </div>
     );
   }
+
+  const isSaving = isNew ? createMutation.isPending : updateMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -98,15 +111,14 @@ const AssetDetailPage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{asset.name}</h1>
-            <p className="text-muted-foreground">Tag: {asset.asset_tag}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{isNew ? 'Create New Asset' : asset.name}</h1>
+            {!isNew && <p className="text-muted-foreground">Tag: {asset.asset_tag}</p>}
           </div>
         </div>
         <div className="flex gap-2">
-          
-          <Button type="submit" form="asset-form" disabled={updateMutation.isPending}>
-            {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Changes
+          <Button type="submit" form="asset-form" disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isNew ? 'Create Asset' : 'Save Changes'}
           </Button>
         </div>
       </div>
@@ -115,13 +127,13 @@ const AssetDetailPage = () => {
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Asset Information</CardTitle>
-            <CardDescription>Update asset details and specifications</CardDescription>
+            <CardDescription>{isNew ? 'Enter details for the new asset' : 'Update asset details and specifications'}</CardDescription>
           </CardHeader>
           <CardContent>
             <form id="asset-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Asset Name</Label>
+                  <Label htmlFor="name">Asset Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -135,7 +147,30 @@ const AssetDetailPage = () => {
                     id="asset_tag"
                     value={formData.asset_tag}
                     onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
-                    required
+                    placeholder="Leave empty to auto-generate"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Asset Type</Label>
+                  <Select value={formData.asset_type} onValueChange={(v) => setFormData({ ...formData, asset_type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="movable">Movable</SelectItem>
+                      <SelectItem value="immovable">Immovable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Input
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   />
                 </div>
               </div>
@@ -150,23 +185,13 @@ const AssetDetailPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -196,51 +221,59 @@ const AssetDetailPage = () => {
                 </div>
               </div>
 
-              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="purchase_date">Purchase Date</Label>
+                  <Input
+                    id="purchase_date"
+                    type="date"
+                    value={formData.purchase_date}
+                    onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="purchase_cost">Purchase Cost ($)</Label>
+                  <Input
+                    id="purchase_cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.purchase_cost}
+                    onChange={(e) => setFormData({ ...formData, purchase_cost: e.target.value })}
+                  />
+                </div>
+              </div>
+
             </form>
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Asset Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Package className="h-8 w-8 text-primary" />
+        {!isNew && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Asset Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <Package className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium capitalize">{asset.status || 'Active'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Added {format(new Date(asset.created_at), 'PP')}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium capitalize">{asset.status || 'Active'}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Added {format(new Date(asset.created_at), 'PP')}
-                  </p>
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-1">Last Maintenance</p>
+                  <p className="font-medium">-</p>
                 </div>
-              </div>
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-1">Last Maintenance</p>
-                <p className="font-medium">-</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Purchase Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-muted-foreground">Purchase Date</Label>
-                <p className="font-medium">{formData.purchase_date || 'N/A'}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Purchase Cost</Label>
-                <p className="font-medium">{formData.purchase_cost ? `$${formData.purchase_cost}` : 'N/A'}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
