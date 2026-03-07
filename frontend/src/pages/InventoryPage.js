@@ -134,7 +134,7 @@ const InventoryPage = () => {
 
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} items?`)) return;
-    
+
     setSubmitting(true);
     try {
       await inventoryApi.bulkDelete({ ids: selectedIds, force: recordStatus === 'inactive' });
@@ -157,7 +157,7 @@ const InventoryPage = () => {
   };
 
   const toggleSelect = (id) => {
-    setSelectedIds((prev) => 
+    setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
     );
   };
@@ -512,7 +512,7 @@ const InventoryPage = () => {
               <TableRow>
                 {isManager() && (
                   <TableHead className="w-[40px]">
-                    <Checkbox 
+                    <Checkbox
                       checked={items.length > 0 && selectedIds.length === items.length}
                       onCheckedChange={toggleSelectAll}
                     />
@@ -545,7 +545,7 @@ const InventoryPage = () => {
                   <TableRow key={item.id} data-testid={`inv-row-${item.id}`}>
                     {isManager() && (
                       <TableCell>
-                        <Checkbox 
+                        <Checkbox
                           checked={selectedIds.includes(item.id)}
                           onCheckedChange={() => toggleSelect(item.id)}
                         />

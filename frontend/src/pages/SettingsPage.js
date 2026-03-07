@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Switch } from '../components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Edit, Trash2, Loader2, Users, Shield, Building2, User } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { Plus, MoreHorizontal, Edit, Trash2, Trash, Loader2, Users, Shield, Building2, User } from 'lucide-react';
 import { format } from 'date-fns';
 
 const SettingsPage = () => {
@@ -22,6 +23,8 @@ const SettingsPage = () => {
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState([]);
   const { user: currentUser, isAdmin, hasRole } = useAuth();
   const { addNotification } = useNotification();
   const isRestricted = hasRole(['technician', 'requestor', 'facility_manager']);
@@ -39,16 +42,17 @@ const SettingsPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [recordStatus]);
 
   const fetchData = async () => {
     try {
       const [usersRes, rolesRes] = await Promise.all([
-        usersApi.list(),
+        usersApi.list({ record_status: recordStatus }),
         rolesApi.list(),
       ]);
       setUsers(usersRes.data);
       setRoles(rolesRes.data);
+      setSelectedIds([]);
     } catch (error) {
       addNotification('error', 'Failed to fetch data');
     } finally {
@@ -106,14 +110,44 @@ const SettingsPage = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Deactivate this user?')) return;
+    if (!window.confirm(recordStatus === 'active' ? 'Deactivate this user?' : 'Permanently delete this user?')) return;
     try {
       await usersApi.delete(userId);
-      toast.success('User deactivated');
+      addNotification('success', recordStatus === 'active' ? 'User deactivated' : 'User permanently deleted');
       fetchData();
     } catch (error) {
-      toast.error('Failed to deactivate user');
+      addNotification('error', 'Failed to delete user');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'deactivate' : 'permanently delete'} ${selectedIds.length} users?`)) return;
+    
+    setSubmitting(true);
+    try {
+      await usersApi.bulkDelete({ ids: selectedIds, force: recordStatus === 'inactive' });
+      addNotification('success', `${selectedIds.length} users ${recordStatus === 'active' ? 'deactivated' : 'permanently deleted'}`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Failed to bulk delete users');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === users.length && users.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(users.map((a) => a.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
   };
 
   const openEditUserDialog = (user) => {
@@ -202,14 +236,32 @@ const SettingsPage = () => {
         <TabsContent value="users" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">User Management</h2>
-            {isAdmin() && (
-              <Dialog open={userDialogOpen} onOpenChange={(open) => { setUserDialogOpen(open); if (!open) resetUserForm(); }}>
-                <DialogTrigger asChild>
-                  <Button data-testid="add-user-btn">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
+            <div className="flex items-center gap-2">
+              {isAdmin() && selectedIds.length > 0 && (
+                <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+              <div className="w-[180px]">
+                <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); }}>
+                  <SelectTrigger data-testid="filter-record-status">
+                    <SelectValue placeholder="Record Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active records</SelectItem>
+                    <SelectItem value="inactive">Deleted / Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {isAdmin() && (
+                <Dialog open={userDialogOpen} onOpenChange={(open) => { setUserDialogOpen(open); if (!open) resetUserForm(); }}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="add-user-btn">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add User
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
@@ -317,6 +369,7 @@ const SettingsPage = () => {
                 </DialogContent>
               </Dialog>
             )}
+            </div>
           </div>
 
           <Card>
@@ -324,6 +377,14 @@ const SettingsPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isAdmin() && (
+                      <TableHead className="w-[40px]">
+                        <Checkbox 
+                          checked={users.length > 0 && selectedIds.length === users.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
@@ -342,6 +403,14 @@ const SettingsPage = () => {
                   ) : (
                     users.map((user) => (
                       <TableRow key={user.id} data-testid={`user-row-${user.id}`}>
+                        {isAdmin() && (
+                          <TableCell>
+                            <Checkbox 
+                              checked={selectedIds.includes(user.id)}
+                              onCheckedChange={() => toggleSelect(user.id)}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">
                           {user.first_name} {user.last_name}
                         </TableCell>
@@ -372,7 +441,7 @@ const SettingsPage = () => {
                                   <Edit className="mr-2 h-4 w-4" />Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />Deactivate
+                                  <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Deactivate' : 'Delete Permanently'}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

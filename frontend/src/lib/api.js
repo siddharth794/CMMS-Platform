@@ -42,6 +42,7 @@ export const usersApi = {
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
+  bulkDelete: (data) => api.post('/users/bulk-delete', data),
 };
 
 // Roles
