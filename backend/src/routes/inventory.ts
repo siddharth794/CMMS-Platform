@@ -7,10 +7,21 @@ router.use(authenticate);
 
 router.get('/', async (req: any, res, next) => {
     try {
-        const { skip = 0, limit = 100, search, category, low_stock_only } = req.query;
-        let where: any = { org_id: req.user.org_id, is_active: true };
+        const { skip = 0, limit = 100, search, category, low_stock_only, record_status } = req.query;
+        let where: any = { org_id: req.user.org_id };
 
         const { Op } = require('sequelize');
+
+        let paranoid = true;
+        if (record_status === 'inactive') {
+            paranoid = false;
+            where[Op.or] = [
+                { deleted_at: { [Op.not]: null } },
+                { is_active: false }
+            ];
+        } else {
+            where.is_active = true;
+        }
 
         if (search) {
             where[Op.or] = [
@@ -30,6 +41,7 @@ router.get('/', async (req: any, res, next) => {
 
         const items = await InventoryItem.findAndCountAll({
             where,
+            paranoid,
             offset: Number(skip),
             limit: Number(limit)
         });
@@ -152,17 +164,80 @@ router.put('/:item_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manag
 router.delete('/:item_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
     try {
         const item: any = await InventoryItem.findOne({
-            where: { id: req.params.item_id, org_id: req.user.org_id }
+            where: { id: req.params.item_id, org_id: req.user.org_id },
+            paranoid: false
         });
         if (!item) {
             res.status(404).json({ detail: 'Inventory item not found' });
             return;
         }
 
-        item.is_active = false;
-        await item.save();
+        if (item.deleted_at === null && item.is_active !== false) {
+            item.is_active = false;
+            await item.save();
+            await item.destroy();
 
-        res.json({ message: 'Inventory item deactivated' });
+            await AuditLog.create({
+                org_id: req.user.org_id,
+                user_id: req.user.id,
+                user_email: req.user.email,
+                entity_type: 'InventoryItem',
+                entity_id: item.id,
+                action: 'delete'
+            });
+
+            res.json({ message: 'Inventory item deactivated' });
+        } else {
+            await item.destroy({ force: true });
+            
+            await AuditLog.create({
+                org_id: req.user.org_id,
+                user_id: req.user.id,
+                user_email: req.user.email,
+                entity_type: 'InventoryItem',
+                entity_id: item.id,
+                action: 'hard_delete'
+            });
+            res.json({ message: 'Inventory item permanently deleted' });
+        }
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+    try {
+        const { ids, force } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({ detail: 'No Inventory Item IDs provided for bulk delete.' });
+            return;
+        }
+
+        const { Op } = require('sequelize');
+
+        // Keep is_active syncing for soft deletes
+        if (!force) {
+            await InventoryItem.update({ is_active: false }, { where: { id: { [Op.in]: ids }, org_id: req.user.org_id } });
+        }
+        const deletedCount = await InventoryItem.destroy({
+            where: {
+                id: { [Op.in]: ids },
+                org_id: req.user.org_id
+            },
+            force: force // true = hard delete, false/undefined = soft delete
+        });
+
+        await AuditLog.create({
+            org_id: req.user.org_id,
+            user_id: req.user.id,
+            user_email: req.user.email,
+            entity_type: 'InventoryItem',
+            entity_id: ids[0],
+            action: force ? 'bulk_hard_delete' : 'bulk_delete',
+            new_values: { deleted_ids: ids, count: deletedCount }
+        });
+
+        res.json({ message: `${deletedCount} Inventory Items successfully ${force ? 'permanently deleted' : 'deactivated'}.` });
     } catch (err) {
         next(err);
     }

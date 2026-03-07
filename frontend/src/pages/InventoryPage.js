@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
-import { Plus, Search, Edit, Trash2, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { Plus, Search, Edit, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
 import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
@@ -31,6 +32,8 @@ const InventoryPage = () => {
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState([]);
   const { isManager, hasRole } = useAuth();
   const isRestricted = hasRole(['technician', 'requestor']);
   const { addNotification } = useNotification();
@@ -49,17 +52,18 @@ const InventoryPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [search, categoryFilter, lowStockOnly, page]);
+  }, [search, categoryFilter, lowStockOnly, page, recordStatus]);
 
   const fetchData = async () => {
     try {
       const [itemsRes, statsRes, categoriesRes] = await Promise.all([
-        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly, skip: (page - 1) * 10, limit: 10 }),
+        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly, record_status: recordStatus, skip: (page - 1) * 10, limit: 10 }),
         inventoryApi.getStats(),
         inventoryApi.getCategories(),
       ]);
       setItems(itemsRes.data.data);
       setTotal(itemsRes.data.total);
+      setSelectedIds([]);
       setStats(statsRes.data);
       setCategories([...new Set([...DEFAULT_CATEGORIES, ...(categoriesRes.data.categories || [])])]);
     } catch (error) {
@@ -118,14 +122,44 @@ const InventoryPage = () => {
   };
 
   const handleDelete = async (itemId) => {
-    if (!confirm('Delete this inventory item?')) return;
+    if (!window.confirm(recordStatus === 'active' ? 'Delete this inventory item?' : 'Permanently delete this inventory item?')) return;
     try {
       await inventoryApi.delete(itemId);
-      addNotification('success', 'Item deleted');
+      addNotification('success', recordStatus === 'active' ? 'Item deactivated' : 'Item permanently deleted');
       fetchData();
     } catch (error) {
       addNotification('error', 'Failed to delete item');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} items?`)) return;
+    
+    setSubmitting(true);
+    try {
+      await inventoryApi.bulkDelete({ ids: selectedIds, force: recordStatus === 'inactive' });
+      addNotification('success', `${selectedIds.length} items ${recordStatus === 'active' ? 'deactivated' : 'permanently deleted'}`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      addNotification('error', 'Failed to bulk delete items');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map((a) => a.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
   };
 
   const openEditDialog = (item) => {
@@ -442,13 +476,30 @@ const InventoryPage = () => {
               </Select>
             </div>
             <div className="flex items-center gap-2">
+              {isManager() && selectedIds.length > 0 && (
+                <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+              <div className="w-[180px]">
+                <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
+                  <SelectTrigger data-testid="filter-record-status">
+                    <SelectValue placeholder="Record Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active records</SelectItem>
+                    <SelectItem value="inactive">Deleted / Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Switch
                 id="low-stock"
                 checked={lowStockOnly}
                 onCheckedChange={(v) => { setLowStockOnly(v); setPage(1); }}
                 data-testid="low-stock-toggle"
               />
-              <Label htmlFor="low-stock" className="flex items-center gap-1 cursor-pointer">
+              <Label htmlFor="low-stock" className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
                 <AlertTriangle className="h-4 w-4" />
                 Low Stock Only
               </Label>
@@ -459,6 +510,14 @@ const InventoryPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                {isManager() && (
+                  <TableHead className="w-[40px]">
+                    <Checkbox 
+                      checked={items.length > 0 && selectedIds.length === items.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Item</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Category</TableHead>
@@ -484,6 +543,14 @@ const InventoryPage = () => {
               ) : (
                 items.map((item) => (
                   <TableRow key={item.id} data-testid={`inv-row-${item.id}`}>
+                    {isManager() && (
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedIds.includes(item.id)}
+                          onCheckedChange={() => toggleSelect(item.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{item.name}</span>

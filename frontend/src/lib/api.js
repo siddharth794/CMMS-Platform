@@ -59,6 +59,7 @@ export const assetsApi = {
   bulkCreate: (data) => api.post('/assets/bulk', data),
   update: (id, data) => api.put(`/assets/${id}`, data),
   delete: (id) => api.delete(`/assets/${id}`),
+  bulkDelete: (data) => api.post('/assets/bulk-delete', data),
 };
 
 // Work Orders
@@ -109,6 +110,7 @@ export const inventoryApi = {
   create: (data) => api.post('/inventory', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id) => api.delete(`/inventory/${id}`),
+  bulkDelete: (data) => api.post('/inventory/bulk-delete', data),
   getStats: () => api.get('/inventory/stats'),
   getCategories: () => api.get('/inventory/categories'),
 };
