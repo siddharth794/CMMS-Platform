@@ -103,7 +103,8 @@ const WorkOrdersPage = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await workOrdersApi.create(formData);
+      const payload = { ...formData, asset_id: formData.asset_id || null };
+      await workOrdersApi.create(payload);
       addNotification('success', 'Work order created');
       setCreateOpen(false);
       setFormData({ title: '', description: '', asset_id: '', priority: 'medium', location: '' });
