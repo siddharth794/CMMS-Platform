@@ -26,7 +26,7 @@ const AssetDetailPage = () => {
     location: '',
     category: '',
     serial_number: '',
-    model_number: '',
+    model: '',
     manufacturer: '',
     purchase_date: '',
     purchase_cost: '',
@@ -41,7 +41,7 @@ const AssetDetailPage = () => {
         location: asset.location || '',
         category: asset.category || '',
         serial_number: asset.serial_number || '',
-        model_number: asset.model_number || '',
+        model: asset.model || '',
         manufacturer: asset.manufacturer || '',
         purchase_date: asset.purchase_date ? asset.purchase_date.split('T')[0] : '',
         purchase_cost: asset.purchase_cost || '',
@@ -102,10 +102,16 @@ const AssetDetailPage = () => {
             <p className="text-muted-foreground">Tag: {asset.asset_tag}</p>
           </div>
         </div>
-        <Button variant="destructive" onClick={handleDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Asset
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="destructive" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Asset
+          </Button>
+          <Button type="submit" form="asset-form" disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Changes
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -115,7 +121,7 @@ const AssetDetailPage = () => {
             <CardDescription>Update asset details and specifications</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="asset-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Asset Name</Label>
@@ -176,11 +182,11 @@ const AssetDetailPage = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="model_number">Model #</Label>
+                  <Label htmlFor="model">Model #</Label>
                   <Input
-                    id="model_number"
-                    value={formData.model_number}
-                    onChange={(e) => setFormData({ ...formData, model_number: e.target.value })}
+                    id="model"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -193,13 +199,7 @@ const AssetDetailPage = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/assets')}>Cancel</Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Changes
-                </Button>
-              </div>
+              
             </form>
           </CardContent>
         </Card>

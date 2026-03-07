@@ -102,8 +102,8 @@ const WorkOrderDetailPage = () => {
         inventoryApi.list()
       ]);
       setWorkOrder(woRes.data);
-      setUsers(usersRes.data);
-      setInventoryCatalog(invRes.data);
+      setUsers(usersRes.data.data || usersRes.data);
+      setInventoryCatalog(invRes.data.data || invRes.data);
       await fetchComments();
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to load work order');
@@ -695,7 +695,7 @@ const WorkOrderDetailPage = () => {
           </DialogHeader>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {users
-              .filter(u => ['technician', 'facility_manager'].includes(u.role?.name?.toLowerCase()))
+              .filter(u => ['technician', 'facility_manager'].includes((u.role?.name || u.Role?.name || '').toLowerCase()))
               .map((user) => (
                 <Button
                   key={user.id}

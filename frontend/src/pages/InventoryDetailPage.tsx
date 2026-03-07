@@ -21,10 +21,10 @@ const InventoryDetailPage = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    part_number: '',
+    sku: '',
     description: '',
     category: '',
-    location: '',
+    storage_location: '',
     quantity: 0,
     min_quantity: 0,
     unit_cost: 0,
@@ -34,10 +34,10 @@ const InventoryDetailPage = () => {
     if (item) {
       setFormData({
         name: item.name || '',
-        part_number: item.part_number || '',
+        sku: item.sku || '',
         description: item.description || '',
         category: item.category || '',
-        location: item.location || '',
+        storage_location: item.storage_location || '',
         quantity: item.quantity || 0,
         min_quantity: item.min_quantity || 0,
         unit_cost: item.unit_cost || 0,
@@ -95,7 +95,7 @@ const InventoryDetailPage = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
-            <p className="text-muted-foreground">Part #: {item.part_number}</p>
+            <p className="text-muted-foreground">SKU: {item.sku}</p>
           </div>
         </div>
         <Button variant="destructive" onClick={handleDelete}>
@@ -123,11 +123,11 @@ const InventoryDetailPage = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="part_number">Part Number</Label>
+                  <Label htmlFor="sku">SKU</Label>
                   <Input
-                    id="part_number"
-                    value={formData.part_number}
-                    onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                     required
                   />
                 </div>
@@ -155,9 +155,9 @@ const InventoryDetailPage = () => {
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
                   <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    id="storage_location"
+                    value={formData.storage_location}
+                    onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
                   />
                 </div>
               </div>
