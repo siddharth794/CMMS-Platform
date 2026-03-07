@@ -422,8 +422,8 @@ const AssetsPage = () => {
                     />
                   </TableHead>
                 )}
-                <TableHead>Asset Tag</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Asset Tag</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Location</TableHead>
@@ -456,12 +456,12 @@ const AssetsPage = () => {
                         />
                       </TableCell>
                     )}
-                    <TableCell className="font-mono text-sm">{asset.asset_tag}</TableCell>
                     <TableCell className="font-medium">
                       <Link to={`/assets/${asset.id}`} className="text-primary hover:underline">
                         {asset.name}
                       </Link>
                     </TableCell>
+                    <TableCell className="font-mono text-sm">{asset.asset_tag}</TableCell>
                     <TableCell>
                       <span className="capitalize text-muted-foreground">{asset.asset_type}</span>
                     </TableCell>
