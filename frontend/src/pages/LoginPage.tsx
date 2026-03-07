@@ -1,0 +1,121 @@
+// @ts-nocheck
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Building2, Sun, Moon, Loader2 } from 'lucide-react';
+
+const LoginPage = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { addNotification } = useNotification();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await login(email, password);
+      addNotification('success', 'Welcome back!');
+      navigate('/');
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Side - Image/Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-primary/5 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1769008302212-816b6a07e10c?crop=entropy&cs=srgb&fm=jpg&q=85')] bg-cover bg-center opacity-20" />
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+              <Building2 className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <span className="text-2xl font-bold tracking-tight">Spartans FMS</span>
+          </div>
+
+          <div className="space-y-6">
+            <h1 className="text-4xl font-bold tracking-tight leading-tight">
+              Facility Management<br />Made Simple
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-md">
+              Streamline your facility operations with intelligent work order management,
+              asset tracking, and preventive maintenance scheduling.
+            </p>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            © 2025 Spartans FMS. All rights reserved.
+          </p>
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+        <div className="absolute top-4 right-4">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="login-theme-toggle">
+            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+        </div>
+
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex items-center justify-center gap-2 mb-4 lg:hidden">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                <Building2 className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold">CMMS</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardDescription>Enter your credentials to access your account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@demo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  data-testid="login-email-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  data-testid="login-password-input"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading} data-testid="login-submit-btn">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
