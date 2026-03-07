@@ -8,6 +8,10 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Calendar } from '../components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Save, Trash2, Package } from 'lucide-react';
 import { format } from 'date-fns';
@@ -166,12 +170,23 @@ const AssetDetailPage = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  />
+                  <Label>Category</Label>
+                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="HVAC">HVAC</SelectItem>
+                      <SelectItem value="Plumbing">Plumbing</SelectItem>
+                      <SelectItem value="Electrical">Electrical</SelectItem>
+                      <SelectItem value="Machinery">Machinery</SelectItem>
+                      <SelectItem value="Vehicles">Vehicles</SelectItem>
+                      <SelectItem value="IT Equipment">IT Equipment</SelectItem>
+                      <SelectItem value="Furniture">Furniture</SelectItem>
+                      <SelectItem value="Building">Building / Infrastructure</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -223,13 +238,29 @@ const AssetDetailPage = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="purchase_date">Purchase Date</Label>
-                  <Input
-                    id="purchase_date"
-                    type="date"
-                    value={formData.purchase_date}
-                    onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                  />
+                  <Label className="block mb-2">Purchase Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.purchase_date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.purchase_date ? format(new Date(formData.purchase_date), "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                        onSelect={(date) => setFormData({ ...formData, purchase_date: date ? date.toISOString() : '' })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="purchase_cost">Purchase Cost ($)</Label>
