@@ -1,0 +1,36 @@
+declare module '@/components/ui/*' {
+  const component: any;
+  export = component;
+  export const Button: any;
+  export const Input: any;
+  export const Label: any;
+  export const Textarea: any;
+  export const Select: any;
+  export const SelectContent: any;
+  export const SelectItem: any;
+  export const SelectTrigger: any;
+  export const SelectValue: any;
+  export const Dialog: any;
+  export const DialogContent: any;
+  export const DialogDescription: any;
+  export const DialogFooter: any;
+  export const DialogHeader: any;
+  export const DialogTitle: any;
+  export const DialogTrigger: any;
+  export const Table: any;
+  export const TableBody: any;
+  export const TableCell: any;
+  export const TableHead: any;
+  export const TableHeader: any;
+  export const TableRow: any;
+  export const DropdownMenu: any;
+  export const DropdownMenuContent: any;
+  export const DropdownMenuItem: any;
+  export const DropdownMenuTrigger: any;
+  export const Pagination: any;
+  export const Checkbox: any;
+  export const Card: any;
+  export const CardContent: any;
+  export const CardHeader: any;
+  export const CardTitle: any;
+}
