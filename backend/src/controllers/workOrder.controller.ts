@@ -21,107 +21,81 @@ const storage = multer.diskStorage({
 export const upload = multer({ storage, limits: { fileSize: 1024 * 1024, files: 3 } });
 
 class WorkOrderController {
-    private getAuditContext(req: Request): AuditContext {
+    private getAuditContext = (req: Request): AuditContext => {
         return { orgId: req.user!.org_id, userId: req.user!.id, userEmail: req.user!.email };
     }
 
-    async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const roleName = req.user!.Role?.name?.toLowerCase() || '';
-            const result = await workOrderService.getAll(req.user!.org_id, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery);
-            res.json(result);
-        } catch (err) { next(err); }
+    getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const roleName = req.user!.Role?.name?.toLowerCase() || '';
+        const result = await workOrderService.getAll(req.user!.org_id, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery);
+        res.json(result);
     }
 
-    async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const wo = await workOrderService.getById(req.params.wo_id as string, req.user!.org_id);
-            res.json(wo);
-        } catch (err) { next(err); }
+    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const wo = await workOrderService.getById(req.params.wo_id as string, req.user!.org_id);
+        res.json(wo);
     }
 
-    async create(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const wo = await workOrderService.create(req.user!.org_id, req.user!.id, req.body as CreateWorkOrderDTO, this.getAuditContext(req));
-            res.status(201).json(wo);
-        } catch (err) { next(err); }
+    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const wo = await workOrderService.create(req.user!.org_id, req.user!.id, req.body as CreateWorkOrderDTO, this.getAuditContext(req));
+        res.status(201).json(wo);
     }
 
-    async update(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const wo = await workOrderService.update(req.params.wo_id as string, req.user!.org_id, req.body as UpdateWorkOrderDTO, this.getAuditContext(req));
-            res.json(wo);
-        } catch (err) { next(err); }
+    update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const wo = await workOrderService.update(req.params.wo_id as string, req.user!.org_id, req.body as UpdateWorkOrderDTO, this.getAuditContext(req));
+        res.json(wo);
     }
 
-    async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const wo = await workOrderService.updateStatus(req.params.wo_id as string, req.user!.org_id, req.body as StatusUpdateDTO, this.getAuditContext(req));
-            res.json(wo);
-        } catch (err) { next(err); }
+    updateStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const wo = await workOrderService.updateStatus(req.params.wo_id as string, req.user!.org_id, req.body as StatusUpdateDTO, this.getAuditContext(req));
+        res.json(wo);
     }
 
-    async assign(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const wo = await workOrderService.assign(req.params.wo_id as string, req.user!.org_id, req.body as AssignDTO, this.getAuditContext(req));
-            res.json(wo);
-        } catch (err) { next(err); }
+    assign = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const wo = await workOrderService.assign(req.params.wo_id as string, req.user!.org_id, req.body as AssignDTO, this.getAuditContext(req));
+        res.json(wo);
     }
 
-    async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const result = await workOrderService.delete(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
-            res.json(result);
-        } catch (err) { next(err); }
+    delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await workOrderService.delete(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
+        res.json(result);
     }
 
-    async bulkDelete(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const result = await workOrderService.bulkDelete(req.user!.org_id, req.body as BulkDeleteDTO, this.getAuditContext(req));
-            res.json(result);
-        } catch (err) { next(err); }
+    bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await workOrderService.bulkDelete(req.user!.org_id, req.body as BulkDeleteDTO, this.getAuditContext(req));
+        res.json(result);
     }
 
     // ─── Comments ─────────────────────────────────────────────────
-    async getComments(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const comments = await workOrderService.getComments(req.params.wo_id as string, req.user!.org_id);
-            res.json(comments);
-        } catch (err) { next(err); }
+    getComments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const comments = await workOrderService.getComments(req.params.wo_id as string, req.user!.org_id);
+        res.json(comments);
     }
 
-    async addComment(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const io = req.app.get('io');
-            const comment = await workOrderService.addComment(req.params.wo_id as string, req.user!.org_id, req.body as CommentDTO, req.user!, io);
-            res.status(201).json(comment);
-        } catch (err) { next(err); }
+    addComment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const io = req.app.get('io');
+        const comment = await workOrderService.addComment(req.params.wo_id as string, req.user!.org_id, req.body as CommentDTO, req.user!, io);
+        res.status(201).json(comment);
     }
 
     // ─── Inventory Usage ──────────────────────────────────────────
-    async getUsedParts(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const parts = await workOrderService.getUsedParts(req.params.wo_id as string);
-            res.json(parts);
-        } catch (err) { next(err); }
+    getUsedParts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const parts = await workOrderService.getUsedParts(req.params.wo_id as string);
+        res.json(parts);
     }
 
-    async addInventoryUsage(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const usage = await workOrderService.addInventoryUsage(req.params.wo_id as string, req.user!.org_id, req.body as InventoryUsageDTO);
-            res.status(201).json(usage);
-        } catch (err) { next(err); }
+    addInventoryUsage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const usage = await workOrderService.addInventoryUsage(req.params.wo_id as string, req.user!.org_id, req.body as InventoryUsageDTO);
+        res.status(201).json(usage);
     }
 
-    async removeInventoryUsage(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const result = await workOrderService.removeInventoryUsage(req.params.wo_id as string, req.params.usage_id as string);
-            res.json(result);
-        } catch (err) { next(err); }
+    removeInventoryUsage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await workOrderService.removeInventoryUsage(req.params.wo_id as string, req.params.usage_id as string);
+        res.json(result);
     }
 
     // ─── Attachments ──────────────────────────────────────────────
-    async addAttachments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    addAttachments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const files = req.files as Express.Multer.File[];
             const filenames = (files || []).map(f => f.filename);
