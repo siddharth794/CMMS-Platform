@@ -21,7 +21,7 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_admin']), async (req: any, res, next) => {
+router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
     try {
         const { email, password, role_id, username, first_name, last_name, phone } = req.body;
 
@@ -38,8 +38,8 @@ router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_ad
         }
 
         const requestorRole = req.user.Role?.name?.toLowerCase() || req.user.role?.name?.toLowerCase();
-        if (requestorRole === 'org_admin' && ['super_admin', 'org_admin'].includes(role.name.toLowerCase())) {
-            res.status(403).json({ detail: 'Org Admins cannot assign Super Admin or Org Admin roles' });
+        if (['org_admin', 'admin'].includes(requestorRole) && ['super_admin', 'org_admin'].includes(role.name.toLowerCase())) {
+            res.status(403).json({ detail: 'You cannot assign Super Admin or Org Admin roles' });
             return;
         }
 
@@ -91,7 +91,7 @@ router.get('/:user_id', async (req: any, res, next) => {
     }
 });
 
-router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_admin']), async (req: any, res, next) => {
+router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
     try {
         const user: any = await User.findOne({
             where: { id: req.params.user_id, org_id: req.user.org_id },
@@ -109,8 +109,8 @@ router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 
             const role = await Role.findOne({ where: { id: updateData.role_id, org_id: req.user.org_id } });
             if (role) {
                 const requestorRole = req.user.Role?.name?.toLowerCase() || req.user.role?.name?.toLowerCase();
-                if (requestorRole === 'org_admin' && ['super_admin', 'org_admin'].includes(role.name.toLowerCase())) {
-                    res.status(403).json({ detail: 'Org Admins cannot assign Super Admin or Org Admin roles' });
+                if (['org_admin', 'admin'].includes(requestorRole) && ['super_admin', 'org_admin'].includes(role.name.toLowerCase())) {
+                    res.status(403).json({ detail: 'You cannot assign Super Admin or Org Admin roles' });
                     return;
                 }
             }
@@ -131,7 +131,7 @@ router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 
     }
 });
 
-router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_admin']), async (req: any, res, next) => {
+router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
     try {
         const user: any = await User.findOne({
             where: { id: req.params.user_id, org_id: req.user.org_id }

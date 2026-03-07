@@ -340,10 +340,10 @@ const AssetsPage = () => {
         )}
       </div>
 
-      {/* Search */}
+      {/* Search & Table */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 max-w-md">
+        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+          <div className="flex items-center gap-2 max-w-md w-full">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search assets by name, tag, or location..."
@@ -352,11 +352,7 @@ const AssetsPage = () => {
               data-testid="asset-search-input"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
+        </div>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>

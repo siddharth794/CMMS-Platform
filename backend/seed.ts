@@ -7,27 +7,22 @@ async function seed() {
         console.log('Connection has been established successfully.');
 
         // Force true only if you want to drop and recreate tables, let's keep it safe with alter: true or just rely on existing schema sync
-        await sequelize.sync({ alter: true });
-
-        // Check if DB already seeded
-        const adminUserCount = await User.count();
-        if (adminUserCount > 0) {
-            console.log('Database already contains users. Skipping seed.');
-            process.exit(0);
-        }
+        await sequelize.sync();
 
         console.log('Seeding initial data...');
 
-        // 1. Create Default Organization
-        const org: any = await Organization.create({
-            name: 'CMMS Demo Org',
-            description: 'Default organization for CMMS Platform',
-            address: '123 Tech Lane',
+        // 1. Find or Create Default Organization
+        const [org]: any = await Organization.findOrCreate({
+            where: { name: 'CMMS Demo Org' },
+            defaults: {
+                description: 'Default organization for CMMS Platform',
+                address: '123 Tech Lane',
+            }
         });
 
-        console.log(`Created Organization: ${org.name} (ID: ${org.id})`);
+        console.log(`Organization: ${org.name} (ID: ${org.id})`);
 
-        // 2. Create Roles
+        // 2. Create Roles (find or create each)
         const roleData = [
             { name: "Super_Admin", description: "Full system access", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
             { name: "Org_Admin", description: "Organization administrator", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
@@ -36,47 +31,48 @@ async function seed() {
             { name: "Requestor", description: "Creates and tracks work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true }
         ];
 
-        let superAdminRole = null;
         for (const roleDef of roleData) {
-            const role: any = await Role.create({ org_id: org.id, ...roleDef });
-            if (role.name === "Super_Admin") {
-                superAdminRole = role;
-            }
+            await Role.findOrCreate({
+                where: { name: roleDef.name, org_id: org.id },
+                defaults: { org_id: org.id, ...roleDef }
+            });
         }
 
-        console.log('Created standard roles.');
+        console.log('Roles ready.');
 
-        // 3. Create Demo Users for Each Role
-        console.log(`\nSeed Complete! Successfully created demo users.`);
-        console.log(`-------------------------------------------------`);
-
+        // 3. Create Demo Users (find or create each)
         const demoUsersData = [
             { email: 'admin@demo.com', roleName: 'Super_Admin', username: 'admin', firstName: 'Admin', lastName: 'User', password: 'admin123' },
+            { email: 'orgadmin@demo.com', roleName: 'Org_Admin', username: 'orgadmin', firstName: 'Org', lastName: 'Admin', password: 'orgadmin123' },
             { email: 'manager@demo.com', roleName: 'Facility_Manager', username: 'manager', firstName: 'Facility', lastName: 'Manager', password: 'manager123' },
             { email: 'tech@demo.com', roleName: 'Technician', username: 'tech', firstName: 'Tech', lastName: 'User', password: 'tech123' },
-            { email: 'requestor@demo.com', roleName: 'Requestor', username: 'requestor', firstName: 'Staff', lastName: 'Requestor', password: 'requestor123' } // Added requestor for completeness
+            { email: 'requestor@demo.com', roleName: 'Requestor', username: 'requestor', firstName: 'Staff', lastName: 'Requestor', password: 'requestor123' },
         ];
 
+        console.log(`\nSeed Complete! Demo users:`);
+        console.log(`-------------------------------------------------`);
+
         for (const demoDef of demoUsersData) {
-            // Find the actual role created from DB
-            const role = await Role.findOne({ where: { name: demoDef.roleName, org_id: org.id } });
+            const role: any = await Role.findOne({ where: { name: demoDef.roleName, org_id: org.id } });
             if (!role) continue;
 
             const salt = bcrypt.genSaltSync(10);
             const passwordHash = bcrypt.hashSync(demoDef.password, salt);
 
-            await User.create({
-                org_id: org.id,
-                role_id: role.id,
-                email: demoDef.email,
-                username: demoDef.username,
-                first_name: demoDef.firstName,
-                last_name: demoDef.lastName,
-                password_hash: passwordHash,
-                is_active: true
+            const [user, created]: any = await User.findOrCreate({
+                where: { email: demoDef.email },
+                defaults: {
+                    org_id: org.id,
+                    role_id: role.id,
+                    username: demoDef.username,
+                    first_name: demoDef.firstName,
+                    last_name: demoDef.lastName,
+                    password_hash: passwordHash,
+                    is_active: true
+                }
             });
 
-            console.log(`Created User: ${demoDef.email} / ${demoDef.password} (Role: ${demoDef.roleName})`);
+            console.log(`${created ? 'Created' : 'Already exists'}: ${demoDef.email} / ${demoDef.password} (Role: ${demoDef.roleName})`);
         }
         console.log(`-------------------------------------------------\n`);
 

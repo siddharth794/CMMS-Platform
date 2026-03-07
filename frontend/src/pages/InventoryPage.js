@@ -284,10 +284,10 @@ const InventoryPage = () => {
           <p className="text-muted-foreground">Browse spare parts and supplies</p>
         </div>
 
-        {/* Search */}
+        {/* Simplified Table with Search Header */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 rounded-lg border px-3 py-2 max-w-md">
+          <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+            <div className="flex items-center gap-2 rounded-lg border px-3 py-2 max-w-md bg-background w-full">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search inventory..."
@@ -297,11 +297,7 @@ const InventoryPage = () => {
                 data-testid="inv-search-input"
               />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Simplified Table */}
-        <Card>
+          </div>
           <CardContent className="pt-6">
             <Table>
               <TableHeader>
@@ -418,11 +414,11 @@ const InventoryPage = () => {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters & Table */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[250px] flex items-center gap-2 rounded-lg border px-3 py-2">
+        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+          <div className="flex flex-wrap gap-4 items-center w-full">
+            <div className="flex-1 min-w-[250px] flex items-center gap-2 rounded-lg border px-3 py-2 bg-background">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search inventory..."
@@ -458,11 +454,7 @@ const InventoryPage = () => {
               </Label>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
+        </div>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
