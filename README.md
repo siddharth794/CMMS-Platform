@@ -24,9 +24,10 @@ A full-stack **Computerized Maintenance Management System** built for managing a
 - **Real-time Notifications** — Socket.IO powered live notifications and work order comment updates
 
 
+
 - **Role-Based Access Control (RBAC)** — Granular, multi-tenant RBAC system with customizable Roles, Groups, and Access Features. 
   - [Read the Architecture Guide](./docs/RBAC_ARCHITECTURE.md)
-  - [Read the User & Setup Guide](./docs/USER_GUIDE.md)
+  - [Read the App & User Manual](./docs/APPLICATION_MANUAL.md)
 - **Multi-Organization** — Tenant-isolated data with organization-scoped queries
 
 ## Quick Start
