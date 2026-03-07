@@ -27,7 +27,7 @@ const InventoryDetailPage = () => {
     storage_location: '',
     quantity: 0,
     min_quantity: 0,
-    unit_cost: 0,
+    unit_cost: '0',
   });
 
   useEffect(() => {
@@ -98,9 +98,9 @@ const InventoryDetailPage = () => {
             <p className="text-muted-foreground">SKU: {item.sku}</p>
           </div>
         </div>
-        <Button variant="destructive" onClick={handleDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Item
+        <Button type="submit" form="inventory-form" disabled={updateMutation.isPending}>
+          {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Save Changes
         </Button>
       </div>
 
@@ -111,7 +111,7 @@ const InventoryDetailPage = () => {
             <CardDescription>Update inventory levels, cost, and location</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="inventory-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Item Name</Label>
@@ -190,19 +190,13 @@ const InventoryDetailPage = () => {
                     type="number"
                     step="0.01"
                     value={formData.unit_cost}
-                    onChange={(e) => setFormData({ ...formData, unit_cost: parseFloat(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, unit_cost: e.target.value.toString() })}
                     required
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/inventory')}>Cancel</Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Changes
-                </Button>
-              </div>
+              
             </form>
           </CardContent>
         </Card>
@@ -240,11 +234,11 @@ const InventoryDetailPage = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label className="text-muted-foreground">Unit Cost</Label>
-                <p className="font-medium">${formData.unit_cost.toFixed(2)}</p>
+                <p className="font-medium">${parseFloat(formData.unit_cost || 0).toFixed(2)}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Total Value</Label>
-                <p className="font-medium">${(formData.quantity * formData.unit_cost).toFixed(2)}</p>
+                <p className="font-medium">${(formData.quantity * parseFloat(formData.unit_cost || 0)).toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>
