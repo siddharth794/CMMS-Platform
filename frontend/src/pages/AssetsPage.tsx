@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { assetsApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -29,6 +30,7 @@ const AssetsPage = () => {
   const [search, setSearch] = useState('');
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -455,7 +457,11 @@ const AssetsPage = () => {
                       </TableCell>
                     )}
                     <TableCell className="font-mono text-sm">{asset.asset_tag}</TableCell>
-                    <TableCell className="font-medium">{asset.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link to={`/assets/${asset.id}`} className="text-primary hover:underline">
+                        {asset.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       <span className="capitalize text-muted-foreground">{asset.asset_type}</span>
                     </TableCell>
@@ -482,12 +488,15 @@ const AssetsPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/assets/${asset.id}`)}>
+                            <Eye className="mr-2 h-4 w-4" />View Details
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setSelectedAsset(asset); setViewOpen(true); }}>
-                            <Eye className="mr-2 h-4 w-4" />View
+                            <Box className="mr-2 h-4 w-4" />Quick View
                           </DropdownMenuItem>
                           {isManager() && (
                             <DropdownMenuItem onClick={() => openEditDialog(asset)}>
-                              <Edit className="mr-2 h-4 w-4" />Edit
+                              <Edit className="mr-2 h-4 w-4" />Edit (Modal)
                             </DropdownMenuItem>
                           )}
                           {isManager() && (

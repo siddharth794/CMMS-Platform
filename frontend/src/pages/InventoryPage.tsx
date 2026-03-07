@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { inventoryApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -38,6 +39,7 @@ const InventoryPage = () => {
   const { isManager, hasRole } = useAuth();
   const isRestricted = hasRole(['technician', 'requestor']);
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -360,7 +362,11 @@ const InventoryPage = () => {
                 ) : (
                   items.map((item) => (
                     <TableRow key={item.id} data-testid={`inv-row-${item.id}`}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/inventory/${item.id}`} className="text-primary hover:underline">
+                          {item.name}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-sm">{item.sku || '-'}</TableCell>
                       <TableCell>{item.category}</TableCell>
                       <TableCell className="text-muted-foreground">{item.storage_location}</TableCell>
@@ -554,7 +560,9 @@ const InventoryPage = () => {
                     )}
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.name}</span>
+                        <Link to={`/inventory/${item.id}`} className="text-primary hover:underline font-medium">
+                          {item.name}
+                        </Link>
                         {isLowStock(item) && (
                           <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                             Low Stock
@@ -577,6 +585,9 @@ const InventoryPage = () => {
                     <TableCell className="text-right">
                       {isManager() && (
                         <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/inventory/${item.id}`)} title="View Details">
+                            <Package className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} data-testid={`edit-${item.id}`}>
                             <Edit className="h-4 w-4" />
                           </Button>

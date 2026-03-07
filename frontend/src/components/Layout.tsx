@@ -27,9 +27,12 @@ const Sidebar = ({ className = '' }) => {
     { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
     { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
+    { name: 'Organizations', href: '/organizations', icon: Building2, superAdminOnly: true },
+    { name: 'Users', href: '/users', icon: User, managerOnly: true },
     { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3, hideFromRequester: true },
     { name: 'Settings', href: '/settings', icon: Settings },
   ].filter(item => {
+    if (item.superAdminOnly && !hasRole(['super_admin'])) return false;
     if (item.managerOnly && isRestricted) return false;
     if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
     return true;
