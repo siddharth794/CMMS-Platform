@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { User, Role, AuditLog } from '../models';
+import { Op } from 'sequelize';
+import { User, Role, sequelize } from '../models';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { CreateUserSchema, UpdateUserSchema, BulkDeleteSchema } from '../validators/user.validator';
+import { auditService } from '../services/audit.service';
+import { ADMIN_ROLES } from '../constants/roles';
 
 const router = Router();
 router.use(authenticate);
@@ -11,7 +16,6 @@ router.get('/', async (req: any, res, next) => {
         const { skip = 0, limit = 100, record_status } = req.query;
         let where: any = { org_id: req.user.org_id };
 
-        const { Op } = require('sequelize');
         let paranoid = true;
         if (record_status === 'inactive') {
             paranoid = false;
@@ -36,7 +40,7 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
+router.post('/', requireRole(ADMIN_ROLES), validate(CreateUserSchema), async (req: any, res, next) => {
     try {
         const { email, password, role_id, username, first_name, last_name, phone } = req.body;
 
@@ -58,30 +62,34 @@ router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin'
             return;
         }
 
-        const salt = bcrypt.genSaltSync(10);
-        const password_hash = bcrypt.hashSync(password, salt);
+        const newUser: any = await sequelize.transaction(async (t) => {
+            const salt = await bcrypt.genSalt(10);
+            const password_hash = await bcrypt.hash(password, salt);
 
-        const newUser: any = await User.create({
-            org_id: req.user.org_id,
-            role_id,
-            email,
-            username,
-            first_name,
-            last_name,
-            phone,
-            password_hash
+            const created = await User.create({
+                org_id: req.user.org_id,
+                role_id,
+                email,
+                username,
+                first_name,
+                last_name,
+                phone,
+                password_hash
+            }, { transaction: t });
+
+            return created;
         });
 
         const createdUser = await User.findByPk(newUser.id, { include: [{ model: Role }] });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'User',
-            entity_id: newUser.id,
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'User',
+            entityId: newUser.id,
             action: 'create',
-            new_values: { email: newUser.email }
+            newValues: { email: newUser.email }
         });
 
         res.status(201).json(createdUser);
@@ -106,7 +114,7 @@ router.get('/:user_id', async (req: any, res, next) => {
     }
 });
 
-router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
+router.put('/:user_id', requireRole(ADMIN_ROLES), validate(UpdateUserSchema), async (req: any, res, next) => {
     try {
         const user: any = await User.findOne({
             where: { id: req.params.user_id, org_id: req.user.org_id },
@@ -132,8 +140,8 @@ router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super
         }
 
         if (updateData.password) {
-            const salt = bcrypt.genSaltSync(10);
-            updateData.password_hash = bcrypt.hashSync(updateData.password, salt);
+            const salt = await bcrypt.genSalt(10);
+            updateData.password_hash = await bcrypt.hash(updateData.password, salt);
             delete updateData.password;
         }
 
@@ -146,7 +154,7 @@ router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super
     }
 });
 
-router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
+router.delete('/:user_id', requireRole(ADMIN_ROLES), async (req: any, res, next) => {
     try {
         const user: any = await User.findOne({
             where: { id: req.params.user_id, org_id: req.user.org_id },
@@ -159,16 +167,18 @@ router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'su
         }
 
         if (user.deleted_at === null && user.is_active !== false) {
-            user.is_active = false;
-            await user.save();
-            await user.destroy();
+            await sequelize.transaction(async (t) => {
+                user.is_active = false;
+                await user.save({ transaction: t });
+                await user.destroy({ transaction: t });
+            });
 
-            await AuditLog.create({
-                org_id: req.user.org_id,
-                user_id: req.user.id,
-                user_email: req.user.email,
-                entity_type: 'User',
-                entity_id: req.params.user_id,
+            auditService.log({
+                orgId: req.user.org_id,
+                userId: req.user.id,
+                userEmail: req.user.email,
+                entityType: 'User',
+                entityId: req.params.user_id,
                 action: 'delete'
             });
 
@@ -176,12 +186,12 @@ router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'su
         } else {
             await user.destroy({ force: true });
 
-            await AuditLog.create({
-                org_id: req.user.org_id,
-                user_id: req.user.id,
-                user_email: req.user.email,
-                entity_type: 'User',
-                entity_id: req.params.user_id,
+            auditService.log({
+                orgId: req.user.org_id,
+                userId: req.user.id,
+                userEmail: req.user.email,
+                entityType: 'User',
+                entityId: req.params.user_id,
                 action: 'hard_delete'
             });
 
@@ -192,15 +202,9 @@ router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'su
     }
 });
 
-router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
+router.post('/bulk-delete', requireRole(ADMIN_ROLES), validate(BulkDeleteSchema), async (req: any, res, next) => {
     try {
         const { ids, force } = req.body;
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            res.status(400).json({ detail: 'No User IDs provided for bulk delete.' });
-            return;
-        }
-
-        const { Op } = require('sequelize');
 
         // Prevent users from deleting themselves in bulk
         const idx = ids.indexOf(req.user.id);
@@ -222,17 +226,17 @@ router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 's
                 id: { [Op.in]: ids },
                 org_id: req.user.org_id
             },
-            force: force // true = hard delete, false/undefined = soft delete
+            force: force
         });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'User',
-            entity_id: ids[0],
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'User',
+            entityId: ids[0],
             action: force ? 'bulk_hard_delete' : 'bulk_delete',
-            new_values: { deleted_ids: ids, count: deletedCount }
+            newValues: { deleted_ids: ids, count: deletedCount }
         });
 
         res.json({ message: `${deletedCount} Users successfully ${force ? 'permanently deleted' : 'deactivated'}.` });
