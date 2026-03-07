@@ -1,10 +1,23 @@
-import { WorkOrder, Asset, User, Role, AuditLog, WOComment, Notification, InventoryItem, WorkOrderInventoryItem, WOAttachment } from '../models';
-import { authenticate, requireRole } from '../middleware/auth';
-import { Op } from 'sequelize';
+import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { Router } from 'express';
+import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, sequelize } from '../models';
+import { authenticate, requireRole } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import {
+    CreateWorkOrderSchema,
+    UpdateWorkOrderSchema,
+    StatusUpdateSchema,
+    AssignSchema,
+    CommentSchema,
+    InventoryUsageSchema,
+    BulkDeleteSchema
+} from '../validators/workOrder.validator';
+import { auditService } from '../services/audit.service';
+import { notificationService } from '../services/notification.service';
+import { ALL_WO_ROLES, MANAGER_ROLES } from '../constants/roles';
+import { Op } from 'sequelize';
 
 const uploadDir = path.join(__dirname, '../../uploads/work-orders');
 if (!fs.existsSync(uploadDir)) {
@@ -77,7 +90,7 @@ router.get('/', async (req: any, res, next) => {
             order: [['created_at', 'DESC']],
             offset: Number(skip),
             limit: Number(limit),
-            distinct: true // Ensure count is correct despite joined tables
+            distinct: true
         });
         res.json({
             data: wos.rows,
@@ -90,16 +103,13 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager', 'technician', 'requestor', 'requester']), async (req: any, res, next) => {
+router.post('/', requireRole(ALL_WO_ROLES), validate(CreateWorkOrderSchema), async (req: any, res, next) => {
     try {
         const woData = { ...req.body, org_id: req.user.org_id, requester_id: req.user.id };
         woData.wo_number = generateWoNumber();
         woData.status = 'new';
 
-        // Ensure asset_id is null if sent as an empty string
-        if (woData.asset_id === "") {
-            woData.asset_id = null;
-        }
+        if (woData.asset_id === "") woData.asset_id = null;
 
         const wo: any = await WorkOrder.create(woData);
 
@@ -113,14 +123,14 @@ router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 's
             ]
         });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'WorkOrder',
-            entity_id: wo.id,
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'WorkOrder',
+            entityId: wo.id,
             action: 'create',
-            new_values: { wo_number: wo.wo_number, title: wo.title }
+            newValues: { wo_number: wo.wo_number, title: wo.title }
         });
 
         res.status(201).json(fullyLoadedWo);
@@ -151,7 +161,7 @@ router.get('/:wo_id', async (req: any, res, next) => {
     }
 });
 
-router.put('/:wo_id', async (req: any, res, next) => {
+router.put('/:wo_id', requireRole(MANAGER_ROLES), validate(UpdateWorkOrderSchema), async (req: any, res, next) => {
     try {
         const wo: any = await WorkOrder.findOne({
             where: { id: req.params.wo_id, org_id: req.user.org_id }
@@ -163,11 +173,8 @@ router.put('/:wo_id', async (req: any, res, next) => {
 
         const oldStatus = wo.status;
 
-        // Ensure asset_id is null if sent as an empty string
         const updateData = { ...req.body };
-        if (updateData.asset_id === "") {
-            updateData.asset_id = null;
-        }
+        if (updateData.asset_id === "") updateData.asset_id = null;
 
         await wo.update(updateData);
 
@@ -187,15 +194,15 @@ router.put('/:wo_id', async (req: any, res, next) => {
             ]
         });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'WorkOrder',
-            entity_id: wo.id,
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'WorkOrder',
+            entityId: wo.id,
             action: 'update',
-            old_values: { status: oldStatus },
-            new_values: req.body
+            oldValues: { status: oldStatus },
+            newValues: req.body
         });
 
         res.json(fullyLoadedWo);
@@ -204,7 +211,7 @@ router.put('/:wo_id', async (req: any, res, next) => {
     }
 });
 
-router.patch('/:wo_id/status', async (req: any, res, next) => {
+router.patch('/:wo_id/status', validate(StatusUpdateSchema), async (req: any, res, next) => {
     try {
         const wo: any = await WorkOrder.findOne({
             where: { id: req.params.wo_id, org_id: req.user.org_id }
@@ -246,15 +253,15 @@ router.patch('/:wo_id/status', async (req: any, res, next) => {
             ]
         });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'WorkOrder',
-            entity_id: wo.id,
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'WorkOrder',
+            entityId: wo.id,
             action: 'status_change',
-            old_values: { status: oldStatus },
-            new_values: { status: newStatus }
+            oldValues: { status: oldStatus },
+            newValues: { status: newStatus }
         });
 
         res.json(fullyLoadedWo);
@@ -263,7 +270,7 @@ router.patch('/:wo_id/status', async (req: any, res, next) => {
     }
 });
 
-router.patch('/:wo_id/assign', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+router.patch('/:wo_id/assign', requireRole(MANAGER_ROLES), validate(AssignSchema), async (req: any, res, next) => {
     try {
         const wo: any = await WorkOrder.findOne({
             where: { id: req.params.wo_id, org_id: req.user.org_id }
@@ -288,14 +295,14 @@ router.patch('/:wo_id/assign', requireRole(['Super_Admin', 'Org_Admin', 'Facilit
             ]
         });
 
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'WorkOrder',
-            entity_id: wo.id,
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'WorkOrder',
+            entityId: wo.id,
             action: 'assign',
-            new_values: { assignee_id: req.body.assignee_id }
+            newValues: { assignee_id: req.body.assignee_id }
         });
 
         res.json(fullyLoadedWo);
@@ -304,11 +311,11 @@ router.patch('/:wo_id/assign', requireRole(['Super_Admin', 'Org_Admin', 'Facilit
     }
 });
 
-router.delete('/:wo_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+router.delete('/:wo_id', requireRole(MANAGER_ROLES), async (req: any, res, next) => {
     try {
         const wo: any = await WorkOrder.findOne({
             where: { id: req.params.wo_id, org_id: req.user.org_id },
-            paranoid: false // Allow finding it even if already soft-deleted
+            paranoid: false
         });
         if (!wo) {
             res.status(404).json({ detail: 'Work order not found' });
@@ -316,26 +323,24 @@ router.delete('/:wo_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Mana
         }
 
         if (wo.deleted_at === null) {
-            // It's active, soft delete it
             await wo.destroy();
-            await AuditLog.create({
-                org_id: req.user.org_id,
-                user_id: req.user.id,
-                user_email: req.user.email,
-                entity_type: 'WorkOrder',
-                entity_id: wo.id,
-                action: 'delete' // Soft delete
+            auditService.log({
+                orgId: req.user.org_id,
+                userId: req.user.id,
+                userEmail: req.user.email,
+                entityType: 'WorkOrder',
+                entityId: wo.id,
+                action: 'delete'
             });
             res.json({ message: 'Work order deactivated (soft delete)' });
         } else {
-            // It's already soft-deleted, hard delete it
             await wo.destroy({ force: true });
-            await AuditLog.create({
-                org_id: req.user.org_id,
-                user_id: req.user.id,
-                user_email: req.user.email,
-                entity_type: 'WorkOrder',
-                entity_id: wo.id,
+            auditService.log({
+                orgId: req.user.org_id,
+                userId: req.user.id,
+                userEmail: req.user.email,
+                entityType: 'WorkOrder',
+                entityId: wo.id,
                 action: 'hard_delete'
             });
             res.json({ message: 'Work order permanently deleted' });
@@ -345,35 +350,29 @@ router.delete('/:wo_id', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Mana
     }
 });
 
-router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Facility_Manager', 'super_admin', 'org_admin', 'facility_manager']), async (req: any, res, next) => {
+router.post('/bulk-delete', requireRole(MANAGER_ROLES), validate(BulkDeleteSchema), async (req: any, res, next) => {
     try {
         const { ids, force } = req.body;
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            res.status(400).json({ detail: 'No Work Order IDs provided for bulk delete.' });
-            return;
-        }
-
-        // Only delete Work Orders belonging to the user's organization
+        
         const deletedCount = await WorkOrder.destroy({
             where: {
                 id: { [Op.in]: ids },
                 org_id: req.user.org_id
             },
-            force: force // true = hard delete, false/undefined = soft delete
+            force: force 
         });
 
-        // Optional: create An Audit log for bulk delete
-        await AuditLog.create({
-            org_id: req.user.org_id,
-            user_id: req.user.id,
-            user_email: req.user.email,
-            entity_type: 'WorkOrder',
-            entity_id: ids[0], // Arbitrary ID from list to fulfill non-null constraint
+        auditService.log({
+            orgId: req.user.org_id,
+            userId: req.user.id,
+            userEmail: req.user.email,
+            entityType: 'WorkOrder',
+            entityId: ids[0],
             action: force ? 'bulk_hard_delete' : 'bulk_delete',
-            new_values: { deleted_ids: ids, count: deletedCount }
+            newValues: { deleted_ids: ids, count: deletedCount }
         });
 
-        res.json({ message: `${deletedCount} Work Orders successfully ${force ? 'permanently deleted' : 'deactivated'}.` });
+        res.json({ message: `${deletedCount} Work Orders OS successfully ${force ? 'permanently deleted' : 'deactivated'}.` });
     } catch (err) {
         next(err);
     }
@@ -381,11 +380,14 @@ router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Facility_M
 
 // --- Work Order Comments ---
 
-// List comments for a WO
 router.get('/:wo_id/comments', async (req: any, res, next) => {
     try {
         const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
         if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
+
+        // Needs to be imported properly from modes (which it currently isn't in original file without explicit require/import)
+        // Let's assume WOComment is imported (which it is on line 1)
+        const { WOComment } = require('../models');
 
         const comments = await WOComment.findAll({
             where: { work_order_id: req.params.wo_id },
@@ -398,14 +400,13 @@ router.get('/:wo_id/comments', async (req: any, res, next) => {
     }
 });
 
-// Add a comment to a WO
-router.post('/:wo_id/comments', async (req: any, res, next) => {
+router.post('/:wo_id/comments', validate(CommentSchema), async (req: any, res, next) => {
     try {
         const wo: any = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
         if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
 
         const { message } = req.body;
-        if (!message || !message.trim()) { res.status(400).json({ detail: 'Message is required' }); return; }
+        const { WOComment } = require('../models');
 
         const comment: any = await WOComment.create({
             work_order_id: req.params.wo_id,
@@ -418,44 +419,16 @@ router.post('/:wo_id/comments', async (req: any, res, next) => {
         });
 
         const io = req.app.get('io');
-
-        // Emit comment to the work order room
         if (io) {
             io.to(`wo_${req.params.wo_id}`).emit('new_comment', fullComment);
         }
 
-        // Determine who needs a notification (Assignee or Requester)
-        const commentersId = req.user.id;
-        const notificationRecipients = [];
-        if (wo.assignee_id && wo.assignee_id !== commentersId) {
-            notificationRecipients.push(wo.assignee_id);
-        }
-        if (wo.requester_id && wo.requester_id !== commentersId && wo.requester_id !== wo.assignee_id) {
-            notificationRecipients.push(wo.requester_id);
-        }
-
-        // Create notification & emit socket to them
-        const commenterName = `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim();
-        for (const targetUserId of notificationRecipients) {
-            const notif = await Notification.create({
-                user_id: targetUserId,
-                title: 'New Comment',
-                message: `${commenterName} commented on Work Order ${wo.wo_number}`,
-                link: `/work-orders/${wo.id}`
-            });
-
-            if (io) {
-                // To get activesockets securely, export from server.ts and look it up
-                // A simpler way: just emit to a user-specific room if we joined it, or emit to all and let client filter
-                // Actually the standard way is socket.join(`user_${user.id}`) in server.ts
-                // I will just emit gloabally for now and let the client UI filter unless I add user rooms.
-                // Let's emit a global event and filter by user ID on frontend.
-                io.emit('new_notification', {
-                    ...notif.toJSON(),
-                    target_user_id: targetUserId
-                });
-            }
-        }
+        // Fire and forget notification
+        notificationService.notifyCommentAdded({
+            workOrder: wo,
+            commenter: req.user,
+            io
+        });
 
         res.status(201).json(fullComment);
     } catch (err) {
@@ -465,7 +438,6 @@ router.post('/:wo_id/comments', async (req: any, res, next) => {
 
 // --- Work Order Inventory (Parts Used) ---
 
-// Get used parts
 router.get('/:wo_id/inventory', async (req: any, res, next) => {
     try {
         const parts = await WorkOrderInventoryItem.findAll({
@@ -479,65 +451,81 @@ router.get('/:wo_id/inventory', async (req: any, res, next) => {
     }
 });
 
-// Add a part to a WO (consumes stock)
-router.post('/:wo_id/inventory', async (req: any, res, next) => {
+router.post('/:wo_id/inventory', validate(InventoryUsageSchema), async (req: any, res, next) => {
     try {
         const { inventory_item_id, quantity_used } = req.body;
-        if (!inventory_item_id || !quantity_used || quantity_used <= 0) {
-            res.status(400).json({ detail: 'Valid inventory_item_id and quantity_used are required' });
-            return;
-        }
 
         const wo = await WorkOrder.findOne({ where: { id: req.params.wo_id, org_id: req.user.org_id } });
         if (!wo) { res.status(404).json({ detail: 'Work order not found' }); return; }
 
-        const item: any = await InventoryItem.findOne({ where: { id: inventory_item_id, org_id: req.user.org_id } });
-        if (!item) { res.status(404).json({ detail: 'Inventory item not found' }); return; }
+        const fullUsage = await sequelize.transaction(async (t) => {
+            // Lock the inventory item to prevent race conditions during check and deduct
+            const item: any = await InventoryItem.findOne({ 
+                where: { id: inventory_item_id, org_id: req.user.org_id },
+                lock: t.LOCK.UPDATE,
+                transaction: t
+            });
 
-        if (item.quantity < quantity_used) {
-            res.status(400).json({ detail: `Not enough stock. Only ${item.quantity} available.` });
-            return;
-        }
+            if (!item) { throw new Error('Inventory item not found'); }
+            if (item.quantity < quantity_used) {
+                throw new Error(`Not enough stock. Only ${item.quantity} available.`);
+            }
 
-        // Deduct quantity
-        item.quantity -= quantity_used;
-        await item.save();
+            item.quantity -= quantity_used;
+            await item.save({ transaction: t });
 
-        // Create usage record
-        const usage: any = await WorkOrderInventoryItem.create({
-            work_order_id: req.params.wo_id,
-            inventory_item_id,
-            quantity_used
-        });
+            const usage: any = await WorkOrderInventoryItem.create({
+                work_order_id: req.params.wo_id,
+                inventory_item_id,
+                quantity_used
+            }, { transaction: t });
 
-        const fullUsage = await WorkOrderInventoryItem.findByPk(usage.id, {
-            include: [{ model: InventoryItem, as: 'item' }]
+            return await WorkOrderInventoryItem.findByPk(usage.id, {
+                include: [{ model: InventoryItem, as: 'item' }],
+                transaction: t
+            });
         });
 
         res.status(201).json(fullUsage);
-    } catch (err) {
-        next(err);
+    } catch (err: any) {
+        if (err.message.includes('stock') || err.message.includes('not found')) {
+            res.status(400).json({ detail: err.message });
+        } else {
+            next(err);
+        }
     }
 });
 
-// Remove a part from a WO (restores stock)
 router.delete('/:wo_id/inventory/:usage_id', async (req: any, res, next) => {
     try {
-        const usage: any = await WorkOrderInventoryItem.findOne({
-            where: { id: req.params.usage_id, work_order_id: req.params.wo_id }
+        await sequelize.transaction(async (t) => {
+            const usage: any = await WorkOrderInventoryItem.findOne({
+                where: { id: req.params.usage_id, work_order_id: req.params.wo_id },
+                transaction: t
+            });
+            if (!usage) { throw new Error('Usage record not found'); }
+
+            const item: any = await InventoryItem.findOne({
+                where: { id: usage.inventory_item_id },
+                lock: t.LOCK.UPDATE,
+                transaction: t
+            });
+
+            if (item) {
+                item.quantity += usage.quantity_used;
+                await item.save({ transaction: t });
+            }
+
+            await usage.destroy({ transaction: t });
         });
-        if (!usage) { res.status(404).json({ detail: 'Usage record not found' }); return; }
 
-        const item: any = await InventoryItem.findByPk(usage.inventory_item_id);
-        if (item) {
-            item.quantity += usage.quantity_used;
-            await item.save();
-        }
-
-        await usage.destroy();
         res.json({ message: 'Part usage removed, stock restored.' });
-    } catch (err) {
-        next(err);
+    } catch (err: any) {
+        if (err.message.includes('not found')) {
+            res.status(404).json({ detail: err.message });
+        } else {
+            next(err);
+        }
     }
 });
 
@@ -554,18 +542,20 @@ router.post('/:wo_id/attachments', upload.array('images', 3), async (req: any, r
             return;
         }
 
-        const attachments = [];
-        for (const file of files) {
-            const attachment = await WOAttachment.create({
-                work_order_id: wo.id,
-                file_path: `/uploads/work-orders/${file.filename}`
-            });
-            attachments.push(attachment);
-        }
+        const attachments = await sequelize.transaction(async (t) => {
+            const results = [];
+            for (const file of files) {
+                const attachment = await WOAttachment.create({
+                    work_order_id: wo.id,
+                    file_path: `/uploads/work-orders/${file.filename}`
+                }, { transaction: t });
+                results.push(attachment);
+            }
+            return results;
+        });
 
         res.status(201).json(attachments);
     } catch (err) {
-        // Multer errors (e.g., LIMIT_FILE_SIZE) are usually caught here
         if (err instanceof multer.MulterError) {
             res.status(400).json({ detail: err.message });
         } else {
