@@ -44,8 +44,8 @@ const AssetsPage = () => {
     try {
       setLoading(true);
       const response = await assetsApi.list({ search, record_status: recordStatus, skip: (page - 1) * 10, limit: 10 });
-      setAssets(response.data.data);
-      setTotal(response.data.total);
+      setAssets(response.data.data || response.data || []);
+      setTotal(response.data.total || (response.data.data || response.data || []).length);
       setSelectedIds([]);
     } catch (error) {
       addNotification('error', 'Failed to fetch assets');
@@ -55,48 +55,8 @@ const AssetsPage = () => {
   };
 
   
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const payload = { ...formData };
-      if (!payload.purchase_date) payload.purchase_date = null;
-      if (!payload.warranty_expiry) payload.warranty_expiry = null;
-
-      await assetsApi.create(payload);
-      addNotification('success', 'Asset created');
-      setCreateOpen(false);
-      resetForm();
-      fetchAssets();
-    } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to create asset');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEdit = async (e) => {
-    e.preventDefault();
-    if (!selectedAsset) return;
-    setSubmitting(true);
-    try {
-      const payload = { ...formData };
-      if (!payload.purchase_date) payload.purchase_date = null;
-      if (!payload.warranty_expiry) payload.warranty_expiry = null;
-
-      await assetsApi.update(selectedAsset.id, payload);
-      addNotification('success', 'Asset updated');
-      setEditOpen(false);
-      setSelectedAsset(null);
-      resetForm();
-      fetchAssets();
-    } catch (error) {
-      addNotification('error', 'Failed to update asset');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+  
+  
   const handleDelete = async (assetId) => {
     if (!window.confirm(recordStatus === 'active' ? 'Delete this asset?' : 'Permanently delete this asset?')) return;
     try {
@@ -128,7 +88,7 @@ const AssetsPage = () => {
     if (selectedIds.length === assets.length && assets.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(assets.map((a) => a.id));
+      setSelectedIds((assets || []).map((a) => a.id));
     }
   };
 
@@ -228,7 +188,7 @@ const AssetsPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                assets.map((asset) => (
+                (assets || []).map((asset) => (
                   <TableRow key={asset.id} data-testid={`asset-row-${asset.id}`}>
                     {isManager() && (
                       <TableCell>
@@ -302,85 +262,9 @@ const AssetsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) { setSelectedAsset(null); resetForm(); } }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
-            <DialogDescription>Update the asset details</DialogDescription>
-          </DialogHeader>
-          {renderAssetForm({ onSubmit: handleEdit, isEdit: true })}
-        </DialogContent>
-      </Dialog>
+      
 
-      {/* View Dialog */}
-      <Dialog open={viewOpen} onOpenChange={(open) => { setViewOpen(open); if (!open) setSelectedAsset(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Asset Details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm text-muted-foreground block">Name</span>
-                <span className="font-medium">{selectedAsset?.name || '-'}</span>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground block">Asset Tag</span>
-                <span className="font-medium">{selectedAsset?.asset_tag || '-'}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm text-muted-foreground block">Type</span>
-                <span className="capitalize">{selectedAsset?.asset_type || '-'}</span>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground block">Category</span>
-                <span className="capitalize">{selectedAsset?.category || '-'}</span>
-              </div>
-            </div>
-            <div>
-              <span className="text-sm text-muted-foreground block">Location</span>
-              <span>{selectedAsset?.location || '-'}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <span className="text-sm text-muted-foreground block">Manufacturer</span>
-                <span>{selectedAsset?.manufacturer || '-'}</span>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground block">Model</span>
-                <span>{selectedAsset?.model || '-'}</span>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground block">Serial Number</span>
-                <span>{selectedAsset?.serial_number || '-'}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm text-muted-foreground block">Purchase Date</span>
-                <span>{selectedAsset?.purchase_date ? format(new Date(selectedAsset.purchase_date), 'MMM d, yyyy') : '-'}</span>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground block">Warranty Expiry</span>
-                <span>{selectedAsset?.warranty_expiry ? format(new Date(selectedAsset.warranty_expiry), 'MMM d, yyyy') : '-'}</span>
-              </div>
-            </div>
-            <div>
-              <span className="text-sm text-muted-foreground block">Description</span>
-              <p className="text-sm">{selectedAsset?.description || '-'}</p>
-            </div>
-            <div>
-              <span className="text-sm text-muted-foreground block mb-1">Status</span>
-              <span className={`status-badge ${selectedAsset?.status === 'active' ? 'status-completed' : selectedAsset?.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
-                {selectedAsset?.status || '-'}
-              </span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      
     </div>
   );
 };
