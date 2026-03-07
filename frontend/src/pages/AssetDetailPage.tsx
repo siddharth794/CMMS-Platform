@@ -103,10 +103,7 @@ const AssetDetailPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Asset
-          </Button>
+          
           <Button type="submit" form="asset-form" disabled={updateMutation.isPending}>
             {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Changes
