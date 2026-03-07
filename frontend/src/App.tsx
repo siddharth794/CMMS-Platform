@@ -28,6 +28,12 @@ const InventoryDetailPage = React.lazy(() => import('./pages/InventoryDetailPage
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 const UserDetailPage = React.lazy(() => import('./pages/UserDetailPage'));
 
+const RolesPage = React.lazy(() => import('./pages/RolesPage'));
+const GroupsPage = React.lazy(() => import('./pages/GroupsPage'));
+const AccessesPage = React.lazy(() => import('./pages/AccessesPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+
+
 const queryClient = new QueryClient();
 
 const RoleBasedDashboard = () => {
@@ -141,6 +147,12 @@ const AppRoutes = () => {
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
           <Route path="users" element={<ManagerRoute><UsersPage /></ManagerRoute>} />
           <Route path="users/:id" element={<ManagerRoute><UserDetailPage /></ManagerRoute>} />
+
+          <Route path="roles" element={<ManagerRoute><RolesPage /></ManagerRoute>} />
+          <Route path="groups" element={<ManagerRoute><GroupsPage /></ManagerRoute>} />
+          <Route path="accesses" element={<SuperAdminRoute><AccessesPage /></SuperAdminRoute>} />
+          <Route path="profile" element={<ProfilePage />} />
+
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

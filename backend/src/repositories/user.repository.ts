@@ -40,7 +40,16 @@ class UserRepository {
 
     async createWithTransaction(data: Record<string, any>): Promise<any> {
         return sequelize.transaction(async (t) => {
-            return User.create(data, { transaction: t });
+            const roleId = data.role_id;
+            delete data.role_id; // Remove before create since the column is gone
+
+            const user = await User.create(data, { transaction: t });
+            
+            if (roleId) {
+                await (user as any).addRole(roleId, { transaction: t });
+            }
+
+            return user;
         });
     }
 

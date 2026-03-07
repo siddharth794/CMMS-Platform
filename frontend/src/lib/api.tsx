@@ -51,17 +51,41 @@ export const usersApi = {
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
+  
   bulkDelete: (data) => api.post('/users/bulk-delete', data),
+  updateRoles: (id, data) => api.put(`/users/${id}/roles`, data),
+  updateProfile: (data) => api.put('/users/me', data),
+  updatePassword: (data) => api.put('/users/me/password', data),
 };
 
+
 // Roles
+// Assets
+
 export const rolesApi = {
   list: () => api.get('/roles'),
   create: (data) => api.post('/roles', data),
   update: (id, data) => api.put(`/roles/${id}`, data),
+  delete: (id) => api.delete(`/roles/${id}`),
+  updateAccesses: (id, data) => api.put(`/roles/${id}/accesses`, data),
 };
 
-// Assets
+export const accessesApi = {
+  list: () => api.get('/accesses'),
+  create: (data) => api.post('/accesses', data),
+  update: (id, data) => api.put(`/accesses/${id}`, data),
+  delete: (id) => api.delete(`/accesses/${id}`),
+};
+
+export const groupsApi = {
+  list: () => api.get('/groups'),
+  create: (data) => api.post('/groups', data),
+  update: (id, data) => api.put(`/groups/${id}`, data),
+  delete: (id) => api.delete(`/groups/${id}`),
+  updateMembers: (id, data) => api.put(`/groups/${id}/members`, data),
+  updateRoles: (id, data) => api.put(`/groups/${id}/roles`, data),
+};
+
 export const assetsApi = {
   list: (params) => api.get('/assets', { params }),
   get: (id) => api.get(`/assets/${id}`),

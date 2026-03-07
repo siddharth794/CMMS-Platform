@@ -216,3 +216,12 @@ export interface UpdatePMScheduleDTO {
     next_due?: string;
     is_active?: boolean;
 }
+
+// ─── Access DTOs ──────────────────────────────────────────────────
+export interface CreateAccessDTO {
+    name: string;
+    description?: string;
+    module?: string;
+}
+
+export type UpdateAccessDTO = Partial<CreateAccessDTO>;

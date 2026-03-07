@@ -48,6 +48,22 @@ class UserController {
         const result = await userService.bulkDelete(req.user!.org_id, dto, this.getAuditContext(req), req.user!.id);
         res.json(result);
     }
+
+    updateRoles = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const { role_ids } = req.body;
+        const user = await userService.updateRoles(req.params.user_id as string, req.user!.org_id, role_ids, this.getRequestorRole(req));
+        res.json(user);
+    }
+
+    updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const user = await userService.updateProfile(req.user!.id, req.user!.org_id, req.body);
+        res.json(user);
+    }
+
+    updatePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        await userService.updatePassword(req.user!.id, req.user!.org_id, req.body);
+        res.status(204).send();
+    }
 }
 
 export const userController = new UserController();
