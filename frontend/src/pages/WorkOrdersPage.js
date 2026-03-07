@@ -327,17 +327,6 @@ const WorkOrdersPage = () => {
               </Button>
             )}
             <div className="w-[180px]">
-              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
-                <SelectTrigger data-testid="filter-record-status">
-                  <SelectValue placeholder="Record Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active records</SelectItem>
-                  <SelectItem value="inactive">Deleted / Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-[180px]">
               <Select value={filters.status} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
                 <SelectTrigger data-testid="filter-status">
                   <SelectValue placeholder="All Status" />
@@ -363,6 +352,17 @@ const WorkOrdersPage = () => {
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-[180px]">
+              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
+                <SelectTrigger data-testid="filter-record-status">
+                  <SelectValue placeholder="Record Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>

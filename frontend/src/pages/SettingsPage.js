@@ -243,17 +243,6 @@ const SettingsPage = () => {
                   Delete
                 </Button>
               )}
-              <div className="w-[180px]">
-                <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); }}>
-                  <SelectTrigger data-testid="filter-record-status">
-                    <SelectValue placeholder="Record Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active records</SelectItem>
-                    <SelectItem value="inactive">Deleted / Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               {isAdmin() && (
                 <Dialog open={userDialogOpen} onOpenChange={(open) => { setUserDialogOpen(open); if (!open) resetUserForm(); }}>
                   <DialogTrigger asChild>
@@ -369,6 +358,17 @@ const SettingsPage = () => {
                 </DialogContent>
               </Dialog>
             )}
+            <div className="w-[180px]">
+              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); }}>
+                <SelectTrigger data-testid="filter-record-status">
+                  <SelectValue placeholder="Record Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             </div>
           </div>
 

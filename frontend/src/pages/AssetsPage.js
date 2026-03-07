@@ -400,8 +400,8 @@ const AssetsPage = () => {
                   <SelectValue placeholder="Record Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active records</SelectItem>
-                  <SelectItem value="inactive">Deleted / Inactive</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
