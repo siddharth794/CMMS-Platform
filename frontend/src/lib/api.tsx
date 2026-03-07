@@ -35,6 +35,15 @@ export const authApi = {
   getMe: () => api.get('/auth/me'),
 };
 
+// Organizations
+export const organizationsApi = {
+  list: (params) => api.get('/organizations', { params }),
+  get: (id) => api.get(`/organizations/${id}`),
+  create: (data) => api.post('/organizations', data),
+  update: (id, data) => api.put(`/organizations/${id}`, data),
+  delete: (id, force = false) => api.delete(`/organizations/${id}`, { params: { force } }),
+};
+
 // Users
 export const usersApi = {
   list: (params) => api.get('/users', { params }),
