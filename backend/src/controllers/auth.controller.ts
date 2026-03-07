@@ -3,17 +3,13 @@ import { authService } from '../services/auth.service';
 import { LoginDTO } from '../types/dto';
 
 class AuthController {
-    async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const dto: LoginDTO = req.body;
-            const result = await authService.login(dto);
-            res.json(result);
-        } catch (err) {
-            next(err);
-        }
+    login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const dto: LoginDTO = req.body;
+        const result = await authService.login(dto);
+        res.json(result);
     }
 
-    async me(req: Request, res: Response, _next: NextFunction): Promise<void> {
+    me = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
         res.json(req.user);
     }
 }

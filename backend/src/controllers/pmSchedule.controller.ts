@@ -4,44 +4,34 @@ import { CreatePMScheduleDTO, UpdatePMScheduleDTO } from '../types/dto';
 import { AuditContext } from '../types/common.dto';
 
 class PMScheduleController {
-    private getAuditContext(req: Request): AuditContext {
+    private getAuditContext = (req: Request): AuditContext => {
         return { orgId: req.user!.org_id, userId: req.user!.id, userEmail: req.user!.email };
     }
 
-    async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const { skip = 0, limit = 100, asset_id } = req.query;
-            const pms = await pmScheduleService.getAll(req.user!.org_id, asset_id as string | undefined, Number(skip), Number(limit));
-            res.json(pms);
-        } catch (err) { next(err); }
+    getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const { skip = 0, limit = 100, asset_id } = req.query;
+        const pms = await pmScheduleService.getAll(req.user!.org_id, asset_id as string | undefined, Number(skip), Number(limit));
+        res.json(pms);
     }
 
-    async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const pm = await pmScheduleService.getById(req.params.pm_id as string, req.user!.org_id);
-            res.json(pm);
-        } catch (err) { next(err); }
+    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const pm = await pmScheduleService.getById(req.params.pm_id as string, req.user!.org_id);
+        res.json(pm);
     }
 
-    async create(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const pm = await pmScheduleService.create(req.user!.org_id, req.body as CreatePMScheduleDTO, this.getAuditContext(req));
-            res.status(201).json(pm);
-        } catch (err) { next(err); }
+    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const pm = await pmScheduleService.create(req.user!.org_id, req.body as CreatePMScheduleDTO, this.getAuditContext(req));
+        res.status(201).json(pm);
     }
 
-    async update(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const pm = await pmScheduleService.update(req.params.pm_id as string, req.user!.org_id, req.body as UpdatePMScheduleDTO);
-            res.json(pm);
-        } catch (err) { next(err); }
+    update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const pm = await pmScheduleService.update(req.params.pm_id as string, req.user!.org_id, req.body as UpdatePMScheduleDTO);
+        res.json(pm);
     }
 
-    async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const result = await pmScheduleService.delete(req.params.pm_id as string, req.user!.org_id);
-            res.json(result);
-        } catch (err) { next(err); }
+    delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await pmScheduleService.delete(req.params.pm_id as string, req.user!.org_id);
+        res.json(result);
     }
 }
 
