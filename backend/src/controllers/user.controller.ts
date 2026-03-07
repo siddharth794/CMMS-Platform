@@ -14,7 +14,10 @@ class UserController {
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const query: UserListQuery = req.query as any;
-        const users = await userService.getAll(req.user!.org_id, query);
+        const userRole = this.getRequestorRole(req);
+        const targetOrgId = (userRole === 'super_admin' && req.query.org_id) ? String(req.query.org_id) : req.user!.org_id;
+
+        const users = await userService.getAll(targetOrgId, query);
         res.json(users);
     }
 
