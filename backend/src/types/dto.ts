@@ -42,6 +42,10 @@ export interface CreateOrganizationDTO {
     name: string;
     description?: string;
     address?: string;
+    owner_name?: string;
+    website_url?: string;
+    email?: string;
+    phone?: string;
 }
 
 // ─── Role DTOs ────────────────────────────────────────────────────
