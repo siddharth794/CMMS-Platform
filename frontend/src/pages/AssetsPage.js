@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import AssetsBulkUploadDialog from '../components/AssetsBulkUploadDialog';
 import { Pagination } from '../components/ui/pagination';
-import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin, Trash } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
@@ -43,16 +44,20 @@ const AssetsPage = () => {
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     fetchAssets();
-  }, [search, page]);
+  }, [search, page, recordStatus]);
 
   const fetchAssets = async () => {
     try {
-      const response = await assetsApi.list({ search, skip: (page - 1) * 10, limit: 10 });
+      setLoading(true);
+      const response = await assetsApi.list({ search, record_status: recordStatus, skip: (page - 1) * 10, limit: 10 });
       setAssets(response.data.data);
       setTotal(response.data.total);
+      setSelectedIds([]);
     } catch (error) {
       addNotification('error', 'Failed to fetch assets');
     } finally {
@@ -120,14 +125,44 @@ const AssetsPage = () => {
   };
 
   const handleDelete = async (assetId) => {
-    if (!confirm('Delete this asset?')) return;
+    if (!window.confirm(recordStatus === 'active' ? 'Delete this asset?' : 'Permanently delete this asset?')) return;
     try {
       await assetsApi.delete(assetId);
-      addNotification('success', 'Asset deleted');
+      addNotification('success', recordStatus === 'active' ? 'Asset deactivated' : 'Asset permanently deleted');
       fetchAssets();
     } catch (error) {
       addNotification('error', 'Failed to delete asset');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} assets?`)) return;
+    
+    setSubmitting(true);
+    try {
+      await assetsApi.bulkDelete({ ids: selectedIds, force: recordStatus === 'inactive' });
+      addNotification('success', `${selectedIds.length} assets ${recordStatus === 'active' ? 'deactivated' : 'permanently deleted'}`);
+      setSelectedIds([]);
+      fetchAssets();
+    } catch (error) {
+      addNotification('error', 'Failed to bulk delete assets');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === assets.length && assets.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(assets.map((a) => a.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
   };
 
   const openEditDialog = (asset) => {
@@ -352,11 +387,38 @@ const AssetsPage = () => {
               data-testid="asset-search-input"
             />
           </div>
+          <div className="flex items-center gap-2">
+            {isManager() && selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
+            <div className="w-[180px]">
+              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
+                <SelectTrigger data-testid="filter-record-status">
+                  <SelectValue placeholder="Record Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
+                {isManager() && (
+                  <TableHead className="w-[40px]">
+                    <Checkbox 
+                      checked={assets.length > 0 && selectedIds.length === assets.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Asset Tag</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
@@ -383,6 +445,14 @@ const AssetsPage = () => {
               ) : (
                 assets.map((asset) => (
                   <TableRow key={asset.id} data-testid={`asset-row-${asset.id}`}>
+                    {isManager() && (
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedIds.includes(asset.id)}
+                          onCheckedChange={() => toggleSelect(asset.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-mono text-sm">{asset.asset_tag}</TableCell>
                     <TableCell className="font-medium">{asset.name}</TableCell>
                     <TableCell>
@@ -421,7 +491,7 @@ const AssetsPage = () => {
                           )}
                           {isManager() && (
                             <DropdownMenuItem onClick={() => handleDelete(asset.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />Delete
+                              <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>

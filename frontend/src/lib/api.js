@@ -42,6 +42,7 @@ export const usersApi = {
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
+  bulkDelete: (data) => api.post('/users/bulk-delete', data),
 };
 
 // Roles
@@ -59,6 +60,7 @@ export const assetsApi = {
   bulkCreate: (data) => api.post('/assets/bulk', data),
   update: (id, data) => api.put(`/assets/${id}`, data),
   delete: (id) => api.delete(`/assets/${id}`),
+  bulkDelete: (data) => api.post('/assets/bulk-delete', data),
 };
 
 // Work Orders
@@ -70,6 +72,7 @@ export const workOrdersApi = {
   updateStatus: (id, data) => api.patch(`/work-orders/${id}/status`, data),
   assign: (id, data) => api.patch(`/work-orders/${id}/assign`, data),
   delete: (id) => api.delete(`/work-orders/${id}`),
+  bulkDelete: (data) => api.post('/work-orders/bulk-delete', data),
   export: () => api.get('/work-orders/export', { responseType: 'blob' }),
   getComments: (id) => api.get(`/work-orders/${id}/comments`),
   addComment: (id, data) => api.post(`/work-orders/${id}/comments`, data),
@@ -108,6 +111,7 @@ export const inventoryApi = {
   create: (data) => api.post('/inventory', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id) => api.delete(`/inventory/${id}`),
+  bulkDelete: (data) => api.post('/inventory/bulk-delete', data),
   getStats: () => api.get('/inventory/stats'),
   getCategories: () => api.get('/inventory/categories'),
 };

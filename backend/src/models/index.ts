@@ -8,7 +8,7 @@ Organization.init({
     description: { type: DataTypes.TEXT },
     address: { type: DataTypes.TEXT },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-}, { sequelize, tableName: 'organizations', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'organizations', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class Role extends Model { public id!: number; public name!: string; }
 Role.init({
@@ -19,7 +19,7 @@ Role.init({
     permissions: { type: DataTypes.JSON, defaultValue: {} },
     is_system_role: { type: DataTypes.BOOLEAN, defaultValue: false },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-}, { sequelize, tableName: 'roles', timestamps: true, createdAt: 'created_at', updatedAt: false });
+}, { sequelize, tableName: 'roles', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
 class User extends Model { public id!: string; public email!: string; public password_hash!: string; }
 User.init({
@@ -34,7 +34,7 @@ User.init({
     phone: { type: DataTypes.STRING(20) },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
     last_login: { type: DataTypes.DATE },
-}, { sequelize, tableName: 'users', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'users', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class Asset extends Model { public id!: string; public name!: string; }
 Asset.init({
@@ -54,7 +54,7 @@ Asset.init({
     warranty_expiry: { type: DataTypes.DATE },
     status: { type: DataTypes.STRING(50), defaultValue: 'active' },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-}, { sequelize, tableName: 'assets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'assets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class WorkOrder extends Model { public id!: string; }
 WorkOrder.init({
@@ -77,7 +77,7 @@ WorkOrder.init({
     actual_hours: { type: DataTypes.INTEGER },
     notes: { type: DataTypes.TEXT },
     is_pm_generated: { type: DataTypes.BOOLEAN, defaultValue: false },
-}, { sequelize, tableName: 'work_orders', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'work_orders', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class PMSchedule extends Model { public id!: string; }
 PMSchedule.init({
@@ -93,7 +93,7 @@ PMSchedule.init({
     last_generated: { type: DataTypes.DATE },
     next_due: { type: DataTypes.DATE, allowNull: false },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-}, { sequelize, tableName: 'pm_schedules', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'pm_schedules', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class AuditLog extends Model { public id!: string; }
 AuditLog.init({
@@ -107,7 +107,7 @@ AuditLog.init({
     old_values: { type: DataTypes.JSON },
     new_values: { type: DataTypes.JSON },
     ip_address: { type: DataTypes.STRING(50) },
-}, { sequelize, tableName: 'audit_logs', timestamps: true, createdAt: 'created_at', updatedAt: false });
+}, { sequelize, tableName: 'audit_logs', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
 class InventoryItem extends Model { public id!: string; }
 InventoryItem.init({
@@ -123,7 +123,7 @@ InventoryItem.init({
     unit_cost: { type: DataTypes.STRING(50), defaultValue: '0' },
     storage_location: { type: DataTypes.STRING, allowNull: false },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-}, { sequelize, tableName: 'inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class WOComment extends Model { public id!: string; }
 WOComment.init({
@@ -131,7 +131,7 @@ WOComment.init({
     work_order_id: { type: DataTypes.UUID, allowNull: false },
     user_id: { type: DataTypes.UUID, allowNull: false },
     message: { type: DataTypes.TEXT, allowNull: false },
-}, { sequelize, tableName: 'wo_comments', timestamps: true, createdAt: 'created_at', updatedAt: false });
+}, { sequelize, tableName: 'wo_comments', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
 class Notification extends Model { public id!: string; }
 Notification.init({
@@ -141,7 +141,7 @@ Notification.init({
     message: { type: DataTypes.TEXT, allowNull: false },
     is_read: { type: DataTypes.BOOLEAN, defaultValue: false },
     link: { type: DataTypes.STRING },
-}, { sequelize, tableName: 'notifications', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { sequelize, tableName: 'notifications', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class WorkOrderInventoryItem extends Model { public id!: string; public quantity_used!: number; }
 WorkOrderInventoryItem.init({
@@ -149,14 +149,14 @@ WorkOrderInventoryItem.init({
     work_order_id: { type: DataTypes.UUID, allowNull: false },
     inventory_item_id: { type: DataTypes.UUID, allowNull: false },
     quantity_used: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-}, { sequelize, tableName: 'work_order_inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: false });
+}, { sequelize, tableName: 'work_order_inventory_items', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
 class WOAttachment extends Model { public id!: string; public file_path!: string; }
 WOAttachment.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     work_order_id: { type: DataTypes.UUID, allowNull: false },
     file_path: { type: DataTypes.STRING, allowNull: false },
-}, { sequelize, tableName: 'wo_attachments', timestamps: true, createdAt: 'created_at', updatedAt: false });
+}, { sequelize, tableName: 'wo_attachments', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
 
 // Associations

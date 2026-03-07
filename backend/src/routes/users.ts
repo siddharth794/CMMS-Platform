@@ -8,9 +8,24 @@ router.use(authenticate);
 
 router.get('/', async (req: any, res, next) => {
     try {
-        const { skip = 0, limit = 100 } = req.query;
+        const { skip = 0, limit = 100, record_status } = req.query;
+        let where: any = { org_id: req.user.org_id };
+
+        const { Op } = require('sequelize');
+        let paranoid = true;
+        if (record_status === 'inactive') {
+            paranoid = false;
+            where[Op.or] = [
+                { deleted_at: { [Op.not]: null } },
+                { is_active: false }
+            ];
+        } else {
+            where.is_active = true;
+        }
+
         const users = await User.findAll({
-            where: { org_id: req.user.org_id },
+            where,
+            paranoid,
             include: [{ model: Role }],
             offset: Number(skip),
             limit: Number(limit)
@@ -134,7 +149,8 @@ router.put('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super
 router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
     try {
         const user: any = await User.findOne({
-            where: { id: req.params.user_id, org_id: req.user.org_id }
+            where: { id: req.params.user_id, org_id: req.user.org_id },
+            paranoid: false
         });
 
         if (!user) {
@@ -142,19 +158,84 @@ router.delete('/:user_id', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'su
             return;
         }
 
-        user.is_active = false;
-        await user.save();
+        if (user.deleted_at === null && user.is_active !== false) {
+            user.is_active = false;
+            await user.save();
+            await user.destroy();
+
+            await AuditLog.create({
+                org_id: req.user.org_id,
+                user_id: req.user.id,
+                user_email: req.user.email,
+                entity_type: 'User',
+                entity_id: req.params.user_id,
+                action: 'delete'
+            });
+
+            res.json({ message: 'User deactivated' });
+        } else {
+            await user.destroy({ force: true });
+
+            await AuditLog.create({
+                org_id: req.user.org_id,
+                user_id: req.user.id,
+                user_email: req.user.email,
+                entity_type: 'User',
+                entity_id: req.params.user_id,
+                action: 'hard_delete'
+            });
+
+            res.json({ message: 'User permanently deleted' });
+        }
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.post('/bulk-delete', requireRole(['Super_Admin', 'Org_Admin', 'Admin', 'super_admin', 'org_admin', 'admin']), async (req: any, res, next) => {
+    try {
+        const { ids, force } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({ detail: 'No User IDs provided for bulk delete.' });
+            return;
+        }
+
+        const { Op } = require('sequelize');
+
+        // Prevent users from deleting themselves in bulk
+        const idx = ids.indexOf(req.user.id);
+        if (idx !== -1) {
+             ids.splice(idx, 1);
+        }
+        
+        if (ids.length === 0) {
+            res.status(400).json({ detail: 'Cannot perform bulk delete exclusively on yourself.' });
+            return;
+        }
+
+        // Keep is_active syncing for soft deletes
+        if (!force) {
+            await User.update({ is_active: false }, { where: { id: { [Op.in]: ids }, org_id: req.user.org_id } });
+        }
+        const deletedCount = await User.destroy({
+            where: {
+                id: { [Op.in]: ids },
+                org_id: req.user.org_id
+            },
+            force: force // true = hard delete, false/undefined = soft delete
+        });
 
         await AuditLog.create({
             org_id: req.user.org_id,
             user_id: req.user.id,
             user_email: req.user.email,
             entity_type: 'User',
-            entity_id: req.params.user_id,
-            action: 'delete'
+            entity_id: ids[0],
+            action: force ? 'bulk_hard_delete' : 'bulk_delete',
+            new_values: { deleted_ids: ids, count: deletedCount }
         });
 
-        res.json({ message: 'User deactivated' });
+        res.json({ message: `${deletedCount} Users successfully ${force ? 'permanently deleted' : 'deactivated'}.` });
     } catch (err) {
         next(err);
     }
