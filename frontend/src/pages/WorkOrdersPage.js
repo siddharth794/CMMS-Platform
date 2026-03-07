@@ -344,18 +344,18 @@ const WorkOrdersPage = () => {
             <TableHeader>
               <TableRow>
                 {isManager() && (
-                  <TableHead className="w-[40px]">
+                  <TableHead className="w-[50px] min-w-[50px]">
                     <Checkbox 
                       checked={workOrders.length > 0 && selectedIds.length === workOrders.length}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
                 )}
-                <TableHead>WO Number</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>
+                <TableHead className="min-w-[180px] whitespace-nowrap">WO Number</TableHead>
+                <TableHead className="min-w-[250px]">Title</TableHead>
+                <TableHead className="min-w-[160px]">
                   <Select value={filters.status || "all"} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-auto p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -368,9 +368,9 @@ const WorkOrdersPage = () => {
                     </SelectContent>
                   </Select>
                 </TableHead>
-                <TableHead>
+                <TableHead className="min-w-[160px]">
                   <Select value={filters.priority || "all"} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-auto p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
                       <SelectValue placeholder="Priority" />
                     </SelectTrigger>
                     <SelectContent>
@@ -382,11 +382,11 @@ const WorkOrdersPage = () => {
                     </SelectContent>
                   </Select>
                 </TableHead>
-                <TableHead>Asset</TableHead>
-                <TableHead>Assignee</TableHead>
-                <TableHead>Created</TableHead>
-                {false && <TableHead className="w-[50px]"></TableHead>}
-                {!isRequester() && <TableHead className="w-[50px]"></TableHead>}
+                <TableHead className="min-w-[200px]">Asset</TableHead>
+                <TableHead className="min-w-[200px]">Assignee</TableHead>
+                <TableHead className="min-w-[150px] whitespace-nowrap">Created</TableHead>
+                {false && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
+                {!isRequester() && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>

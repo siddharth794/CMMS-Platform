@@ -379,18 +379,18 @@ const SettingsPage = () => {
                 <TableHeader>
                   <TableRow>
                     {isAdmin() && (
-                      <TableHead className="w-[40px]">
+                      <TableHead className="w-[50px] min-w-[50px]">
                         <Checkbox 
                           checked={users.length > 0 && selectedIds.length === users.length}
                           onCheckedChange={toggleSelectAll}
                         />
                       </TableHead>
                     )}
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>
+                    <TableHead className="min-w-[200px]">Name</TableHead>
+                    <TableHead className="min-w-[250px]">Email</TableHead>
+                    <TableHead className="min-w-[200px]">
                       <Select value={roleFilter || "all"} onValueChange={(v) => { setRoleFilter(v === "all" ? "" : v); }}>
-                        <SelectTrigger className="border-0 bg-transparent shadow-none w-auto p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectTrigger className="border-0 bg-transparent shadow-none w-[160px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
                           <SelectValue placeholder="Role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -411,9 +411,9 @@ const SettingsPage = () => {
                         </SelectContent>
                       </Select>
                     </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="min-w-[150px]">Status</TableHead>
+                    <TableHead className="min-w-[150px] whitespace-nowrap">Last Login</TableHead>
+                    <TableHead className="w-[50px] min-w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

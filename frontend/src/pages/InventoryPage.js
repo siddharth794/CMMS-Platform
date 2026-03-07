@@ -499,18 +499,18 @@ const InventoryPage = () => {
             <TableHeader>
               <TableRow>
                 {isManager() && (
-                  <TableHead className="w-[40px]">
+                  <TableHead className="w-[50px] min-w-[50px]">
                     <Checkbox
                       checked={items.length > 0 && selectedIds.length === items.length}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
                 )}
-                <TableHead>Item</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>
+                <TableHead className="min-w-[250px]">Item</TableHead>
+                <TableHead className="min-w-[150px]">SKU</TableHead>
+                <TableHead className="min-w-[200px]">
                   <Select value={categoryFilter || "all"} onValueChange={(v) => { setCategoryFilter(v === "all" ? "" : v); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-auto p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[160px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -521,10 +521,10 @@ const InventoryPage = () => {
                     </SelectContent>
                   </Select>
                 </TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Unit Cost</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="min-w-[200px]">Location</TableHead>
+                <TableHead className="min-w-[120px] text-right whitespace-nowrap">Quantity</TableHead>
+                <TableHead className="min-w-[120px] text-right whitespace-nowrap">Unit Cost</TableHead>
+                <TableHead className="w-[100px] min-w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
