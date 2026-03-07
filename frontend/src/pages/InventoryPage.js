@@ -462,19 +462,7 @@ const InventoryPage = () => {
                 data-testid="inv-search-input"
               />
             </div>
-            <div className="w-[180px]">
-              <Select value={categoryFilter || "all"} onValueChange={(v) => { setCategoryFilter(v === "all" ? "" : v); setPage(1); }}>
-                <SelectTrigger data-testid="filter-category">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="flex items-center gap-2">
               {isManager() && selectedIds.length > 0 && (
                 <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
@@ -520,7 +508,19 @@ const InventoryPage = () => {
                 )}
                 <TableHead>Item</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead>
+                  <Select value={categoryFilter || "all"} onValueChange={(v) => { setCategoryFilter(v === "all" ? "" : v); setPage(1); }}>
+                    <SelectTrigger className="border-0 bg-transparent shadow-none w-auto p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead className="text-right">Unit Cost</TableHead>

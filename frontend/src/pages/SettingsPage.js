@@ -24,6 +24,7 @@ const SettingsPage = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [roleFilter, setRoleFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const { user: currentUser, isAdmin, hasRole } = useAuth();
   const { addNotification } = useNotification();
@@ -387,7 +388,29 @@ const SettingsPage = () => {
                     )}
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
+                    <TableHead>
+                      <Select value={roleFilter || "all"} onValueChange={(v) => { setRoleFilter(v === "all" ? "" : v); }}>
+                        <SelectTrigger className="border-0 bg-transparent shadow-none w-auto p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Roles</SelectItem>
+                          {roles
+                            .filter(role => {
+                              const roleName = role.name.toLowerCase();
+                              if (isSuperAdmin) {
+                                return true;
+                              }
+                              return !['super_admin', 'org_admin'].includes(roleName);
+                            })
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.name}>
+                                {role.name.replace('_', ' ')}
+                              </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Login</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -401,7 +424,13 @@ const SettingsPage = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user) => (
+                    users
+                      .filter((user) => {
+                        if (!roleFilter || roleFilter === 'all') return true;
+                        const roleName = user.role?.name || user.Role?.name || '';
+                        return roleName === roleFilter;
+                      })
+                      .map((user) => (
                       <TableRow key={user.id} data-testid={`user-row-${user.id}`}>
                         {isAdmin() && (
                           <TableCell>
