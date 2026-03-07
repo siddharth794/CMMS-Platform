@@ -127,15 +127,15 @@ const AssetDetailPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
+      <div className="grid gap-6 md:grid-cols-4">
+        <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle>Asset Information</CardTitle>
             <CardDescription>{isNew ? 'Enter details for the new asset' : 'Update asset details and specifications'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form id="asset-form" onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form id="asset-form" onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="name">Asset Name *</Label>
                   <Input
@@ -156,7 +156,7 @@ const AssetDetailPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Asset Type</Label>
                   <Select value={formData.asset_type} onValueChange={(v) => setFormData({ ...formData, asset_type: v })}>
@@ -209,7 +209,7 @@ const AssetDetailPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="manufacturer">Manufacturer</Label>
                   <Input
@@ -236,7 +236,7 @@ const AssetDetailPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="block mb-2">Purchase Date</Label>
                   <Popover>

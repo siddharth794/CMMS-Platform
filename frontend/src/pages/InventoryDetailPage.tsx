@@ -104,15 +104,15 @@ const InventoryDetailPage = () => {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
+      <div className="grid gap-6 md:grid-cols-4">
+        <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle>Item Details</CardTitle>
             <CardDescription>Update inventory levels, cost, and location</CardDescription>
           </CardHeader>
           <CardContent>
-            <form id="inventory-form" onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form id="inventory-form" onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="name">Item Name</Label>
                   <Input
@@ -143,7 +143,7 @@ const InventoryDetailPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Input
@@ -162,7 +162,7 @@ const InventoryDetailPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="quantity">Quantity On Hand</Label>
                   <Input
