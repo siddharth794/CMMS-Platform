@@ -1,0 +1,204 @@
+import { Op } from 'sequelize';
+import { workOrderRepository } from '../repositories/workOrder.repository';
+import { auditService } from './audit.service';
+import { notificationService } from './notification.service';
+import {
+    CreateWorkOrderDTO, UpdateWorkOrderDTO, WorkOrderListQuery,
+    StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
+} from '../types/dto';
+import { AuditContext, BulkDeleteDTO, PaginatedResponse } from '../types/common.dto';
+import { NotFoundError, BadRequestError } from '../errors/AppError';
+import { AuthenticatedUser } from '../types/express';
+
+function generateWoNumber(): string {
+    const prefix = "WO";
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
+    return `${prefix}-${date}-${randomSuffix}`;
+}
+
+class WorkOrderService {
+    async getAll(orgId: string, userId: string, roleName: string, query: WorkOrderListQuery): Promise<PaginatedResponse<any>> {
+        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search, record_status } = query;
+        let where: any = { org_id: orgId };
+        let paranoid = true;
+
+        if (record_status === 'inactive') {
+            paranoid = false;
+            where.deleted_at = { [Op.not]: null };
+        }
+
+        if (roleName === 'technician') where.assignee_id = userId;
+        else if (['requestor', 'requester'].includes(roleName)) where.requester_id = userId;
+
+        if (status) where.status = status;
+        if (priority) where.priority = priority;
+        if (assignee_id) where.assignee_id = assignee_id;
+        if (asset_id) where.asset_id = asset_id;
+
+        if (search) {
+            where[Op.or] = [
+                { wo_number: { [Op.like]: `%${search}%` } },
+                { title: { [Op.like]: `%${search}%` } },
+                { description: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
+        const result = await workOrderRepository.findAndCountAll(where, paranoid, Number(skip), Number(limit));
+        return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
+    }
+
+    async getById(woId: string, orgId: string): Promise<any> {
+        const wo = await workOrderRepository.findByIdAndOrgFull(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+        return wo;
+    }
+
+    async create(orgId: string, userId: string, dto: CreateWorkOrderDTO, audit: AuditContext): Promise<any> {
+        const data: any = { ...dto, org_id: orgId, requester_id: userId, wo_number: generateWoNumber(), status: 'new' };
+        if (data.asset_id === "") data.asset_id = null;
+
+        const wo = await workOrderRepository.create(data);
+        const loaded = await workOrderRepository.findByPkFull(wo.id);
+
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'create', newValues: { wo_number: wo.wo_number, title: wo.title } });
+        return loaded;
+    }
+
+    async update(woId: string, orgId: string, dto: UpdateWorkOrderDTO, audit: AuditContext): Promise<any> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        const oldStatus = wo.status;
+        const updateData: any = { ...dto };
+        if (updateData.asset_id === "") updateData.asset_id = null;
+
+        await wo.update(updateData);
+
+        if (dto.status && dto.status !== oldStatus) {
+            if (dto.status === 'in_progress' && !wo.actual_start) wo.actual_start = new Date();
+            else if (dto.status === 'completed' && !wo.actual_end) wo.actual_end = new Date();
+            await wo.save();
+        }
+
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'update', oldValues: { status: oldStatus }, newValues: dto as any });
+        return workOrderRepository.findByPkFull(wo.id);
+    }
+
+    async updateStatus(woId: string, orgId: string, dto: StatusUpdateDTO, audit: AuditContext): Promise<any> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        if (dto.status === 'completed') {
+            const count = await workOrderRepository.countAttachments(wo.id);
+            if (count === 0) throw new BadRequestError('Cannot mark as completed without uploading at least one image/attachment.');
+        }
+
+        const oldStatus = wo.status;
+        wo.status = dto.status;
+
+        if (dto.notes) {
+            wo.notes = (wo.notes || "") + `\n[${new Date().toISOString()}] Status changed to ${dto.status}: ${dto.notes}`;
+        }
+
+        if (dto.status === 'in_progress' && !wo.actual_start) wo.actual_start = new Date();
+        else if (dto.status === 'completed' && !wo.actual_end) wo.actual_end = new Date();
+
+        await wo.save();
+
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'status_change', oldValues: { status: oldStatus }, newValues: { status: dto.status } });
+        return workOrderRepository.findByPkFull(wo.id);
+    }
+
+    async assign(woId: string, orgId: string, dto: AssignDTO, audit: AuditContext): Promise<any> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        wo.assignee_id = dto.assignee_id;
+        if (wo.status === 'new') wo.status = 'open';
+        await wo.save();
+
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'assign', newValues: { assignee_id: dto.assignee_id } });
+        return workOrderRepository.findByPkFull(wo.id);
+    }
+
+    async delete(woId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+        const wo = await workOrderRepository.findByIdParanoid(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        if (wo.deleted_at === null) {
+            await workOrderRepository.softDelete(wo);
+            auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'delete' });
+            return { message: 'Work order deactivated (soft delete)' };
+        } else {
+            await workOrderRepository.hardDelete(wo);
+            auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'hard_delete' });
+            return { message: 'Work order permanently deleted' };
+        }
+    }
+
+    async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
+        const count = await workOrderRepository.bulkDelete(dto.ids, orgId, !!dto.force);
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: dto.ids[0], action: dto.force ? 'bulk_hard_delete' : 'bulk_delete', newValues: { deleted_ids: dto.ids, count } });
+        return { message: `${count} Work Orders successfully ${dto.force ? 'permanently deleted' : 'deactivated'}.` };
+    }
+
+    // ─── Comments ─────────────────────────────────────────────────
+    async getComments(woId: string, orgId: string): Promise<any[]> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+        return workOrderRepository.findComments(woId);
+    }
+
+    async addComment(woId: string, orgId: string, dto: CommentDTO, user: AuthenticatedUser, io: any): Promise<any> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        const comment = await workOrderRepository.createComment({
+            work_order_id: woId,
+            user_id: user.id,
+            message: dto.message.trim()
+        });
+
+        if (io) io.to(`wo_${woId}`).emit('new_comment', comment);
+        notificationService.notifyCommentAdded({ workOrder: wo, commenter: user as any, io });
+
+        return comment;
+    }
+
+    // ─── Inventory Usage ──────────────────────────────────────────
+    async getUsedParts(woId: string): Promise<any[]> {
+        return workOrderRepository.findUsedParts(woId);
+    }
+
+    async addInventoryUsage(woId: string, orgId: string, dto: InventoryUsageDTO): Promise<any> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        try {
+            return await workOrderRepository.addInventoryUsage(woId, dto.inventory_item_id, dto.quantity_used, orgId);
+        } catch (err: any) {
+            throw new BadRequestError(err.message);
+        }
+    }
+
+    async removeInventoryUsage(woId: string, usageId: string): Promise<{ message: string }> {
+        try {
+            await workOrderRepository.removeInventoryUsage(usageId, woId);
+            return { message: 'Part usage removed, stock restored.' };
+        } catch (err: any) {
+            throw new NotFoundError('Usage record');
+        }
+    }
+
+    // ─── Attachments ──────────────────────────────────────────────
+    async addAttachments(woId: string, orgId: string, filenames: string[]): Promise<any[]> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+        if (!filenames.length) throw new BadRequestError('No files uploaded. Ensure images are < 1MB and max 3 files.');
+
+        return workOrderRepository.createAttachments(woId, filenames);
+    }
+}
+
+export const workOrderService = new WorkOrderService();
