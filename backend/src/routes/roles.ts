@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { Role } from '../models';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { CreateRoleSchema, UpdateRoleSchema } from '../validators/role.validator';
+import { ADMIN_ROLES } from '../constants/roles';
 
 const router = Router();
 router.use(authenticate);
@@ -16,7 +19,7 @@ router.get('/', async (req: any, res, next) => {
     }
 });
 
-router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_admin']), async (req: any, res, next) => {
+router.post('/', requireRole(ADMIN_ROLES), validate(CreateRoleSchema), async (req: any, res, next) => {
     try {
         const { name, description, permissions } = req.body;
         const role = await Role.create({
@@ -31,7 +34,7 @@ router.post('/', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_ad
     }
 });
 
-router.put('/:role_id', requireRole(['Super_Admin', 'Org_Admin', 'super_admin', 'org_admin']), async (req: any, res, next) => {
+router.put('/:role_id', requireRole(ADMIN_ROLES), validate(UpdateRoleSchema), async (req: any, res, next) => {
     try {
         const role: any = await Role.findOne({
             where: { id: req.params.role_id, org_id: req.user.org_id }
