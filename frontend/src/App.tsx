@@ -20,6 +20,7 @@ const WorkOrderDetailPage = React.lazy(() => import('./pages/WorkOrderDetailPage
 const AssetsPage = React.lazy(() => import('./pages/AssetsPage'));
 const InventoryPage = React.lazy(() => import('./pages/InventoryPage'));
 const PMSchedulesPage = React.lazy(() => import('./pages/PMSchedulesPage'));
+const PMScheduleDetailPage = React.lazy(() => import('./pages/PMScheduleDetailPage'));
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const TechnicianAnalyticsPage = React.lazy(() => import('./pages/TechnicianAnalyticsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
@@ -147,6 +148,7 @@ const AppRoutes = () => {
           <Route path="inventory/:id" element={<HideFromRequesterRoute><InventoryDetailPage /></HideFromRequesterRoute>} />
           <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
           <Route path="pm-schedules/new" element={<ManagerRoute><CreatePMSchedulePage /></ManagerRoute>} />
+          <Route path="pm-schedules/:id" element={<ManagerRoute><PMScheduleDetailPage /></ManagerRoute>} />
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />

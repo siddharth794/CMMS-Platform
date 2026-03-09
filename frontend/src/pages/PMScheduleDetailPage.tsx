@@ -1,6 +1,6 @@
 // @ts-nocheck
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -8,16 +8,20 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNotification } from '../context/NotificationContext';
-import { Loader2, ArrowLeft, Plus, Trash2 } from 'lucide-react';
-import { pmSchedulesApi } from '../lib/api';
+import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import { usePMSchedule, useUpdatePMSchedule, useDeletePMSchedule } from '../hooks/api/usePMSchedules';
 import { useAssetsData } from '../hooks/api/useAssets';
 
-const CreatePMSchedulePage = () => {
+const PMScheduleDetailPage = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
-  const [isPending, setIsPending] = useState(false);
   const { data: assetsData } = useAssetsData();
   const assets = assetsData?.data || [];
+
+  const { data: pm, isLoading, isError } = usePMSchedule(id);
+  const updateMutation = useUpdatePMSchedule();
+  const deleteMutation = useDeletePMSchedule();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -29,6 +33,16 @@ const CreatePMSchedulePage = () => {
     estimated_hours: '',
     tasks: ['']
   });
+
+  const getFrequencyFromCron = (cron) => {
+    if (cron === '0 0 * * *') return 'daily';
+    if (cron === '0 0 * * 1') return 'weekly';
+    if (cron === '0 0 1 * *') return 'monthly';
+    if (cron === '0 0 1 */3 *') return 'quarterly';
+    if (cron === '0 0 1 */6 *') return 'semi_annual';
+    if (cron === '0 0 1 1 *') return 'annual';
+    return 'monthly';
+  };
 
   const getCronFromFrequency = (freq) => {
     switch(freq) {
@@ -42,10 +56,23 @@ const CreatePMSchedulePage = () => {
     }
   };
 
+  useEffect(() => {
+    if (pm) {
+      setFormData({
+        name: pm.name || '',
+        description: pm.description || '',
+        asset_id: pm.asset_id || '',
+        schedule_logic: pm.schedule_logic || 'FIXED',
+        frequency: pm.triggers?.[0]?.cron_expression ? getFrequencyFromCron(pm.triggers[0].cron_expression) : 'monthly',
+        priority: pm.template?.priority || 'medium',
+        estimated_hours: pm.template?.estimated_hours?.toString() || '',
+        tasks: pm.tasks && pm.tasks.length > 0 ? pm.tasks.map(t => t.description) : ['']
+      });
+    }
+  }, [pm]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsPending(true);
-    
     try {
       if (!formData.asset_id || formData.asset_id === 'none') {
         throw new Error('Please select an asset for this PM schedule');
@@ -56,12 +83,11 @@ const CreatePMSchedulePage = () => {
         description: formData.description,
         asset_id: formData.asset_id,
         schedule_logic: formData.schedule_logic,
-        is_paused: false,
         triggers: [
           {
             trigger_type: 'TIME',
             cron_expression: getCronFromFrequency(formData.frequency),
-            lead_time_days: 7 // Generate WO 7 days before due date
+            lead_time_days: 7 
           }
         ],
         template: {
@@ -71,15 +97,42 @@ const CreatePMSchedulePage = () => {
         tasks: formData.tasks.filter(t => t.trim() !== '').map(t => ({ description: t }))
       };
 
-      await pmSchedulesApi.create(payload);
-      addNotification('success', 'PM Schedule created successfully');
-      navigate('/pm-schedules');
+      await updateMutation.mutateAsync({ id, data: payload });
+      addNotification('success', 'PM Schedule updated successfully');
     } catch (error) {
-      addNotification('error', error.message || error.response?.data?.detail || 'Failed to create PM schedule');
-    } finally {
-      setIsPending(false);
+      addNotification('error', error.message || error.response?.data?.detail || 'Failed to update PM schedule');
     }
   };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this PM schedule?')) return;
+    try {
+      await deleteMutation.mutateAsync(id);
+      addNotification('success', 'PM Schedule deleted updated');
+      navigate('/pm-schedules');
+    } catch (error) {
+      addNotification('error', 'Failed to delete PM schedule');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError || !pm) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold">PM Schedule not found</h2>
+        <Button variant="link" onClick={() => navigate('/pm-schedules')}>Back to PM Schedules</Button>
+      </div>
+    );
+  }
+
+  const isSaving = updateMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -89,17 +142,18 @@ const CreatePMSchedulePage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Create PM Schedule</h1>
-            <p className="text-muted-foreground">Define a robust preventive maintenance schedule.</p>
+            <h1 className="text-3xl font-bold tracking-tight">{pm.name}</h1>
+            <p className="text-muted-foreground">Edit recurrence and maintenance rules.</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate('/pm-schedules')}>
-            Cancel
+          <Button variant="destructive" onClick={handleDelete} disabled={isSaving}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
           </Button>
-          <Button type="submit" form="pm-form" disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Schedule
+          <Button type="submit" form="pm-form" disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Changes
           </Button>
         </div>
       </div>
@@ -252,4 +306,4 @@ const CreatePMSchedulePage = () => {
   );
 };
 
-export default CreatePMSchedulePage;
+export default PMScheduleDetailPage;

@@ -124,6 +124,7 @@ export const pmSchedulesApi = {
   create: (data) => api.post('/pm-schedules', data),
   update: (id, data) => api.put(`/pm-schedules/${id}`, data),
   delete: (id) => api.delete(`/pm-schedules/${id}`),
+  bulkDelete: (data) => api.post('/pm-schedules/bulk-delete', data),
 };
 
 // Analytics
