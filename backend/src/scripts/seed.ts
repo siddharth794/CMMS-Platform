@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { Organization, Role, User, sequelize } from '../models';
+import { Organization, Role, User, Access, sequelize } from '../models';
+import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from '../constants/permissions';
 
 async function seed() {
     try {
@@ -24,7 +25,16 @@ async function seed() {
 
         console.log(`Organization: ${org.name} (ID: ${org.id})`);
 
-        // 2. Create Roles (find or create each)
+        // 2. Create Accesses (Permissions)
+        for (const perm of PERMISSIONS) {
+            await Access.findOrCreate({
+                where: { name: perm.name },
+                defaults: { ...perm, is_system: true, org_id: null }
+            });
+        }
+        console.log('System Accesses (Permissions) ready.');
+
+        // 3. Create Roles and associate default Accesses
         const roleData = [
             { name: "Super_Admin", description: "Full system access", is_system_role: true },
             { name: "Org_Admin", description: "Organization administrator", is_system_role: true },
@@ -34,15 +44,28 @@ async function seed() {
         ];
 
         for (const roleDef of roleData) {
-            await Role.findOrCreate({
+            const [role] = await Role.findOrCreate({
                 where: { name: roleDef.name, is_system_role: true },
                 defaults: { org_id: null, ...roleDef }
             });
+
+            // Map permissions to role
+            const allowedPerms = DEFAULT_ROLE_PERMISSIONS[role.name as keyof typeof DEFAULT_ROLE_PERMISSIONS] || [];
+            
+            if (allowedPerms.includes('*')) {
+                // Give Super Admin all system permissions
+                const allAccesses = await Access.findAll({ where: { is_system: true } });
+                await (role as any).setAccesses(allAccesses);
+            } else if (allowedPerms.length > 0) {
+                // Give specific permissions
+                const specificAccesses = await Access.findAll({ where: { name: allowedPerms, is_system: true } });
+                await (role as any).setAccesses(specificAccesses);
+            }
         }
 
         console.log('Roles ready.');
 
-        // 3. Create Demo Users (find or create each)
+        // 4. Create Demo Users (find or create each)
         const demoUsersData = [
             { email: 'admin@demo.com', roleName: 'Super_Admin', username: 'admin', firstName: 'Admin', lastName: 'User', password: 'admin123' },
             { email: 'orgadmin@demo.com', roleName: 'Org_Admin', username: 'orgadmin', firstName: 'Org', lastName: 'Admin', password: 'orgadmin123' },
