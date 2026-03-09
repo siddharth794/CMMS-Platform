@@ -13,7 +13,8 @@
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed:demo": "ts-node src/scripts/seed-demo-data.ts",
-    "seed:assets": "ts-node src/scripts/seed-50-assets.ts"
+    "seed:assets": "ts-node src/scripts/seed-50-assets.ts",
+    "pm:trigger": "ts-node src/scripts/trigger-pms.ts"
   },
   "keywords": [],
   "author": "",
