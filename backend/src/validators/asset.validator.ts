@@ -10,9 +10,9 @@ export const CreateAssetSchema = z.object({
     manufacturer: z.string().max(255).optional(),
     model: z.string().max(255).optional(),
     serial_number: z.string().max(255).optional(),
-    purchase_date: z.string().optional(),
-    purchase_cost: z.string().max(50).optional(),
-    warranty_expiry: z.string().optional(),
+    purchase_date: z.string().nullable().optional(),
+    purchase_cost: z.string().max(50).nullable().optional(),
+    warranty_expiry: z.string().nullable().optional(),
     status: z.string().max(50).default('active'),
 }).strict();
 

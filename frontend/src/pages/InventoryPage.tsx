@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, Edit, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
+import { Plus, Search, Trash2, Trash, Loader2, AlertTriangle, DollarSign } from 'lucide-react';
 import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
@@ -25,7 +25,6 @@ const InventoryPage = () => {
   const [stats, setStats] = useState({ total_items: 0, low_stock_count: 0, total_value: 0 });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-      const [selectedItem, setSelectedItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -145,22 +144,6 @@ const InventoryPage = () => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
     );
-  };
-
-  const openEditDialog = (item) => {
-    setSelectedItem(item);
-    setFormData({
-      name: item.name,
-      description: item.description || '',
-      sku: item.sku || '',
-      category: item.category,
-      quantity: item.quantity,
-      min_quantity: item.min_quantity || 0,
-      unit: item.unit || 'pcs',
-      unit_cost: item.unit_cost || '0',
-      storage_location: item.storage_location,
-    });
-    setEditOpen(true);
   };
 
   const isLowStock = (item) => item.min_quantity > 0 && item.quantity <= item.min_quantity;
@@ -299,7 +282,7 @@ const InventoryPage = () => {
                 <TableHead className="min-w-[200px]">Location</TableHead>
                 <TableHead className="min-w-[120px] text-right whitespace-nowrap">Quantity</TableHead>
                 <TableHead className="min-w-[120px] text-right whitespace-nowrap">Unit Cost</TableHead>
-                <TableHead className="w-[100px] min-w-[100px] text-right">Actions</TableHead>
+                <TableHead className="w-[60px] min-w-[60px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -352,17 +335,15 @@ const InventoryPage = () => {
                     <TableCell className="text-right">₹{parseFloat(item.unit_cost || 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/inventory/${item.id}`)} title="View Details">
-                            <Package className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} data-testid={`edit-${item.id}`}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="text-destructive hover:text-destructive" data-testid={`delete-${item.id}`}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive h-8 w-8"
+                          onClick={() => handleDelete(item.id)}
+                          data-testid={`delete-inv-btn-${item.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>

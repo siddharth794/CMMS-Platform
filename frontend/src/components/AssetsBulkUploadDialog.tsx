@@ -48,9 +48,9 @@ const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
                     manufacturer: row['Manufacturer'] || row['manufacturer'] || '',
                     model: row['Model'] || row['model'] || '',
                     serial_number: row['Serial Number'] || row['serial_number'] || row['Serial'] || '',
-                    purchase_date: row['Purchase Date'] || row['purchase_date'] || '',
-                    purchase_cost: row['Purchase Cost'] || row['purchase_cost'] || '',
-                    warranty_expiry: row['Warranty Expiry'] || row['warranty_expiry'] || '',
+                    purchase_date: row['Purchase Date'] || row['purchase_date'] || null,
+                    purchase_cost: row['Purchase Cost'] || row['purchase_cost'] || null,
+                    warranty_expiry: row['Warranty Expiry'] || row['warranty_expiry'] || null,
                     status: row['Status'] || row['status'] || 'active',
                 })).filter(asset => asset.name); // Filter out empty rows without a name
 

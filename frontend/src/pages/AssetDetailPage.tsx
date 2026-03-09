@@ -63,8 +63,9 @@ const AssetDetailPage = () => {
     try {
       const payload = {
         ...formData,
-        purchase_date: formData.purchase_date === '' ? null : formData.purchase_date,
-        purchase_cost: formData.purchase_cost === '' ? null : formData.purchase_cost,
+        purchase_date: formData.purchase_date.trim() === '' ? null : formData.purchase_date,
+        purchase_cost: formData.purchase_cost.trim() === '' ? null : formData.purchase_cost,
+        asset_tag: formData.asset_tag.trim() === '' ? null : formData.asset_tag,
       };
 
       if (isNew) {
