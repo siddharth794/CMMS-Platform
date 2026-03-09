@@ -183,7 +183,7 @@ const UsersPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                users.filter(u => !roleFilter || (u.role?.name || u.Role?.name) === roleFilter).map((u) => (
+                users.filter(u => !roleFilter || roleFilter === 'all' || (u.role?.name || u.Role?.name) === roleFilter).map((u) => (
                   <TableRow key={u.id}>
                     {isAdmin() && (
                       <TableCell>
