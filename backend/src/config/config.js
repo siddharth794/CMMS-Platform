@@ -1,4 +1,5 @@
-require('dotenv').config({ path: '../../.env' }); // Support running from root or src
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 module.exports = {
   development: {

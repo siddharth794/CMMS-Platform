@@ -11,6 +11,7 @@ import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useNavigate, Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 
 const StatusBadge = ({ status }) => {
@@ -60,6 +61,7 @@ const StatCard = ({ title, value, icon: Icon, color = 'primary' }) => (
 const RequesterDashboardPage = () => {
     const [workOrders, setWorkOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
     const [createOpen, setCreateOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const { addNotification } = useNotification();
@@ -175,7 +177,9 @@ const RequesterDashboardPage = () => {
                                 recentWorkOrders.map((wo) => (
                                     <TableRow key={wo.id}>
                                         <TableCell>
-                                            <span className="font-medium">{wo.wo_number}</span>
+                                            <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
+                                                {wo.wo_number}
+                                            </Link>
                                         </TableCell>
                                         <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                                         <TableCell><StatusBadge status={wo.status} /></TableCell>
