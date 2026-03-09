@@ -1,11 +1,16 @@
-import { Asset, InventoryItem, WorkOrder, User, sequelize } from '../models';
-
-const ORG_ID = '81808758-8f23-426d-ba0e-581f44a257ab';
+import { Asset, InventoryItem, WorkOrder, User, Organization, sequelize } from '../models';
 
 async function seedExtraDemo() {
     try {
         await sequelize.authenticate();
         console.log('Connection established successfully.');
+
+        const org: any = await Organization.findOne({ where: { name: 'CMMS Demo Org' } });
+        if (!org) {
+            console.error('Demo Organization not found. Please run npm run seed first.');
+            process.exit(1);
+        }
+        const ORG_ID = org.id;
 
         console.log(`Seeding extra demo data for Organization ID: ${ORG_ID}`);
 
