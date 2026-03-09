@@ -20,7 +20,7 @@ export default function AccessesPage() {
   const handleCreate = async () => {
     if (!newAccessName || !newAccessModule) return;
     try {
-      await createAccess.mutateAsync({ name: newAccessName, module: newAccessModule, is_system: false });
+      await createAccess.mutateAsync({ name: newAccessName, module: newAccessModule });
       setNewAccessName('');
       setNewAccessModule('');
       addNotification('success', 'Custom permission key created successfully');
