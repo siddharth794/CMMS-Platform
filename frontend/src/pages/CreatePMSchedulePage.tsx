@@ -25,19 +25,24 @@ const CreatePMSchedulePage = () => {
     asset_id: '',
     schedule_logic: 'FIXED',
     frequency: 'monthly',
+    startDate: new Date().toISOString().split('T')[0],
     priority: 'medium',
     estimated_hours: '',
     tasks: ['']
   });
 
-  const getCronFromFrequency = (freq) => {
+  const getCronFromFrequency = (freq, startDateStr) => {
+    const date = new Date(startDateStr);
+    const dayOfMonth = date.getDate();
+    const dayOfWeek = date.getDay(); // 0 is Sunday, 1 is Monday...
+
     switch(freq) {
       case 'daily': return '0 0 * * *';
-      case 'weekly': return '0 0 * * 1';
-      case 'monthly': return '0 0 1 * *';
-      case 'quarterly': return '0 0 1 */3 *';
-      case 'semi_annual': return '0 0 1 */6 *';
-      case 'annual': return '0 0 1 1 *';
+      case 'weekly': return `0 0 * * ${dayOfWeek}`;
+      case 'monthly': return `0 0 ${dayOfMonth} * *`;
+      case 'quarterly': return `0 0 ${dayOfMonth} */3 *`;
+      case 'semi_annual': return `0 0 ${dayOfMonth} */6 *`;
+      case 'annual': return `0 0 ${dayOfMonth} ${date.getMonth() + 1} *`;
       default: return '0 0 1 * *';
     }
   };
@@ -60,7 +65,7 @@ const CreatePMSchedulePage = () => {
         triggers: [
           {
             trigger_type: 'TIME',
-            cron_expression: getCronFromFrequency(formData.frequency),
+            cron_expression: getCronFromFrequency(formData.frequency, formData.startDate),
             lead_time_days: 7 // Generate WO 7 days before due date
           }
         ],
@@ -186,6 +191,22 @@ const CreatePMSchedulePage = () => {
                   Work Orders generate automatically 7 days before due date.
                 </p>
               </div>
+
+              {formData.schedule_logic === 'FIXED' && (
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date / Reference Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used to set the recurring day (e.g., if you pick 15th, it repeats on 15th).
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Work Order Priority</Label>

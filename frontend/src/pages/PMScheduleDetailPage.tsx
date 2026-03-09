@@ -29,41 +29,68 @@ const PMScheduleDetailPage = () => {
     asset_id: '',
     schedule_logic: 'FIXED',
     frequency: 'monthly',
+    startDate: new Date().toISOString().split('T')[0],
     priority: 'medium',
     estimated_hours: '',
     tasks: ['']
   });
 
+  const getInitialDateFromCron = (cron, freq) => {
+    // Reverse engineer a safe date string for the picker
+    // Default to today if we can't parse perfectly, but we extract what we can
+    const parts = cron.split(' ');
+    const now = new Date();
+    let d = now.getDate();
+    let m = now.getMonth();
+    
+    if (parts.length >= 5) {
+      if (freq === 'monthly' || freq === 'quarterly' || freq === 'semi_annual') {
+        d = parseInt(parts[2]) || d;
+      } else if (freq === 'annual') {
+        d = parseInt(parts[2]) || d;
+        m = (parseInt(parts[3]) - 1) || m;
+      }
+    }
+    
+    const date = new Date(now.getFullYear(), m, d);
+    return date.toISOString().split('T')[0];
+  };
+
   const getFrequencyFromCron = (cron) => {
     if (cron === '0 0 * * *') return 'daily';
-    if (cron === '0 0 * * 1') return 'weekly';
-    if (cron === '0 0 1 * *') return 'monthly';
-    if (cron === '0 0 1 */3 *') return 'quarterly';
-    if (cron === '0 0 1 */6 *') return 'semi_annual';
-    if (cron === '0 0 1 1 *') return 'annual';
+    if (cron.match(/^0 0 \* \* \d$/)) return 'weekly';
+    if (cron.match(/^0 0 \d+ \* \*$/)) return 'monthly';
+    if (cron.match(/^0 0 \d+ \*\/\d+ \*$/)) return 'quarterly'; // matches 1/3, 1/6
+    if (cron.match(/^0 0 \d+ \d+ \*$/)) return 'annual';
     return 'monthly';
   };
 
-  const getCronFromFrequency = (freq) => {
+  const getCronFromFrequency = (freq, startDateStr) => {
+    const date = new Date(startDateStr);
+    const dayOfMonth = date.getDate();
+    const dayOfWeek = date.getDay();
+
     switch(freq) {
       case 'daily': return '0 0 * * *';
-      case 'weekly': return '0 0 * * 1';
-      case 'monthly': return '0 0 1 * *';
-      case 'quarterly': return '0 0 1 */3 *';
-      case 'semi_annual': return '0 0 1 */6 *';
-      case 'annual': return '0 0 1 1 *';
+      case 'weekly': return `0 0 * * ${dayOfWeek}`;
+      case 'monthly': return `0 0 ${dayOfMonth} * *`;
+      case 'quarterly': return `0 0 ${dayOfMonth} */3 *`;
+      case 'semi_annual': return `0 0 ${dayOfMonth} */6 *`;
+      case 'annual': return `0 0 ${dayOfMonth} ${date.getMonth() + 1} *`;
       default: return '0 0 1 * *';
     }
   };
 
   useEffect(() => {
     if (pm) {
+      const freq = pm.triggers?.[0]?.cron_expression ? getFrequencyFromCron(pm.triggers[0].cron_expression) : 'monthly';
       setFormData({
         name: pm.name || '',
         description: pm.description || '',
         asset_id: pm.asset_id || '',
         schedule_logic: pm.schedule_logic || 'FIXED',
-        frequency: pm.triggers?.[0]?.cron_expression ? getFrequencyFromCron(pm.triggers[0].cron_expression) : 'monthly',
+        frequency: freq,
+        startDate: pm.triggers?.[0]?.cron_expression ? getInitialDateFromCron(pm.triggers[0].cron_expression, freq) : new Date().toISOString().split('T')[0],
         priority: pm.template?.priority || 'medium',
         estimated_hours: pm.template?.estimated_hours?.toString() || '',
         tasks: pm.tasks && pm.tasks.length > 0 ? pm.tasks.map(t => t.description) : ['']
@@ -86,7 +113,7 @@ const PMScheduleDetailPage = () => {
         triggers: [
           {
             trigger_type: 'TIME',
-            cron_expression: getCronFromFrequency(formData.frequency),
+            cron_expression: getCronFromFrequency(formData.frequency, formData.startDate),
             lead_time_days: 7 
           }
         ],
@@ -240,6 +267,22 @@ const PMScheduleDetailPage = () => {
                   Work Orders generate automatically 7 days before due date.
                 </p>
               </div>
+
+              {formData.schedule_logic === 'FIXED' && (
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date / Reference Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used to set the recurring day (e.g., if you pick 15th, it repeats on 15th).
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Work Order Priority</Label>
