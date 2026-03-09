@@ -177,9 +177,9 @@ const RequesterDashboardPage = () => {
                                 recentWorkOrders.map((wo) => (
                                     <TableRow key={wo.id}>
                                         <TableCell>
-                                            <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
+                                            <span className="font-medium">
                                                 {wo.wo_number}
-                                            </Link>
+                                            </span>
                                         </TableCell>
                                         <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                                         <TableCell><StatusBadge status={wo.status} /></TableCell>

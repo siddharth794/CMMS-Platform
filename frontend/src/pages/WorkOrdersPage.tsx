@@ -324,9 +324,13 @@ const WorkOrdersPage = () => {
                       </TableCell>
                     )}
                     <TableCell>
-                      <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
-                        {wo.wo_number}
-                      </Link>
+                      {isRequester() ? (
+                        <span className="font-medium">{wo.wo_number}</span>
+                      ) : (
+                        <Link to={`/work-orders/${wo.id}`} className="font-medium text-primary hover:underline">
+                          {wo.wo_number}
+                        </Link>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                     <TableCell><StatusBadge status={wo.status} /></TableCell>
