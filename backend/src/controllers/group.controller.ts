@@ -30,7 +30,8 @@ class GroupController {
 
     updateRoles = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const { role_ids } = req.body;
-        const group = await groupService.updateRoles(req.params.group_id as string, req.user!.org_id, role_ids);
+        const requestorRole = req.user!.Role?.name?.toLowerCase() || '';
+        const group = await groupService.updateRoles(req.params.group_id as string, req.user!.org_id, role_ids, requestorRole);
         res.json(group);
     }
 }

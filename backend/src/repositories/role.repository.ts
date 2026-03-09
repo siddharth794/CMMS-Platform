@@ -2,15 +2,23 @@ import { Op } from 'sequelize';
 import { Role, Access, sequelize } from '../models';
 
 class RoleRepository {
-    async findByOrgId(orgId: string): Promise<any[]> {
+    async findByOrgId(orgId: string, requestorRole?: string): Promise<any[]> {
+        const whereClause: any = { 
+            [Op.or]: [
+                { org_id: orgId },
+                { is_system_role: true }
+            ],
+            is_active: true 
+        };
+
+        if (requestorRole && requestorRole !== 'super_admin') {
+            whereClause.name = {
+                [Op.notIn]: ['super_admin', 'org_admin']
+            };
+        }
+
         return Role.findAll({ 
-            where: { 
-                [Op.or]: [
-                    { org_id: orgId },
-                    { is_system_role: true }
-                ],
-                is_active: true 
-            },
+            where: whereClause,
             include: [{ model: Access }]
         });
     }

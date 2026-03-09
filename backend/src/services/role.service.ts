@@ -3,8 +3,8 @@ import { CreateRoleDTO, UpdateRoleDTO } from '../types/dto';
 import { NotFoundError, BadRequestError } from '../errors/AppError';
 
 class RoleService {
-    async getByOrgId(orgId: string): Promise<any[]> {
-        return roleRepository.findByOrgId(orgId);
+    async getByOrgId(orgId: string, requestorRole?: string): Promise<any[]> {
+        return roleRepository.findByOrgId(orgId, requestorRole);
     }
 
     async create(orgId: string, dto: CreateRoleDTO): Promise<any> {

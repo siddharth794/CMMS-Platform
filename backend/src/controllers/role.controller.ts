@@ -4,7 +4,8 @@ import { CreateRoleDTO, UpdateRoleDTO } from '../types/dto';
 
 class RoleController {
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const roles = await roleService.getByOrgId(req.user!.org_id);
+        const requestorRole = req.user!.Role?.name?.toLowerCase() || '';
+        const roles = await roleService.getByOrgId(req.user!.org_id, requestorRole);
         res.json(roles);
     }
 

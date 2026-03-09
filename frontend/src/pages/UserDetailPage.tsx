@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { Loader2, ArrowLeft, Save, User as UserIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -19,6 +20,9 @@ const UserDetailPage = () => {
   const { addNotification } = useNotification();
   const { data: user, isLoading, isError } = useUser(id);
   const updateMutation = useUpdateUser();
+  const { user: currentUser } = useAuth();
+  
+  const isSuperAdmin = (currentUser?.role?.name || currentUser?.Role?.name || '').toLowerCase() === 'super_admin';
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
@@ -38,17 +42,31 @@ const UserDetailPage = () => {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && roles.length > 0) {
+      // Find role ID from nested user object
+      const roleObj = user.Role || (user.Roles?.[0]) || user.role;
+      const assignedRoleId = (user.role_id || roleObj?.id)?.toString() || '';
+      
       setFormData({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email || '',
         username: user.username || '',
         phone: user.phone || '',
-        role_id: (user.role_id || user.role?.id || user.Role?.id || (user.Roles?.[0]?.id))?.toString() || '',
+        role_id: assignedRoleId,
       });
+    } else if (user) {
+      // Fallback if roles aren't loaded yet
+      setFormData(prev => ({
+        ...prev,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        username: user.username || '',
+        phone: user.phone || '',
+      }));
     }
-  }, [user]);
+  }, [user, roles]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -156,7 +174,12 @@ const UserDetailPage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <Select value={formData.role_id} onValueChange={(v) => setFormData({ ...formData, role_id: v })} required>
+                  <Select 
+                    key={`${formData.role_id}-${roles.length}`}
+                    value={formData.role_id || undefined} 
+                    onValueChange={(v) => setFormData({ ...formData, role_id: v })} 
+                    required
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -168,6 +191,9 @@ const UserDetailPage = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-[10px] text-muted-foreground opacity-50">
+                    ID: {formData.role_id || 'None'} | Available: {roles.length}
+                  </p>
                 </div>
               </div>
 
