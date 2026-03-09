@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Loader2, ArrowLeft, Users } from 'lucide-react';
 import { useCreateUser } from '../hooks/api/useUsers';
 import { useGroups, useUpdateGroupMembers } from '../hooks/api/useRBAC';
+import { useOrganizations } from '../hooks/api/useOrganizations';
 import { rolesApi } from '../lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { Checkbox } from '../components/ui/checkbox';
@@ -29,9 +30,13 @@ const CreateUserPage = () => {
     last_name: '',
     phone: '',
     role_id: '',
+    org_id: '',
   });
 
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+
+  const { data: orgsData, isLoading: isLoadingOrgs } = useOrganizations({ limit: 100 });
+  const organizations = orgsData?.data || [];
 
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['roles'],
@@ -55,7 +60,11 @@ const CreateUserPage = () => {
     e.preventDefault();
     try {
       // 1. Create the user
-      const createdUser = await createUserMutation.mutateAsync({ ...userForm, role_id: parseInt(userForm.role_id) });
+      const payload = { ...userForm, role_id: parseInt(userForm.role_id) };
+      // Omit org_id if not super admin to let backend default to their own
+      if (!isSuperAdmin) delete payload.org_id;
+      
+      const createdUser = await createUserMutation.mutateAsync(payload);
       const newUserId = createdUser.id;
 
       // 2. Assign the user to selected groups
@@ -178,6 +187,31 @@ const CreateUserPage = () => {
                 placeholder="••••••••"
               />
             </div>
+
+            {isSuperAdmin && (
+              <div className="space-y-2">
+                <Label>Organization *</Label>
+                {isLoadingOrgs ? (
+                  <div className="flex items-center h-10 px-3 py-2 border rounded-md opacity-50">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading organizations...
+                  </div>
+                ) : (
+                  <Select value={userForm.org_id} onValueChange={(v) => setUserForm({ ...userForm, org_id: v })} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizations.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Super Admins can place users in specific organizations.</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Core Role *</Label>
