@@ -10,6 +10,7 @@ import { Textarea } from '../components/ui/textarea';
 import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Save, Trash2, Box } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '../lib/utils';
 
 const InventoryDetailPage = () => {
   const { id } = useParams();
@@ -50,13 +51,19 @@ const InventoryDetailPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateMutation.mutateAsync({
-        id,
-        data: formData
-      });
-      addNotification('success', 'Inventory item updated successfully');
+      if (isNew) {
+        await createMutation.mutateAsync(formData);
+        addNotification('success', 'Inventory item created successfully');
+        navigate('/inventory');
+      } else {
+        await updateMutation.mutateAsync({
+          id,
+          data: formData
+        });
+        addNotification('success', 'Inventory item updated successfully');
+      }
     } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to update item');
+      addNotification('error', error.response?.data?.detail || (isNew ? 'Failed to create item' : 'Failed to update item'));
     }
   };
 
@@ -96,21 +103,21 @@ const InventoryDetailPage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
-            <p className="text-muted-foreground">SKU: {item.sku}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{isNew ? 'Create New Item' : (item?.name || 'Loading...')}</h1>
+            {!isNew && item && <p className="text-muted-foreground">SKU: {item.sku}</p>}
           </div>
         </div>
-        <Button type="submit" form="inventory-form" disabled={updateMutation.isPending}>
-          {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Save Changes
+        <Button type="submit" form="inventory-form" disabled={(isNew ? createMutation.isPending : updateMutation.isPending)}>
+          {(isNew ? createMutation.isPending : updateMutation.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {isNew ? 'Create Item' : 'Save Changes'}
         </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className="md:col-span-3">
+        <Card className={cn("space-y-6", isNew ? "md:col-span-4" : "md:col-span-3")}>
           <CardHeader>
-            <CardTitle>Item Details</CardTitle>
-            <CardDescription>Update inventory levels, cost, and location</CardDescription>
+            <CardTitle>{isNew ? 'New Item Details' : 'Item Details'}</CardTitle>
+            <CardDescription>{isNew ? 'Enter basic information for the new inventory item' : 'Update inventory levels, cost, and location'}</CardDescription>
           </CardHeader>
           <CardContent>
             <form id="inventory-form" onSubmit={handleSubmit} className="space-y-6">
@@ -203,6 +210,7 @@ const InventoryDetailPage = () => {
           </CardContent>
         </Card>
 
+        {!isNew && (
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -218,7 +226,7 @@ const InventoryDetailPage = () => {
                     {formData.quantity <= formData.min_quantity ? 'Low Stock' : 'In Stock'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Added {format(new Date(item.created_at), 'PP')}
+                    {isNew ? 'Adding to organization' : `Added ${item ? format(new Date(item.created_at), 'PP') : '...'}`}
                   </p>
                 </div>
               </div>
@@ -245,6 +253,7 @@ const InventoryDetailPage = () => {
             </CardContent>
           </Card>
         </div>
+        )}
       </div>
     </div>
   );

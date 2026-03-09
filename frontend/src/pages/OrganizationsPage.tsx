@@ -104,6 +104,12 @@ const OrganizationsPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
           <p className="text-muted-foreground">Manage system organizations</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button data-testid="add-org-btn" onClick={() => navigate('/organizations/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Organization
+          </Button>
+        </div>
         
       </div>
 
@@ -184,8 +190,8 @@ const OrganizationsPage = () => {
                           <DropdownMenuItem onClick={() => navigate(`/organizations/${org.id}`)}>
                             <Eye className="mr-2 h-4 w-4" />View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(org)}>
-                            <Edit className="mr-2 h-4 w-4" />Edit (Modal)
+                          <DropdownMenuItem onClick={() => navigate(`/organizations/${org.id}`)}>
+                            <Edit className="mr-2 h-4 w-4" />Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(org)} className="text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Deactivate' : 'Delete Permanently'}

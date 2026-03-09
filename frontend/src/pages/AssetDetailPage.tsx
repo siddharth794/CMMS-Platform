@@ -61,14 +61,20 @@ const AssetDetailPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        purchase_date: formData.purchase_date === '' ? null : formData.purchase_date,
+        purchase_cost: formData.purchase_cost === '' ? null : formData.purchase_cost,
+      };
+
       if (isNew) {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(payload);
         addNotification('success', 'Asset created successfully');
         navigate('/assets');
       } else {
         await updateMutation.mutateAsync({
           id,
-          data: formData
+          data: payload
         });
         addNotification('success', 'Asset updated successfully');
       }
@@ -128,7 +134,7 @@ const AssetDetailPage = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className="md:col-span-3">
+        <Card className={cn("space-y-6", isNew ? "md:col-span-4" : "md:col-span-3")}>
           <CardHeader>
             <CardTitle>Asset Information</CardTitle>
             <CardDescription>{isNew ? 'Enter details for the new asset' : 'Update asset details and specifications'}</CardDescription>

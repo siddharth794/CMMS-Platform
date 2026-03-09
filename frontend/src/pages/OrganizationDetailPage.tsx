@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useOrganization, useUpdateOrganization } from '../hooks/api/useOrganizations';
+import { useOrganization, useCreateOrganization, useUpdateOrganization } from '../hooks/api/useOrganizations';
 import { useUsers } from '../hooks/api/useUsers';
 import { useWorkOrders } from '../hooks/api/useWorkOrders';
 import { useAssetsData } from '../hooks/api/useAssets';
@@ -17,6 +17,7 @@ import { Badge } from '../components/ui/badge';
 import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Save, Building2, Globe, User as UserIcon, ClipboardList, Box, Package, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '../lib/utils';
 
 const OrganizationDetailPage = () => {
   const { id } = useParams();
@@ -44,7 +45,7 @@ const OrganizationDetailPage = () => {
   });
 
   useEffect(() => {
-    if (organization) {
+    if (organization && !isNew) {
       setFormData({
         name: organization.name || '',
         address: organization.address || '',
@@ -55,18 +56,24 @@ const OrganizationDetailPage = () => {
         is_active: organization.is_active ?? true,
       });
     }
-  }, [organization]);
+  }, [organization, isNew]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     try {
-      await updateMutation.mutateAsync({
-        id,
-        data: formData
-      });
-      addNotification('success', 'Organization updated successfully');
+      if (isNew) {
+        await createMutation.mutateAsync(formData);
+        addNotification('success', 'Organization created successfully');
+        navigate('/organizations');
+      } else {
+        await updateMutation.mutateAsync({
+          id,
+          data: formData
+        });
+        addNotification('success', 'Organization updated successfully');
+      }
     } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to update organization');
+      addNotification('error', error.response?.data?.detail || `Failed to ${isNew ? 'create' : 'update'} organization`);
     }
   };
 
@@ -143,7 +150,7 @@ const OrganizationDetailPage = () => {
 
         <TabsContent value="info">
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="md:col-span-2">
+            <Card className={cn("space-y-6", isNew ? "md:col-span-3" : "md:col-span-2")}>
               <CardHeader>
                 <CardTitle>Organization Details</CardTitle>
                 <CardDescription>Update name, contact info, and website</CardDescription>
@@ -216,6 +223,7 @@ const OrganizationDetailPage = () => {
               </CardContent>
             </Card>
 
+            {!isNew && (
             <Card>
               <CardHeader>
                 <CardTitle>Organization Overview</CardTitle>
@@ -227,12 +235,16 @@ const OrganizationDetailPage = () => {
                   </div>
                   <div>
                     <p className="font-medium text-lg">{formData.is_active ? 'Active' : 'Inactive'}</p>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                      ID: {organization.id}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Registered {format(new Date(organization.created_at), 'PP')}
-                    </p>
+                    {!isNew && organization && (
+                      <>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          ID: {organization.id}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Registered {format(new Date(organization.created_at), 'PP')}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
                 
@@ -250,6 +262,7 @@ const OrganizationDetailPage = () => {
                 </div>
               </CardContent>
             </Card>
+            )}
           </div>
         </TabsContent>
 

@@ -20,7 +20,7 @@ export const useOrganization = (id: string) => {
       const { data } = await organizationsApi.get(id);
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && id !== 'new',
   });
 };
 

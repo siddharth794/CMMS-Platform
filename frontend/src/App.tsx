@@ -144,13 +144,11 @@ const AppRoutes = () => {
           <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
           <Route path="assets/:id" element={<HideFromRequesterRoute><AssetDetailPage /></HideFromRequesterRoute>} />
           <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
-          <Route path="inventory/new" element={<HideFromRequesterRoute><InventoryDetailPage /></HideFromRequesterRoute>} />
           <Route path="inventory/:id" element={<HideFromRequesterRoute><InventoryDetailPage /></HideFromRequesterRoute>} />
           <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
           <Route path="pm-schedules/new" element={<ManagerRoute><CreatePMSchedulePage /></ManagerRoute>} />
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
-          <Route path="organizations/new" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
           <Route path="users" element={<ManagerRoute><UsersPage /></ManagerRoute>} />
           <Route path="users/new" element={<ManagerRoute><CreateUserPage /></ManagerRoute>} />
