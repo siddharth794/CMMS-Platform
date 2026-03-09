@@ -9,9 +9,15 @@ class PMScheduleController {
     }
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const { skip = 0, limit = 100, asset_id } = req.query;
-        const pms = await pmScheduleService.getAll(req.user!.org_id, asset_id as string | undefined, Number(skip), Number(limit));
-        res.json(pms);
+        const { skip = 0, limit = 100, asset_id, search, record_status } = req.query;
+        const result = await pmScheduleService.getAll(req.user!.org_id, {
+            asset_id: asset_id as string | undefined,
+            skip: Number(skip),
+            limit: Number(limit),
+            search: search as string | undefined,
+            record_status: record_status as string | undefined
+        });
+        res.json(result);
     }
 
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -31,6 +37,11 @@ class PMScheduleController {
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const result = await pmScheduleService.delete(req.params.pm_id as string, req.user!.org_id);
+        res.json(result);
+    }
+
+    bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await pmScheduleService.bulkDelete(req.user!.org_id, req.body, this.getAuditContext(req));
         res.json(result);
     }
 }
