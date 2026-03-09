@@ -200,21 +200,24 @@ export interface CreatePMScheduleDTO {
     asset_id: string;
     name: string;
     description?: string;
-    frequency_type?: string;
-    frequency_value: number;
-    priority?: string;
-    estimated_hours?: number;
-    next_due: string;
+    schedule_logic?: string;
+    is_paused?: boolean;
+    triggers: {
+        trigger_type?: string;
+        cron_expression?: string;
+        meter_interval?: number;
+        lead_time_days?: number;
+    }[];
+    template: {
+        priority?: string;
+        estimated_hours?: number;
+        assignee_id?: string;
+    };
+    tasks?: { description: string }[];
+    parts?: { inventory_item_id: string; quantity_required: number }[];
 }
 
-export interface UpdatePMScheduleDTO {
-    name?: string;
-    description?: string;
-    frequency_type?: string;
-    frequency_value?: number;
-    priority?: string;
-    estimated_hours?: number;
-    next_due?: string;
+export interface UpdatePMScheduleDTO extends Partial<CreatePMScheduleDTO> {
     is_active?: boolean;
 }
 
