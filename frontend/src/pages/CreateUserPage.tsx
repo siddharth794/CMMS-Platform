@@ -267,26 +267,28 @@ const CreateUserPage = () => {
                 {groups.map((group: any) => {
                   const isSelected = selectedGroups.includes(group.id);
                   return (
-                    <div 
+                    <button 
+                      type="button"
                       key={group.id}
                       onClick={() => handleToggleGroup(group.id)}
-                      className={`flex items-start space-x-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                      className={`text-left flex items-start space-x-3 p-4 rounded-xl border cursor-pointer transition-all ${
                         isSelected ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/20' : 'hover:border-primary/30 bg-card'
                       }`}
                     >
-                      <Checkbox 
-                        checked={isSelected}
-                        onCheckedChange={() => handleToggleGroup(group.id)}
-                        className="mt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <div className="space-y-1 leading-none">
-                        <Label className="cursor-pointer">{group.name}</Label>
+                      <div className={`mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-input bg-background'}`}>
+                        {isSelected && (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="space-y-1 leading-none flex-1">
+                        <div className="font-medium">{group.name}</div>
                         <p className="text-xs text-muted-foreground">
                           {group.Users?.length || 0} Member{(group.Users?.length || 0) !== 1 ? 's' : ''}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

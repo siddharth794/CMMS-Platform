@@ -142,6 +142,7 @@ export const inventoryApi = {
   list: (params) => api.get('/inventory', { params }),
   get: (id) => api.get(`/inventory/${id}`),
   create: (data) => api.post('/inventory', data),
+  bulkCreate: (data) => api.post('/inventory/bulk', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id) => api.delete(`/inventory/${id}`),
   bulkDelete: (data) => api.post('/inventory/bulk-delete', data),

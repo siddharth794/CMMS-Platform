@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Checkbox } from '../components/ui/checkbox';
+import InventoryBulkUploadDialog from '../components/InventoryBulkUploadDialog';
 import { Plus, Search, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
 import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
@@ -110,10 +111,13 @@ const InventoryPage = () => {
           <p className="text-muted-foreground">Manage spare parts and supplies</p>
         </div>
         {isManager() && (
-          <Button data-testid="add-item-btn" onClick={() => navigate('/inventory/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Item
-              </Button>
+          <div className="flex items-center gap-2">
+            <InventoryBulkUploadDialog onUploadSuccess={fetchData} />
+            <Button data-testid="add-item-btn" onClick={() => navigate('/inventory/new')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Item
+                </Button>
+          </div>
         )}
       </div>
 

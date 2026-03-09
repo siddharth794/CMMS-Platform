@@ -36,6 +36,11 @@ class InventoryController {
         res.status(201).json(item);
     }
 
+    bulkCreate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await inventoryService.bulkCreate(req.user!.org_id, req.body.items, this.getAuditContext(req));
+        res.status(201).json(result);
+    }
+
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const item = await inventoryService.update(req.params.item_id as string, req.user!.org_id, req.body as UpdateInventoryItemDTO);
         res.json(item);
