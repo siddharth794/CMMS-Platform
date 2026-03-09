@@ -26,11 +26,11 @@ async function seed() {
 
         // 2. Create Roles (find or create each)
         const roleData = [
-            { name: "Super_Admin", description: "Full system access", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
-            { name: "Org_Admin", description: "Organization administrator", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
-            { name: "Facility_Manager", description: "Manages facilities and work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true, "write": true }, "pm_schedules": { "read": true, "write": true }, "analytics": { "read": true } }, is_system_role: true },
-            { name: "Technician", description: "Executes work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true },
-            { name: "Requestor", description: "Creates and tracks work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true }
+            { name: "Super_Admin", description: "Full system access", is_system_role: true },
+            { name: "Org_Admin", description: "Organization administrator", is_system_role: true },
+            { name: "Facility_Manager", description: "Manages facilities and work orders", is_system_role: true },
+            { name: "Technician", description: "Executes work orders", is_system_role: true },
+            { name: "Requestor", description: "Creates and tracks work orders", is_system_role: true }
         ];
 
         for (const roleDef of roleData) {
@@ -65,7 +65,6 @@ async function seed() {
                 where: { email: demoDef.email },
                 defaults: {
                     org_id: org.id,
-                    role_id: role.id,
                     username: demoDef.username,
                     first_name: demoDef.firstName,
                     last_name: demoDef.lastName,
@@ -73,6 +72,10 @@ async function seed() {
                     is_active: true
                 }
             });
+
+            if (created) {
+                await user.addRole(role);
+            }
 
             console.log(`${created ? 'Created' : 'Already exists'}: ${demoDef.email} / ${demoDef.password} (Role: ${demoDef.roleName})`);
         }
