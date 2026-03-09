@@ -17,7 +17,7 @@ class OrganizationService {
 
         const orgRoles = DEFAULT_ROLES.map(role => ({
             ...role,
-            name: role.name
+            name: `${dto.name}_${role.name}`
         }));
 
         return organizationRepository.createWithRoles(dto, orgRoles);
