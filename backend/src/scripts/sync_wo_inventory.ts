@@ -1,5 +1,5 @@
-import sequelize from './src/config/database';
-import { WorkOrderInventoryItem } from './src/models';
+import sequelize from '../config/database';
+import { WorkOrderInventoryItem } from '../models';
 
 async function sync() {
   await WorkOrderInventoryItem.sync({ alter: true });

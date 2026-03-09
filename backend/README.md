@@ -45,7 +45,7 @@ PORT=8000
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=cmms_user
-DB_PASS=cmms_password
+DB_PASSWORD=cmms_password
 DB_NAME=cmms_dev
 JWT_SECRET=your_super_secret_jwt_key
 ```

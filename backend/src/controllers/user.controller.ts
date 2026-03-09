@@ -14,7 +14,18 @@ class UserController {
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const query: UserListQuery = req.query as any;
-        const users = await userService.getAll(req.user!.org_id, query);
+        const userRole = this.getRequestorRole(req);
+        
+        let targetOrgId: string | null = req.user!.org_id;
+        if (userRole === 'super_admin') {
+            if (req.query.org_id === 'all') {
+                targetOrgId = null;
+            } else if (req.query.org_id) {
+                targetOrgId = String(req.query.org_id);
+            }
+        }
+
+        const users = await userService.getAll(targetOrgId, query);
         res.json(users);
     }
 
@@ -25,7 +36,11 @@ class UserController {
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const dto: CreateUserDTO = req.body;
-        const user = await userService.create(req.user!.org_id, dto, this.getAuditContext(req), this.getRequestorRole(req));
+        const userRole = this.getRequestorRole(req);
+        // Allow super_admin to specify target org_id for new users
+        const targetOrgId = (userRole === 'super_admin' && (dto as any).org_id) ? (dto as any).org_id : req.user!.org_id;
+
+        const user = await userService.create(targetOrgId, dto, this.getAuditContext(req), userRole);
         res.status(201).json(user);
     }
 
@@ -44,6 +59,22 @@ class UserController {
         const dto: BulkDeleteDTO = req.body;
         const result = await userService.bulkDelete(req.user!.org_id, dto, this.getAuditContext(req), req.user!.id);
         res.json(result);
+    }
+
+    updateRoles = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const { role_ids } = req.body;
+        const user = await userService.updateRoles(req.params.user_id as string, req.user!.org_id, role_ids, this.getRequestorRole(req));
+        res.json(user);
+    }
+
+    updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const user = await userService.updateProfile(req.user!.id, req.user!.org_id, req.body);
+        res.json(user);
+    }
+
+    updatePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        await userService.updatePassword(req.user!.id, req.user!.org_id, req.body);
+        res.status(204).send();
     }
 }
 

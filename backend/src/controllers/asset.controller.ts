@@ -9,7 +9,10 @@ class AssetController {
     }
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await assetService.getAll(req.user!.org_id, req.query as unknown as AssetListQuery);
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = (userRole === 'super_admin' && req.query.org_id) ? String(req.query.org_id) : req.user!.org_id;
+        
+        const result = await assetService.getAll(targetOrgId, req.query as unknown as AssetListQuery);
         res.json(result);
     }
 

@@ -19,6 +19,21 @@ class InventoryRepository {
         return InventoryItem.findOne({ where: { id: itemId, org_id: orgId }, paranoid: false });
     }
 
+    async findBySkuOrName(orgId: string, sku: string | null | undefined, name: string): Promise<any | null> {
+        let where: any = { org_id: orgId };
+        
+        if (sku) {
+            where[Op.or] = [
+                { sku: sku },
+                { name: name }
+            ];
+        } else {
+            where.name = name;
+        }
+
+        return InventoryItem.findOne({ where });
+    }
+
     async count(orgId: string, where: any = {}): Promise<number> {
         return InventoryItem.count({ where: { org_id: orgId, ...where } });
     }

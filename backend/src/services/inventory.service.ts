@@ -95,6 +95,39 @@ class InventoryService {
         auditService.log({ ...audit, entityType: 'InventoryItem', entityId: dto.ids[0], action: dto.force ? 'bulk_hard_delete' : 'bulk_delete', newValues: { deleted_ids: dto.ids, count } });
         return { message: `${count} Inventory Items successfully ${dto.force ? 'permanently deleted' : 'deactivated'}.` };
     }
+    async bulkCreate(orgId: string, items: any[], audit: AuditContext): Promise<{ count: number }> {
+        let processedCount = 0;
+        
+        for (const dto of items) {
+            const existingItem = await inventoryRepository.findBySkuOrName(orgId, dto.sku, dto.name);
+            
+            if (existingItem) {
+                // If exists, increment quantity
+                const newQuantity = Number(existingItem.quantity) + Number(dto.quantity || 0);
+                await existingItem.update({ quantity: newQuantity });
+                auditService.log({ 
+                    ...audit, 
+                    entityType: 'InventoryItem', 
+                    entityId: existingItem.id, 
+                    action: 'update', 
+                    newValues: { quantity: newQuantity, note: 'Bulk imported quantity addition' } 
+                });
+            } else {
+                // If it doesn't exist, create it
+                const newItem = await inventoryRepository.create({ ...dto, org_id: orgId });
+                auditService.log({ 
+                    ...audit, 
+                    entityType: 'InventoryItem', 
+                    entityId: newItem.id, 
+                    action: 'create', 
+                    newValues: { name: newItem.name, note: 'Bulk imported' } 
+                });
+            }
+            processedCount++;
+        }
+        
+        return { count: processedCount };
+    }
 }
 
 export const inventoryService = new InventoryService();

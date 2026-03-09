@@ -62,6 +62,33 @@ export interface WorkOrder {
   updated_at?: string;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  owner_name?: string;
+  website_url?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Inventory {
+  id: string;
+  name: string;
+  part_number: string;
+  description?: string;
+  category?: string;
+  location?: string;
+  quantity: number;
+  min_quantity?: number;
+  unit_cost?: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;

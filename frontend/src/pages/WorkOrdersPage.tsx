@@ -205,91 +205,10 @@ const WorkOrdersPage = () => {
             <Download className="mr-2 h-4 w-4" />
             Export to Excel
           </Button>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="create-wo-btn">
+          <Button data-testid="create-wo-btn" onClick={() => navigate('/work-orders/new')}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Work Order
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create Work Order</DialogTitle>
-                <DialogDescription>Fill in the details for the new work order</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Brief description of the issue"
-                    required
-                    data-testid="wo-title-input"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Detailed description..."
-                    rows={3}
-                    data-testid="wo-description-input"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Asset</Label>
-                    <Select value={formData.asset_id || "none"} onValueChange={(v) => setFormData({ ...formData, asset_id: v === "none" ? "" : v })}>
-                      <SelectTrigger data-testid="wo-asset-select">
-                        <SelectValue placeholder="Select asset" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {assets.map((asset) => (
-                          <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
-                      <SelectTrigger data-testid="wo-priority-select">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="e.g., Room 101, Floor 2"
-                    data-testid="wo-location-input"
-                  />
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={submitting} data-testid="wo-submit-btn">
-                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
@@ -340,33 +259,37 @@ const WorkOrdersPage = () => {
                 <TableHead className="min-w-[180px] whitespace-nowrap">WO Number</TableHead>
                 <TableHead className="min-w-[250px]">Title</TableHead>
                 <TableHead className="min-w-[160px]">
-                  <Select value={filters.status || "all"} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={filters.status || "all"} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
+                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableHead>
                 <TableHead className="min-w-[160px]">
-                  <Select value={filters.priority || "all"} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priorities</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={filters.priority || "all"} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
+                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableHead>
                 <TableHead className="min-w-[200px]">Asset</TableHead>
                 <TableHead className="min-w-[200px]">Assignee</TableHead>
@@ -420,42 +343,44 @@ const WorkOrdersPage = () => {
                     </TableCell>
                     {!isRequester() && (
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />View
-                            </DropdownMenuItem>
-                            {isManager() && (
-                              <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
-                                <UserPlus className="mr-2 h-4 w-4" />Assign
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />View
                               </DropdownMenuItem>
-                            )}
-                            {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
-                              <>
-                                {wo.status !== 'in_progress' && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
-                                    Start Work
-                                  </DropdownMenuItem>
-                                )}
-                                {wo.status === 'in_progress' && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
-                                    Complete
-                                  </DropdownMenuItem>
-                                )}
-                              </>
-                            )}
-                            {isManager() && (
-                              <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {isManager() && (
+                                <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
+                                  <UserPlus className="mr-2 h-4 w-4" />Assign
+                                </DropdownMenuItem>
+                              )}
+                              {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                                <>
+                                  {wo.status !== 'in_progress' && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
+                                      Start Work
+                                    </DropdownMenuItem>
+                                  )}
+                                  {wo.status === 'in_progress' && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
+                                      Complete
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                              {isManager() && (
+                                <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

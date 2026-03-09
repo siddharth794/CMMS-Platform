@@ -35,6 +35,15 @@ export const authApi = {
   getMe: () => api.get('/auth/me'),
 };
 
+// Organizations
+export const organizationsApi = {
+  list: (params) => api.get('/organizations', { params }),
+  get: (id) => api.get(`/organizations/${id}`),
+  create: (data) => api.post('/organizations', data),
+  update: (id, data) => api.put(`/organizations/${id}`, data),
+  delete: (id, force = false) => api.delete(`/organizations/${id}`, { params: { force } }),
+};
+
 // Users
 export const usersApi = {
   list: (params) => api.get('/users', { params }),
@@ -42,17 +51,41 @@ export const usersApi = {
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
+  
   bulkDelete: (data) => api.post('/users/bulk-delete', data),
+  updateRoles: (id, data) => api.put(`/users/${id}/roles`, data),
+  updateProfile: (data) => api.put('/users/me', data),
+  updatePassword: (data) => api.put('/users/me/password', data),
 };
 
+
 // Roles
+// Assets
+
 export const rolesApi = {
   list: () => api.get('/roles'),
   create: (data) => api.post('/roles', data),
   update: (id, data) => api.put(`/roles/${id}`, data),
+  delete: (id) => api.delete(`/roles/${id}`),
+  updateAccesses: (id, data) => api.put(`/roles/${id}/accesses`, data),
 };
 
-// Assets
+export const accessesApi = {
+  list: () => api.get('/accesses'),
+  create: (data) => api.post('/accesses', data),
+  update: (id, data) => api.put(`/accesses/${id}`, data),
+  delete: (id) => api.delete(`/accesses/${id}`),
+};
+
+export const groupsApi = {
+  list: () => api.get('/groups'),
+  create: (data) => api.post('/groups', data),
+  update: (id, data) => api.put(`/groups/${id}`, data),
+  delete: (id) => api.delete(`/groups/${id}`),
+  updateMembers: (id, data) => api.put(`/groups/${id}/members`, data),
+  updateRoles: (id, data) => api.put(`/groups/${id}/roles`, data),
+};
+
 export const assetsApi = {
   list: (params) => api.get('/assets', { params }),
   get: (id) => api.get(`/assets/${id}`),
@@ -109,6 +142,7 @@ export const inventoryApi = {
   list: (params) => api.get('/inventory', { params }),
   get: (id) => api.get(`/inventory/${id}`),
   create: (data) => api.post('/inventory', data),
+  bulkCreate: (data) => api.post('/inventory/bulk', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id) => api.delete(`/inventory/${id}`),
   bulkDelete: (data) => api.post('/inventory/bulk-delete', data),

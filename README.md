@@ -22,7 +22,12 @@ A full-stack **Computerized Maintenance Management System** built for managing a
 - **Inventory Tracking** — Stock levels, low-stock alerts, usage per work order with atomic stock deduction
 - **Analytics Dashboards** — Admin and technician-specific dashboards with charts
 - **Real-time Notifications** — Socket.IO powered live notifications and work order comment updates
-- **Role-Based Access Control** — 5 roles (Super Admin, Org Admin, Facility Manager, Technician, Requestor)
+
+
+
+- **Role-Based Access Control (RBAC)** — Granular, multi-tenant RBAC system with customizable Roles, Groups, and Access Features. 
+  - [Read the Architecture Guide](./docs/RBAC_ARCHITECTURE.md)
+  - [Read the App & User Manual](./docs/APPLICATION_MANUAL.md)
 - **Multi-Organization** — Tenant-isolated data with organization-scoped queries
 
 ## Quick Start
@@ -117,9 +122,11 @@ All API routes are prefixed with `/api`.
 | Module | Endpoints | Description |
 |--------|-----------|-------------|
 | Auth | `POST /login`, `GET /me` | JWT authentication |
-| Users | CRUD + bulk ops | User management with role assignment |
+| Users | CRUD + bulk ops + `/me` | User management & self-serve profile |
 | Organizations | CRUD | Multi-tenant org management |
-| Roles | CRUD | RBAC role definitions |
+| Roles | CRUD + `/accesses` | Custom Tenant Roles |
+| Groups | CRUD + `/members`, `/roles` | User Groups & inherited permissions |
+| Accesses | CRUD | Granular feature strings |
 | Assets | CRUD + bulk | Asset tracking with tags & categories |
 | Work Orders | CRUD + status/assign/comments/attachments/inventory | Full work order lifecycle |
 | PM Schedules | CRUD | Preventive maintenance scheduling |

@@ -3,7 +3,7 @@ require('dotenv').config({ path: '../../.env' }); // Support running from root o
 module.exports = {
   development: {
     username: process.env.DB_USER || 'cmms_user',
-    password: process.env.DB_PASS || 'cmms_password',
+    password: process.env.DB_PASSWORD || 'cmms_password',
     database: process.env.DB_NAME || 'cmms_dev',
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306'),
@@ -11,7 +11,7 @@ module.exports = {
   },
   test: {
     username: process.env.DB_USER || 'cmms_user',
-    password: process.env.DB_PASS || 'cmms_password',
+    password: process.env.DB_PASSWORD || 'cmms_password',
     database: process.env.DB_NAME_TEST || 'cmms_test',
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306'),
@@ -19,7 +19,7 @@ module.exports = {
   },
   production: {
     username: process.env.DB_USER || 'cmms_user',
-    password: process.env.DB_PASS || 'cmms_password',
+    password: process.env.DB_PASSWORD || 'cmms_password',
     database: process.env.DB_NAME || 'cmms_prod',
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306'),

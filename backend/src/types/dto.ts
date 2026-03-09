@@ -18,6 +18,7 @@ export interface CreateUserDTO {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    org_id?: string;
 }
 
 export interface UpdateUserDTO {
@@ -42,6 +43,10 @@ export interface CreateOrganizationDTO {
     name: string;
     description?: string;
     address?: string;
+    owner_name?: string;
+    website_url?: string;
+    email?: string;
+    phone?: string;
 }
 
 // ─── Role DTOs ────────────────────────────────────────────────────
@@ -212,3 +217,12 @@ export interface UpdatePMScheduleDTO {
     next_due?: string;
     is_active?: boolean;
 }
+
+// ─── Access DTOs ──────────────────────────────────────────────────
+export interface CreateAccessDTO {
+    name: string;
+    description?: string;
+    module?: string;
+}
+
+export type UpdateAccessDTO = Partial<CreateAccessDTO>;

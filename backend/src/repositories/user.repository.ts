@@ -28,6 +28,22 @@ class UserRepository {
         return User.findByPk(userId, { include: [{ model: Role }] });
     }
 
+    async findAndCountAll(orgId: string | null, skip: number, limit: number, paranoid: boolean, where: any): Promise<{ rows: any[]; count: number }> {
+        const queryWhere = { ...where };
+        if (orgId !== null) {
+            queryWhere.org_id = orgId;
+        }
+
+        return User.findAndCountAll({
+            where: queryWhere,
+            paranoid,
+            include: [{ model: Role }],
+            offset: skip,
+            limit,
+            distinct: true
+        });
+    }
+
     async findAll(orgId: string, skip: number, limit: number, paranoid: boolean, where: any): Promise<any[]> {
         return User.findAll({
             where: { org_id: orgId, ...where },
@@ -40,7 +56,16 @@ class UserRepository {
 
     async createWithTransaction(data: Record<string, any>): Promise<any> {
         return sequelize.transaction(async (t) => {
-            return User.create(data, { transaction: t });
+            const roleId = data.role_id;
+            delete data.role_id; // Remove before create since the column is gone
+
+            const user = await User.create(data, { transaction: t });
+            
+            if (roleId) {
+                await (user as any).addRole(roleId, { transaction: t });
+            }
+
+            return user;
         });
     }
 

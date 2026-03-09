@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { Organization, Role, User, sequelize } from './src/models';
+import { Organization, Role, User, Access, sequelize } from '../models';
+import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from '../constants/permissions';
 
 async function seed() {
     try {
@@ -7,7 +8,7 @@ async function seed() {
         console.log('Connection has been established successfully.');
 
         // Force true only if you want to drop and recreate tables, let's keep it safe with alter: true or just rely on existing schema sync
-        await sequelize.sync();
+        await sequelize.sync({ force: true });
 
         console.log('Seeding initial data...');
 
@@ -17,30 +18,54 @@ async function seed() {
             defaults: {
                 description: 'Default organization for CMMS Platform',
                 address: '123 Tech Lane',
+                owner_name: 'John Doe',
+                website_url: 'https://demo-corp.com'
             }
         });
 
         console.log(`Organization: ${org.name} (ID: ${org.id})`);
 
-        // 2. Create Roles (find or create each)
+        // 2. Create Accesses (Permissions)
+        for (const perm of PERMISSIONS) {
+            await Access.findOrCreate({
+                where: { name: perm.name },
+                defaults: { ...perm, is_system: true, org_id: null }
+            });
+        }
+        console.log('System Accesses (Permissions) ready.');
+
+        // 3. Create Roles and associate default Accesses
         const roleData = [
-            { name: "Super_Admin", description: "Full system access", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
-            { name: "Org_Admin", description: "Organization administrator", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
-            { name: "Facility_Manager", description: "Manages facilities and work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true, "write": true }, "pm_schedules": { "read": true, "write": true }, "analytics": { "read": true } }, is_system_role: true },
-            { name: "Technician", description: "Executes work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true },
-            { name: "Requestor", description: "Creates and tracks work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true }
+            { name: "Super_Admin", description: "Full system access", is_system_role: true },
+            { name: "Org_Admin", description: "Organization administrator", is_system_role: true },
+            { name: "Facility_Manager", description: "Manages facilities and work orders", is_system_role: true },
+            { name: "Technician", description: "Executes work orders", is_system_role: true },
+            { name: "Requestor", description: "Creates and tracks work orders", is_system_role: true }
         ];
 
         for (const roleDef of roleData) {
-            await Role.findOrCreate({
-                where: { name: roleDef.name, org_id: org.id },
-                defaults: { org_id: org.id, ...roleDef }
+            const [role] = await Role.findOrCreate({
+                where: { name: roleDef.name, is_system_role: true },
+                defaults: { org_id: null, ...roleDef }
             });
+
+            // Map permissions to role
+            const allowedPerms = DEFAULT_ROLE_PERMISSIONS[role.name as keyof typeof DEFAULT_ROLE_PERMISSIONS] || [];
+            
+            if (allowedPerms.includes('*')) {
+                // Give Super Admin all system permissions
+                const allAccesses = await Access.findAll({ where: { is_system: true } });
+                await (role as any).setAccesses(allAccesses);
+            } else if (allowedPerms.length > 0) {
+                // Give specific permissions
+                const specificAccesses = await Access.findAll({ where: { name: allowedPerms, is_system: true } });
+                await (role as any).setAccesses(specificAccesses);
+            }
         }
 
         console.log('Roles ready.');
 
-        // 3. Create Demo Users (find or create each)
+        // 4. Create Demo Users (find or create each)
         const demoUsersData = [
             { email: 'admin@demo.com', roleName: 'Super_Admin', username: 'admin', firstName: 'Admin', lastName: 'User', password: 'admin123' },
             { email: 'orgadmin@demo.com', roleName: 'Org_Admin', username: 'orgadmin', firstName: 'Org', lastName: 'Admin', password: 'orgadmin123' },
@@ -53,7 +78,7 @@ async function seed() {
         console.log(`-------------------------------------------------`);
 
         for (const demoDef of demoUsersData) {
-            const role: any = await Role.findOne({ where: { name: demoDef.roleName, org_id: org.id } });
+            const role: any = await Role.findOne({ where: { name: demoDef.roleName, is_system_role: true } });
             if (!role) continue;
 
             const salt = bcrypt.genSaltSync(10);
@@ -63,7 +88,6 @@ async function seed() {
                 where: { email: demoDef.email },
                 defaults: {
                     org_id: org.id,
-                    role_id: role.id,
                     username: demoDef.username,
                     first_name: demoDef.firstName,
                     last_name: demoDef.lastName,
@@ -71,6 +95,10 @@ async function seed() {
                     is_active: true
                 }
             });
+
+            if (created) {
+                await user.addRole(role);
+            }
 
             console.log(`${created ? 'Created' : 'Already exists'}: ${demoDef.email} / ${demoDef.password} (Role: ${demoDef.roleName})`);
         }

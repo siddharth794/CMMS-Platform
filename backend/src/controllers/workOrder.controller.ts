@@ -27,7 +27,9 @@ class WorkOrderController {
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
-        const result = await workOrderService.getAll(req.user!.org_id, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery);
+        const targetOrgId = (roleName === 'super_admin' && req.query.org_id) ? String(req.query.org_id) : req.user!.org_id;
+        
+        const result = await workOrderService.getAll(targetOrgId, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery);
         res.json(result);
     }
 

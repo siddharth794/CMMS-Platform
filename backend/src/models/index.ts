@@ -1,31 +1,65 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import sequelize from '../config/database';
 
-class Organization extends Model { public id!: string; public name!: string; }
+class Organization extends Model { public id!: string; public name!: string; public owner_name?: string; public website_url?: string; public email?: string; public phone?: string; }
 Organization.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false, unique: true },
+    owner_name: { type: DataTypes.STRING },
+    website_url: { type: DataTypes.STRING },
+    email: { type: DataTypes.STRING },
+    phone: { type: DataTypes.STRING },
     description: { type: DataTypes.TEXT },
     address: { type: DataTypes.TEXT },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'organizations', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class Role extends Model { public id!: number; public name!: string; }
+class Role extends Model { public id!: number; public name!: string; public org_id?: string; public is_system_role!: boolean; }
 Role.init({
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    org_id: { type: DataTypes.UUID, allowNull: false },
+    org_id: { type: DataTypes.UUID, allowNull: true },
     name: { type: DataTypes.STRING(100), allowNull: false },
     description: { type: DataTypes.STRING(500) },
-    permissions: { type: DataTypes.JSON, defaultValue: {} },
     is_system_role: { type: DataTypes.BOOLEAN, defaultValue: false },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'roles', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
-class User extends Model { public id!: string; public email!: string; public password_hash!: string; }
+class Access extends Model { public id!: string; public name!: string; public module!: string; public is_system!: boolean; public org_id?: string; }
+Access.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.TEXT },
+    module: { type: DataTypes.STRING },
+    org_id: { type: DataTypes.UUID, allowNull: true },
+    is_system: { type: DataTypes.BOOLEAN, defaultValue: false },
+}, { sequelize, tableName: 'accesses', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class Group extends Model { public id!: string; public name!: string; public org_id!: string; }
+Group.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.TEXT },
+    org_id: { type: DataTypes.UUID, allowNull: false },
+}, { sequelize, tableName: 'groups', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class User extends Model { 
+    public id!: string; 
+    public email!: string; 
+    public password_hash!: string; 
+    public org_id!: string; 
+    
+    toJSON() {
+        const values = Object.assign({}, this.get());
+        if (values.Roles && Array.isArray(values.Roles)) {
+            values.Role = values.Roles[0] || null;
+            values.role_id = values.Role?.id || null;
+        }
+        return values;
+    }
+}
 User.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
-    role_id: { type: DataTypes.INTEGER, allowNull: false },
     email: { type: DataTypes.STRING, allowNull: false, unique: true },
     username: { type: DataTypes.STRING(100), allowNull: false },
     first_name: { type: DataTypes.STRING(100) },
@@ -166,8 +200,25 @@ User.belongsTo(Organization, { foreignKey: 'org_id' });
 Organization.hasMany(Role, { foreignKey: 'org_id' });
 Role.belongsTo(Organization, { foreignKey: 'org_id' });
 
-Role.hasMany(User, { foreignKey: 'role_id' });
-User.belongsTo(Role, { foreignKey: 'role_id' });
+Organization.hasMany(Group, { foreignKey: 'org_id' });
+Group.belongsTo(Organization, { foreignKey: 'org_id' });
+
+// RBAC Associations
+Role.belongsToMany(Access, { through: 'role_accesses', foreignKey: 'role_id', otherKey: 'access_id' });
+Access.belongsToMany(Role, { through: 'role_accesses', foreignKey: 'access_id', otherKey: 'role_id' });
+
+User.belongsToMany(Role, { through: 'user_roles', foreignKey: 'user_id', otherKey: 'role_id' });
+Role.belongsToMany(User, { through: 'user_roles', foreignKey: 'role_id', otherKey: 'user_id' });
+
+User.belongsToMany(Group, { through: 'user_groups', foreignKey: 'user_id', otherKey: 'group_id' });
+Group.belongsToMany(User, { through: 'user_groups', foreignKey: 'group_id', otherKey: 'user_id' });
+
+Group.belongsToMany(Role, { through: 'group_roles', foreignKey: 'group_id', otherKey: 'role_id' });
+Role.belongsToMany(Group, { through: 'group_roles', foreignKey: 'role_id', otherKey: 'group_id' });
+
+// Old association to remove, but I'll remove it entirely.
+// Role.hasMany(User, { foreignKey: 'role_id' });
+// User.belongsTo(Role, { foreignKey: 'role_id' });
 
 Organization.hasMany(Asset, { foreignKey: 'org_id' });
 Asset.belongsTo(Organization, { foreignKey: 'org_id' });
@@ -212,11 +263,11 @@ WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id'
 WOAttachment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 
-
-
 export {
     Organization,
     Role,
+    Access,
+    Group,
     User,
     Asset,
     WorkOrder,
