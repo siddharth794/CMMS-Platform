@@ -77,10 +77,11 @@ const UsersPage = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === users.length && users.length > 0) {
+    const selectableUsers = users.filter((u) => u.id !== currentUser?.id);
+    if (selectedIds.length === selectableUsers.length && selectableUsers.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(users.map((u) => u.id));
+      setSelectedIds(selectableUsers.map((u) => u.id));
     }
   };
 
@@ -144,7 +145,7 @@ const UsersPage = () => {
                 {isAdmin() && (
                   <TableHead className="w-[50px]">
                     <Checkbox 
-                      checked={users.length > 0 && selectedIds.length === users.length}
+                      checked={users.length > 0 && selectedIds.length === users.filter((u) => u.id !== currentUser?.id).length && selectedIds.length > 0}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -190,6 +191,7 @@ const UsersPage = () => {
                         <Checkbox 
                           checked={selectedIds.includes(u.id)}
                           onCheckedChange={() => toggleSelect(u.id)}
+                          disabled={u.id === currentUser?.id}
                         />
                       </TableCell>
                     )}

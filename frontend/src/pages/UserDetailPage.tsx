@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser, useUpdateUser } from '../hooks/api/useUsers';
+import { useUser, useUpdateUser, useDeleteUser } from '../hooks/api/useUsers';
 import { rolesApi } from '../lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -11,7 +11,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft, Save, User as UserIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, User as UserIcon, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const UserDetailPage = () => {
@@ -20,9 +20,11 @@ const UserDetailPage = () => {
   const { addNotification } = useNotification();
   const { data: user, isLoading, isError } = useUser(id);
   const updateMutation = useUpdateUser();
+  const deleteMutation = useDeleteUser();
   const { user: currentUser } = useAuth();
-  
+
   const isSuperAdmin = (currentUser?.role?.name || currentUser?.Role?.name || '').toLowerCase() === 'super_admin';
+  const isOwnProfile = currentUser?.id === id;
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
@@ -68,6 +70,17 @@ const UserDetailPage = () => {
     }
   }, [user, roles]);
 
+  const handleDelete = async () => {
+    if (!window.confirm(user.is_active ? 'Deactivate this user?' : 'Permanently delete this user?')) return;
+    try {
+      await deleteMutation.mutateAsync(id);
+      addNotification('success', user.is_active ? 'User deactivated' : 'User permanently deleted');
+      navigate('/users');
+    } catch (error) {
+      addNotification('error', 'Failed to delete user');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -104,13 +117,21 @@ const UserDetailPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/users')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{user.first_name} {user.last_name}</h1>
-          <p className="text-muted-foreground">User ID: {user.id}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/users')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{user.first_name} {user.last_name}</h1>
+            <p className="text-muted-foreground">User ID: {user.id}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button type="submit" form="user-form" disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Changes
+          </Button>
         </div>
       </div>
 
@@ -121,7 +142,7 @@ const UserDetailPage = () => {
             <CardDescription>Update personal information and role</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">First Name</Label>
@@ -179,11 +200,17 @@ const UserDetailPage = () => {
                     value={formData.role_id || undefined} 
                     onValueChange={(v) => setFormData({ ...formData, role_id: v })} 
                     required
+                    disabled={formData.role_id === '2' && !isSuperAdmin}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
+                      {formData.role_id === '2' && !roles.some((r) => r.id.toString() === '2') && (
+                        <SelectItem value="2">
+                          {((user?.Role?.name || user?.role?.name) || 'Org Admin').replace('_', ' ')}
+                        </SelectItem>
+                      )}
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id.toString()}>
                           {role.name.replace('_', ' ')}
@@ -195,14 +222,6 @@ const UserDetailPage = () => {
                     ID: {formData.role_id || 'None'} | Available: {roles.length}
                   </p>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/users')}>Cancel</Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Changes
-                </Button>
               </div>
             </form>
           </CardContent>
