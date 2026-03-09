@@ -28,6 +28,17 @@ class UserRepository {
         return User.findByPk(userId, { include: [{ model: Role }] });
     }
 
+    async findAndCountAll(orgId: string, skip: number, limit: number, paranoid: boolean, where: any): Promise<{ rows: any[]; count: number }> {
+        return User.findAndCountAll({
+            where: { org_id: orgId, ...where },
+            paranoid,
+            include: [{ model: Role }],
+            offset: skip,
+            limit,
+            distinct: true
+        });
+    }
+
     async findAll(orgId: string, skip: number, limit: number, paranoid: boolean, where: any): Promise<any[]> {
         return User.findAll({
             where: { org_id: orgId, ...where },

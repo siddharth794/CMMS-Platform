@@ -8,7 +8,7 @@ import { AuditContext, BulkDeleteDTO } from '../types/common.dto';
 import { NotFoundError, ConflictError, ForbiddenError, BadRequestError } from '../errors/AppError';
 
 class UserService {
-    async getAll(orgId: string, query: UserListQuery): Promise<any[]> {
+    async getAll(orgId: string, query: UserListQuery): Promise<any> {
         const { skip = 0, limit = 100, record_status } = query;
         let where: any = {};
         let paranoid = true;
@@ -23,7 +23,8 @@ class UserService {
             where.is_active = true;
         }
 
-        return userRepository.findAll(orgId, Number(skip), Number(limit), paranoid, where);
+        const result = await userRepository.findAndCountAll(orgId, Number(skip), Number(limit), paranoid, where);
+        return { data: result.rows, total: result.count };
     }
 
     async getById(userId: string, orgId: string): Promise<any> {
