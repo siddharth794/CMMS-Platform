@@ -101,7 +101,9 @@ class WorkOrderService {
 
         // 1. Check Transition Validity
         const allowed = WO_STATUS_TRANSITIONS[oldStatus] || [];
-        if (!allowed.includes(dto.status)) {
+        const isSelfTransitionWithNotes = dto.status === oldStatus && dto.notes;
+        
+        if (!allowed.includes(dto.status) && !isSelfTransitionWithNotes) {
             throw new BadRequestError(`Invalid status transition from ${oldStatus} to ${dto.status}`);
         }
 

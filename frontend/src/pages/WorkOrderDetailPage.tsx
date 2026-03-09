@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { workOrdersApi, usersApi, inventoryApi } from '../lib/api';
+import { workOrdersApi, usersApi, inventoryApi, BACKEND_URL } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -124,10 +124,25 @@ const WorkOrderDetailPage = () => {
   };
 
   const handleStatusUpdate = async () => {
-    // Client-side validation for completion
-    if (newStatus === 'completed') {
-      const hasAttachments = workOrder.attachments && workOrder.attachments.length > 0;
-      if (!hasAttachments) {
+    // Client-side validation for completion and review
+    if (newStatus === 'completed' || newStatus === 'pending_review') {
+      // 1. Mandatory Notes
+      if (!statusNotes.trim() && !workOrder.resolution_notes) {
+        addNotification('error', 'Resolution notes are mandatory when completing or submitting for review.');
+        return;
+      }
+
+      // 2. Mandatory Attachments for High/Critical priority
+      if (['high', 'critical'].includes(workOrder.priority)) {
+        const hasAttachments = (workOrder.attachments && workOrder.attachments.length > 0) || (selectedFiles.length > 0);
+        if (!hasAttachments) {
+          addNotification('error', 'Proof of work (images) is required for High/Critical priority work orders.');
+          return;
+        }
+      }
+      
+      // 3. General Attachment check for completion
+      if (newStatus === 'completed' && !(workOrder.attachments?.length > 0 || selectedFiles.length > 0)) {
         addNotification('error', 'You must upload at least one image before completing the work order.');
         return;
       }
@@ -500,7 +515,7 @@ const WorkOrderDetailPage = () => {
                   {workOrder.attachments.map(att => (
                     <div key={att.id} className="relative group rounded-md overflow-hidden border">
                       <img
-                        src={`http://localhost:8000${att.file_path}`}
+                        src={`${BACKEND_URL}${att.file_path}`}
                         alt="Work Order"
                         className="w-full h-32 object-cover"
                       />
@@ -684,7 +699,9 @@ const WorkOrderDetailPage = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Notes (optional)</Label>
+              <Label>
+                Notes {(newStatus === 'completed' || newStatus === 'pending_review') ? '(Mandatory)' : '(Optional)'}
+              </Label>
               <Textarea
                 value={statusNotes}
                 onChange={(e) => setStatusNotes(e.target.value)}

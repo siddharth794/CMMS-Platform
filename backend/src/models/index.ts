@@ -273,11 +273,11 @@ PMSchedule.belongsTo(Organization, { foreignKey: 'org_id' });
 Organization.hasMany(InventoryItem, { foreignKey: 'org_id' });
 InventoryItem.belongsTo(Organization, { foreignKey: 'org_id' });
 
-Asset.hasMany(WorkOrder, { foreignKey: 'asset_id' });
-WorkOrder.belongsTo(Asset, { foreignKey: 'asset_id' });
+Asset.hasMany(WorkOrder, { foreignKey: 'asset_id', as: 'work_orders' });
+WorkOrder.belongsTo(Asset, { foreignKey: 'asset_id', as: 'asset' });
 
-Asset.hasMany(PMSchedule, { foreignKey: 'asset_id' });
-PMSchedule.belongsTo(Asset, { foreignKey: 'asset_id' });
+Asset.hasMany(PMSchedule, { foreignKey: 'asset_id', as: 'pm_schedules' });
+PMSchedule.belongsTo(Asset, { foreignKey: 'asset_id', as: 'asset' });
 
 PMSchedule.hasMany(PMTrigger, { as: 'triggers', foreignKey: 'pm_schedule_id' });
 PMTrigger.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });

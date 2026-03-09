@@ -18,7 +18,7 @@ export const UpdateWorkOrderSchema = z.object({
     asset_id: z.string().uuid().nullable().optional(),
     assignee_id: z.string().uuid().nullable().optional(),
     priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-    status: z.enum(['new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled']).optional(),
+    status: z.enum(['new', 'open', 'in_progress', 'on_hold', 'pending_review', 'completed', 'cancelled']).optional(),
     location: z.string().max(100).optional(),
     scheduled_start: z.string().optional(),
     scheduled_end: z.string().optional(),
@@ -28,7 +28,7 @@ export const UpdateWorkOrderSchema = z.object({
 }).strict();
 
 export const StatusUpdateSchema = z.object({
-    status: z.enum(['new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled']),
+    status: z.enum(['new', 'open', 'in_progress', 'on_hold', 'pending_review', 'completed', 'cancelled']),
     notes: z.string().max(5000).optional(),
 }).strict();
 
