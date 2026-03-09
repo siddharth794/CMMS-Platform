@@ -79,7 +79,14 @@ const AssetDetailPage = () => {
         addNotification('success', 'Asset updated successfully');
       }
     } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to save asset');
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const firstField = Object.keys(errors)[0];
+        const firstError = errors[firstField][0];
+        addNotification('error', `${firstField}: ${firstError}`);
+      } else {
+        addNotification('error', error.response?.data?.detail || 'Failed to save asset');
+      }
     }
   };
 

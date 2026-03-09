@@ -9,21 +9,17 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import AssetsBulkUploadDialog from '../components/AssetsBulkUploadDialog';
 import { Pagination } from '../components/ui/pagination';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, Box, MapPin, Trash } from 'lucide-react';
+import { Plus, Search, Loader2, MapPin, Trash, Trash2 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
-    const [editOpen, setEditOpen] = useState(false);
-    const [selectedAsset, setSelectedAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const { isManager } = useAuth();
@@ -222,32 +218,18 @@ const AssetsPage = () => {
                         {asset.status}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`asset-actions-${asset.id}`}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/assets/${asset.id}`)}>
-                            <Eye className="mr-2 h-4 w-4" />View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setSelectedAsset(asset); setViewOpen(true); }}>
-                            <Box className="mr-2 h-4 w-4" />Quick View
-                          </DropdownMenuItem>
-                          {isManager() && (
-                            <DropdownMenuItem onClick={() => openEditDialog(asset)}>
-                              <Edit className="mr-2 h-4 w-4" />Edit (Modal)
-                            </DropdownMenuItem>
-                          )}
-                          {isManager() && (
-                            <DropdownMenuItem onClick={() => handleDelete(asset.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="text-right">
+                      {isManager() && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive h-8 w-8"
+                          onClick={() => handleDelete(asset.id)}
+                          data-testid={`delete-asset-btn-${asset.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

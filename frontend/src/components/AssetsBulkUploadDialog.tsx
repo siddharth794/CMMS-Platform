@@ -79,7 +79,14 @@ const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
             setAssetsToUpload([]);
             if (onUploadSuccess) onUploadSuccess();
         } catch (error) {
-            addNotification('error', error.response?.data?.detail || 'Failed to upload assets');
+            if (error.response?.data?.errors) {
+                const errors = error.response.data.errors;
+                const firstField = Object.keys(errors)[0];
+                const firstError = Array.isArray(errors[firstField]) ? errors[firstField][0] : errors[firstField];
+                addNotification('error', `Validation failed: ${firstField} - ${firstError}`);
+            } else {
+                addNotification('error', error.response?.data?.detail || 'Failed to upload assets');
+            }
         } finally {
             setUploading(false);
         }
