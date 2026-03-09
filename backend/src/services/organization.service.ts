@@ -15,7 +15,12 @@ class OrganizationService {
         const existing = await organizationRepository.findByName(dto.name);
         if (existing) throw new ConflictError('Organization name already exists');
 
-        return organizationRepository.createWithRoles(dto, DEFAULT_ROLES);
+        const orgRoles = DEFAULT_ROLES.map(role => ({
+            ...role,
+            name: role.name
+        }));
+
+        return organizationRepository.createWithRoles(dto, orgRoles);
     }
 
     async getAll(skip: number, limit: number, userRole: string, filters: any = {}): Promise<{ data: any[], total: number }> {
