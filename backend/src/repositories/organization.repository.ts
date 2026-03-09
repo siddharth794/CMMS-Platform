@@ -44,14 +44,8 @@ class OrganizationRepository {
         return true;
     }
 
-    async createWithRoles(orgData: Record<string, any>, defaultRoles: Record<string, any>[]): Promise<any> {
-        return sequelize.transaction(async (t) => {
-            const org = await Organization.create(orgData, { transaction: t });
-            for (const roleData of defaultRoles) {
-                await Role.create({ org_id: (org as any).id, ...roleData }, { transaction: t });
-            }
-            return org;
-        });
+    async create(orgData: Record<string, any>): Promise<any> {
+        return Organization.create(orgData);
     }
 }
 

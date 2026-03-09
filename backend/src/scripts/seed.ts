@@ -35,8 +35,8 @@ async function seed() {
 
         for (const roleDef of roleData) {
             await Role.findOrCreate({
-                where: { name: roleDef.name, org_id: org.id },
-                defaults: { org_id: org.id, ...roleDef }
+                where: { name: roleDef.name, is_system_role: true },
+                defaults: { org_id: null, ...roleDef }
             });
         }
 
@@ -55,7 +55,7 @@ async function seed() {
         console.log(`-------------------------------------------------`);
 
         for (const demoDef of demoUsersData) {
-            const role: any = await Role.findOne({ where: { name: demoDef.roleName, org_id: org.id } });
+            const role: any = await Role.findOne({ where: { name: demoDef.roleName, is_system_role: true } });
             if (!role) continue;
 
             const salt = bcrypt.genSaltSync(10);

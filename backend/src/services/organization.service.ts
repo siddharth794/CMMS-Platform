@@ -2,24 +2,12 @@ import { organizationRepository } from '../repositories/organization.repository'
 import { CreateOrganizationDTO } from '../types/dto';
 import { ConflictError, NotFoundError, ForbiddenError } from '../errors/AppError';
 
-const DEFAULT_ROLES = [
-    { name: "Org_Admin", description: "Organization administrator", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
-    { name: "Facility_Manager", description: "Manages facilities and work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true, "write": true }, "pm_schedules": { "read": true, "write": true }, "analytics": { "read": true } }, is_system_role: true },
-    { name: "Technician", description: "Executes work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true },
-    { name: "Requestor", description: "Creates and tracks work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true }
-];
-
 class OrganizationService {
     async create(dto: CreateOrganizationDTO): Promise<any> {
         const existing = await organizationRepository.findByName(dto.name);
         if (existing) throw new ConflictError('Organization name already exists');
 
-        const orgRoles = DEFAULT_ROLES.map(role => ({
-            ...role,
-            name: role.name
-        }));
-
-        return organizationRepository.createWithRoles(dto, orgRoles);
+        return organizationRepository.create(dto);
     }
 
     async getAll(skip: number, limit: number, userRole: string, filters: any = {}): Promise<{ data: any[], total: number }> {
