@@ -10,6 +10,7 @@ router.use(authenticate);
 
 router.get('/', pmScheduleController.getAll);
 router.post('/', requireRole(MANAGER_ROLES), validate(CreatePMScheduleSchema), pmScheduleController.create);
+router.post('/bulk-delete', requireRole(MANAGER_ROLES), pmScheduleController.bulkDelete);
 router.get('/:pm_id', pmScheduleController.getById);
 router.put('/:pm_id', requireRole(MANAGER_ROLES), validate(UpdatePMScheduleSchema), pmScheduleController.update);
 router.delete('/:pm_id', requireRole(MANAGER_ROLES), pmScheduleController.delete);

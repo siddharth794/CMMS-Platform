@@ -21,15 +21,12 @@ export interface Asset {
   id: string;
   name: string;
   asset_type: string;
-  description?: string;
-  location?: string;
-  manufacturer?: string;
-  model?: string;
+  category?: string;
   serial_number?: string;
   status: string;
   supplier_id?: string;
   purchase_date?: string;
-  purchase_price?: number;
+  purchase_cost?: string;
   warranty_expiry?: string;
   expected_life_years?: number;
   qr_code?: string;

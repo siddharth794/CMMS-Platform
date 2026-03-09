@@ -90,7 +90,7 @@ Asset.init({
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'assets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class WorkOrder extends Model { public id!: string; }
+class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; }
 WorkOrder.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
@@ -113,21 +113,61 @@ WorkOrder.init({
     is_pm_generated: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { sequelize, tableName: 'work_orders', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class PMSchedule extends Model { public id!: string; }
+class PMSchedule extends Model { public id!: string; public schedule_logic!: string; public is_paused!: boolean; public name!: string; }
 PMSchedule.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
     asset_id: { type: DataTypes.UUID, allowNull: false },
     name: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT },
-    frequency_type: { type: DataTypes.STRING(50), defaultValue: 'days' },
-    frequency_value: { type: DataTypes.INTEGER, allowNull: false },
-    priority: { type: DataTypes.STRING(50), defaultValue: 'medium' },
-    estimated_hours: { type: DataTypes.INTEGER },
-    last_generated: { type: DataTypes.DATE },
-    next_due: { type: DataTypes.DATE, allowNull: false },
+    schedule_logic: { type: DataTypes.ENUM('FIXED', 'FLOATING'), defaultValue: 'FIXED' },
+    is_paused: { type: DataTypes.BOOLEAN, defaultValue: false },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'pm_schedules', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class PMTrigger extends Model { public id!: string; public pm_schedule_id!: string; public trigger_type!: string; public cron_expression?: string; public meter_interval?: number; public lead_time_days!: number; }
+PMTrigger.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
+    trigger_type: { type: DataTypes.ENUM('TIME', 'METER'), defaultValue: 'TIME' },
+    cron_expression: { type: DataTypes.STRING(100) }, // e.g., '0 0 1 * *'
+    meter_interval: { type: DataTypes.INTEGER },
+    lead_time_days: { type: DataTypes.INTEGER, defaultValue: 7 }, // Generate 7 days before
+}, { sequelize, tableName: 'pm_triggers', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+
+class PMTemplate extends Model { public id!: string; public pm_schedule_id!: string; public priority!: string; public estimated_hours?: number; public assignee_id?: string; }
+PMTemplate.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
+    priority: { type: DataTypes.ENUM('low', 'medium', 'high', 'critical'), defaultValue: 'medium' },
+    estimated_hours: { type: DataTypes.INTEGER },
+    assignee_id: { type: DataTypes.UUID },
+}, { sequelize, tableName: 'pm_templates', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+
+class PMTask extends Model { public id!: string; public pm_schedule_id!: string; public description!: string; }
+PMTask.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
+    description: { type: DataTypes.TEXT, allowNull: false },
+}, { sequelize, tableName: 'pm_tasks', timestamps: true, createdAt: 'created_at', updatedAt: false });
+
+class PMPart extends Model { public id!: string; public pm_schedule_id!: string; public inventory_item_id!: string; public quantity_required!: number; }
+PMPart.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
+    inventory_item_id: { type: DataTypes.UUID, allowNull: false },
+    quantity_required: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+}, { sequelize, tableName: 'pm_parts', timestamps: true, createdAt: 'created_at', updatedAt: false });
+
+class PMExecution extends Model { public id!: string; public pm_schedule_id!: string; public work_order_id!: string; public status!: string; }
+PMExecution.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
+    work_order_id: { type: DataTypes.UUID, allowNull: false },
+    triggered_by: { type: DataTypes.STRING(50) }, // e.g., 'TIME' or 'METER'
+    status: { type: DataTypes.ENUM('generated', 'completed', 'skipped'), defaultValue: 'generated' },
+    actual_completion_date: { type: DataTypes.DATE },
+}, { sequelize, tableName: 'pm_executions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
 class AuditLog extends Model { public id!: string; }
 AuditLog.init({
@@ -238,13 +278,32 @@ WorkOrder.belongsTo(Asset, { foreignKey: 'asset_id' });
 Asset.hasMany(PMSchedule, { foreignKey: 'asset_id' });
 PMSchedule.belongsTo(Asset, { foreignKey: 'asset_id' });
 
+PMSchedule.hasMany(PMTrigger, { as: 'triggers', foreignKey: 'pm_schedule_id' });
+PMTrigger.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
+
+PMSchedule.hasOne(PMTemplate, { as: 'template', foreignKey: 'pm_schedule_id' });
+PMTemplate.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
+
+PMSchedule.hasMany(PMTask, { as: 'tasks', foreignKey: 'pm_schedule_id' });
+PMTask.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
+
+PMSchedule.hasMany(PMPart, { as: 'parts', foreignKey: 'pm_schedule_id' });
+PMPart.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
+
+PMPart.belongsTo(InventoryItem, { as: 'item', foreignKey: 'inventory_item_id' });
+
+PMSchedule.hasMany(PMExecution, { as: 'executions', foreignKey: 'pm_schedule_id' });
+PMExecution.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
+WorkOrder.hasMany(PMExecution, { foreignKey: 'work_order_id', onDelete: 'CASCADE' });
+PMExecution.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
 User.hasMany(WorkOrder, { as: 'assigned_work_orders', foreignKey: 'assignee_id' });
 WorkOrder.belongsTo(User, { as: 'assignee', foreignKey: 'assignee_id' });
 
 User.hasMany(WorkOrder, { as: 'created_work_orders', foreignKey: 'requester_id' });
 WorkOrder.belongsTo(User, { as: 'requester', foreignKey: 'requester_id' });
 
-WorkOrder.hasMany(WOComment, { as: 'comments', foreignKey: 'work_order_id' });
+WorkOrder.hasMany(WOComment, { as: 'comments', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WOComment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 User.hasMany(WOComment, { foreignKey: 'user_id' });
@@ -253,13 +312,13 @@ WOComment.belongsTo(User, { foreignKey: 'user_id' });
 User.hasMany(Notification, { foreignKey: 'user_id' });
 Notification.belongsTo(User, { foreignKey: 'user_id' });
 
-WorkOrder.hasMany(WorkOrderInventoryItem, { as: 'used_parts', foreignKey: 'work_order_id' });
+WorkOrder.hasMany(WorkOrderInventoryItem, { as: 'used_parts', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WorkOrderInventoryItem.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 InventoryItem.hasMany(WorkOrderInventoryItem, { foreignKey: 'inventory_item_id' });
 WorkOrderInventoryItem.belongsTo(InventoryItem, { as: 'item', foreignKey: 'inventory_item_id' });
 
-WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id' });
+WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WOAttachment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 
@@ -272,6 +331,11 @@ export {
     Asset,
     WorkOrder,
     PMSchedule,
+    PMTrigger,
+    PMTemplate,
+    PMTask,
+    PMPart,
+    PMExecution,
     AuditLog,
     InventoryItem,
     WOComment,

@@ -294,7 +294,6 @@ const WorkOrdersPage = () => {
                 <TableHead className="min-w-[200px]">Asset</TableHead>
                 <TableHead className="min-w-[200px]">Assignee</TableHead>
                 <TableHead className="min-w-[150px] whitespace-nowrap">Created</TableHead>
-                {false && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
                 {!isRequester() && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -359,7 +358,7 @@ const WorkOrdersPage = () => {
                                   <UserPlus className="mr-2 h-4 w-4" />Assign
                                 </DropdownMenuItem>
                               )}
-                              {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                              {!isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
                                 <>
                                   {wo.status !== 'in_progress' && (
                                     <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>

@@ -118,7 +118,16 @@ app.get('/health', async (req: Request, res: Response) => {
 
 // ─── API Routes ───────────────────────────────────────────────────
 import apiRoutes from './routes';
+import cron from 'node-cron';
+import { PMGeneratorWorker } from './workers/pmGenerator.worker';
+
 app.use('/api', apiRoutes);
+
+// ─── Background Workers ────────────────────────────────────────────
+const pmWorker = new PMGeneratorWorker();
+cron.schedule('0 * * * *', () => { // Runs every hour
+    pmWorker.evaluateAllActivePMs();
+});
 
 // ─── Global Error Handler ─────────────────────────────────────────
 app.use(errorHandler);

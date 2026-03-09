@@ -185,7 +185,11 @@ const AssetDetailPage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                  <Select 
+                    key={`${formData.category}-${asset?.id}`}
+                    value={formData.category} 
+                    onValueChange={(v) => setFormData({ ...formData, category: v })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>

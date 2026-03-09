@@ -8,58 +8,47 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
-import { Calendar } from '../components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Pagination } from '../components/ui/pagination';
-import { Plus, MoreHorizontal, Edit, Trash2, Loader2, CalendarIcon, AlertTriangle, CheckCircle } from 'lucide-react';
-import { format, isBefore, addDays } from 'date-fns';
+import { Checkbox } from '../components/ui/checkbox';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Trash, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNotification } from '../context/NotificationContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const PMSchedulesPage = () => {
   const [schedules, setSchedules] = useState([]);
-  const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPM, setSelectedPM] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const itemsPerPage = 10;
-  
-  const paginatedSchedules = schedules.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const [total, setTotal] = useState(0);
+  const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState([]);
   
   const navigate = useNavigate();
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    asset_id: '',
-    frequency_type: 'days',
-    frequency_value: 30,
-    priority: 'medium',
-    estimated_hours: '',
-    next_due: new Date(),
-  });
-
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [search, page, recordStatus]);
 
   const fetchData = async () => {
     try {
-      const [pmRes, assetsRes] = await Promise.all([
-        pmSchedulesApi.list(),
-        assetsApi.list(),
-      ]);
-      setSchedules(pmRes.data);
-      setAssets(assetsRes.data);
+      setLoading(true);
+      const res = await pmSchedulesApi.list({ 
+        search, 
+        record_status: recordStatus, 
+        skip: (page - 1) * 10, 
+        limit: 10 
+      });
+      setSchedules(res.data.data || res.data || []);
+      setTotal(res.data.total || (res.data.data || res.data || []).length);
+      setSelectedIds([]);
     } catch (error) {
-      addNotification('error', 'Failed to fetch data');
+      addNotification('error', 'Failed to fetch PM schedules');
     } finally {
       setLoading(false);
     }
@@ -125,18 +114,45 @@ const PMSchedulesPage = () => {
   };
 
   const handleDelete = async (pmId) => {
-    if (!confirm('Delete this PM schedule?')) return;
+    if (!confirm(recordStatus === 'active' ? 'Delete this PM schedule?' : 'Permanently delete this PM schedule?')) return;
     try {
       await pmSchedulesApi.delete(pmId);
-      addNotification('success', 'PM Schedule deleted');
+      addNotification('success', recordStatus === 'active' ? 'PM Schedule deactivated' : 'PM Schedule permanently deleted');
       fetchData();
     } catch (error) {
       addNotification('error', 'Failed to delete schedule');
     }
   };
 
-  
-  const isOverdue = (date) => isBefore(new Date(date), new Date());
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} schedules?`)) return;
+    
+    setSubmitting(true);
+    try {
+      await pmSchedulesApi.bulkDelete({ ids: selectedIds, force: recordStatus === 'inactive' });
+      addNotification('success', `${selectedIds.length} schedules ${recordStatus === 'active' ? 'deactivated' : 'permanently deleted'}`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      addNotification('error', 'Failed to bulk delete schedules');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === schedules.length && schedules.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds((schedules || []).map((a) => a.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
+  };
 
   const PMForm = ({ onSubmit, isEdit = false }) => (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -273,17 +289,55 @@ const PMSchedulesPage = () => {
         )}
       </div>
 
-      {/* Table */}
+      {/* Filters, Search & Table */}
       <Card>
+        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+          <div className="flex items-center gap-2 max-w-md w-full">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search schedules by name..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              data-testid="pm-search-input"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {isManager() && selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
+            <div className="w-[180px]">
+              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
+                <SelectTrigger data-testid="filter-record-status">
+                  <SelectValue placeholder="Record Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
+                {isManager() && (
+                  <TableHead className="w-[40px]">
+                    <Checkbox 
+                      checked={schedules.length > 0 && selectedIds.length === schedules.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Name</TableHead>
                 <TableHead>Asset</TableHead>
-                <TableHead>Frequency</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Next Due</TableHead>
+                <TableHead>Triggers</TableHead>
+                <TableHead>WO Priority</TableHead>
+                <TableHead>Logic</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -302,45 +356,57 @@ const PMSchedulesPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedSchedules.map((pm) => (
+                schedules.map((pm) => (
                   <TableRow key={pm.id} data-testid={`pm-row-${pm.id}`}>
-                    <TableCell className="font-medium">{pm.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{pm.asset?.name || '-'}</TableCell>
-                    <TableCell>{pm.frequency_value} {pm.frequency_type}</TableCell>
+                    {isManager() && (
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedIds.includes(pm.id)}
+                          onCheckedChange={() => toggleSelect(pm.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <span className={`status-badge priority-${pm.priority}`}>{pm.priority}</span>
+                      <Link to={`/pm-schedules/${pm.id}`} className="font-medium text-primary hover:underline">
+                        {pm.name}
+                      </Link>
                     </TableCell>
-                    <TableCell>{format(new Date(pm.next_due), 'MMM d, yyyy')}</TableCell>
                     <TableCell>
-                      {isOverdue(pm.next_due) ? (
-                        <span className="flex items-center gap-1 text-destructive text-sm">
-                          <AlertTriangle className="h-4 w-4" />
-                          Overdue
-                        </span>
+                      <Link to={`/assets/${pm.asset_id}`} className="text-primary hover:underline">
+                        {pm.Asset?.name || pm.asset?.name || '-'}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {pm.Triggers?.[0]?.trigger_type === 'TIME' || pm.triggers?.[0]?.trigger_type === 'TIME' ? (
+                        <span className="text-sm border px-2 py-1 rounded bg-muted">Cron: {pm.Triggers?.[0]?.cron_expression || pm.triggers?.[0]?.cron_expression}</span>
                       ) : (
-                        <span className="flex items-center gap-1 text-emerald-600 text-sm">
-                          <CheckCircle className="h-4 w-4" />
-                          On Track
-                        </span>
+                        <span className="text-sm border px-2 py-1 rounded bg-muted">Meter-based</span>
                       )}
                     </TableCell>
                     <TableCell>
+                      <span className={`status-badge priority-${pm.Template?.priority || pm.template?.priority || 'medium'}`}>
+                        {pm.Template?.priority || pm.template?.priority || 'medium'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {pm.schedule_logic === 'FIXED' ? 'Strict Calendar' : 'Floating'}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`status-badge ${pm.is_paused ? 'status-cancelled' : 'status-completed'}`}>
+                        {pm.is_paused ? 'Paused' : 'Active'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
                       {isManager() && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" data-testid={`pm-actions-${pm.id}`}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(pm)}>
-                              <Edit className="mr-2 h-4 w-4" />Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(pm.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive h-8 w-8"
+                          onClick={() => handleDelete(pm.id)}
+                          data-testid={`delete-pm-btn-${pm.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -348,14 +414,11 @@ const PMSchedulesPage = () => {
               )}
             </TableBody>
           </Table>
-          {!loading && schedules.length > 0 && (
-            <Pagination
-              currentPage={page}
-              totalItems={schedules.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setPage}
-            />
-          )}
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 
