@@ -71,6 +71,7 @@
     
     html {
         font-family: 'Inter', sans-serif;
+        font-size: 87.5%; /* Decreases 1rem from 16px to 14px */
     }
     
     body {
