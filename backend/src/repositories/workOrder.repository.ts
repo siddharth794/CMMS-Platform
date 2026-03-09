@@ -58,11 +58,54 @@ class WorkOrderRepository {
     }
 
     async hardDelete(wo: any): Promise<void> {
-        await wo.destroy({ force: true });
+        await sequelize.transaction(async (t) => {
+            const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');
+            await PMExecution.destroy({ where: { work_order_id: wo.id }, force: true, transaction: t });
+            await WOComment.destroy({ where: { work_order_id: wo.id }, force: true, transaction: t });
+            await WorkOrderInventoryItem.destroy({ where: { work_order_id: wo.id }, force: true, transaction: t });
+            await WOAttachment.destroy({ where: { work_order_id: wo.id }, force: true, transaction: t });
+            await wo.destroy({ force: true, transaction: t });
+        });
     }
 
     async bulkDelete(ids: string[], orgId: string, force: boolean): Promise<number> {
-        return WorkOrder.destroy({ where: { id: { [Op.in]: ids }, org_id: orgId }, force });
+        return sequelize.transaction(async (t) => {
+            // Find all records to check their state
+            const records = await WorkOrder.findAll({
+                where: { id: { [Op.in]: ids }, org_id: orgId },
+                paranoid: false,
+                transaction: t
+            });
+
+            const toSoftDelete = records.filter(r => !r.deleted_at).map(r => r.id);
+            const toHardDelete = records.filter(r => r.deleted_at).map(r => r.id);
+
+            let deletedCount = 0;
+
+            if (toSoftDelete.length > 0) {
+                deletedCount += await WorkOrder.destroy({
+                    where: { id: { [Op.in]: toSoftDelete } },
+                    transaction: t
+                });
+            }
+
+            if (toHardDelete.length > 0) {
+                // Manually clean up related records for hard delete
+                const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');
+                await PMExecution.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
+                await WOComment.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
+                await WorkOrderInventoryItem.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
+                await WOAttachment.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
+                
+                deletedCount += await WorkOrder.destroy({
+                    where: { id: { [Op.in]: toHardDelete } },
+                    force: true,
+                    transaction: t
+                });
+            }
+
+            return deletedCount;
+        });
     }
 
     async countAttachments(woId: string): Promise<number> {

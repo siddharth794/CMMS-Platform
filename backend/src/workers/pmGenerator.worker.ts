@@ -36,6 +36,7 @@ export class PMGeneratorWorker {
 
         let shouldTrigger = false;
         let triggeredBy = '';
+        let triggeredDate: Date | null = null;
 
         for (const trigger of schedule.triggers || []) {
           if (trigger.trigger_type === 'TIME' && trigger.cron_expression) {
@@ -48,6 +49,7 @@ export class PMGeneratorWorker {
               if (nextDate.getTime() <= now.getTime() + leadTimeMs) {
                 shouldTrigger = true;
                 triggeredBy = 'TIME';
+                triggeredDate = nextDate;
                 break;
               }
             } catch (err) {
@@ -58,7 +60,7 @@ export class PMGeneratorWorker {
         }
 
         if (shouldTrigger) {
-          await this.generateWorkOrder(schedule, triggeredBy);
+          await this.generateWorkOrder(schedule, triggeredBy, triggeredDate);
           generatedCount++;
         }
       }
@@ -68,7 +70,7 @@ export class PMGeneratorWorker {
     }
   }
 
-  private async generateWorkOrder(schedule: any, triggeredBy: string) {
+  private async generateWorkOrder(schedule: any, triggeredBy: string, scheduledStart: Date | null) {
     const template = schedule.template || {};
     
     // Auto-generate WO Number
@@ -85,6 +87,7 @@ export class PMGeneratorWorker {
       priority: template.priority || 'medium',
       assignee_id: template.assignee_id || null,
       estimated_hours: template.estimated_hours || null,
+      scheduled_start: scheduledStart,
       is_pm_generated: true
     });
 

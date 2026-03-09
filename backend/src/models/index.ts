@@ -90,7 +90,7 @@ Asset.init({
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'assets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class WorkOrder extends Model { public id!: string; }
+class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; }
 WorkOrder.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
@@ -294,6 +294,7 @@ PMPart.belongsTo(InventoryItem, { as: 'item', foreignKey: 'inventory_item_id' })
 
 PMSchedule.hasMany(PMExecution, { as: 'executions', foreignKey: 'pm_schedule_id' });
 PMExecution.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
+WorkOrder.hasMany(PMExecution, { foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 PMExecution.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 User.hasMany(WorkOrder, { as: 'assigned_work_orders', foreignKey: 'assignee_id' });
@@ -302,7 +303,7 @@ WorkOrder.belongsTo(User, { as: 'assignee', foreignKey: 'assignee_id' });
 User.hasMany(WorkOrder, { as: 'created_work_orders', foreignKey: 'requester_id' });
 WorkOrder.belongsTo(User, { as: 'requester', foreignKey: 'requester_id' });
 
-WorkOrder.hasMany(WOComment, { as: 'comments', foreignKey: 'work_order_id' });
+WorkOrder.hasMany(WOComment, { as: 'comments', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WOComment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 User.hasMany(WOComment, { foreignKey: 'user_id' });
@@ -311,13 +312,13 @@ WOComment.belongsTo(User, { foreignKey: 'user_id' });
 User.hasMany(Notification, { foreignKey: 'user_id' });
 Notification.belongsTo(User, { foreignKey: 'user_id' });
 
-WorkOrder.hasMany(WorkOrderInventoryItem, { as: 'used_parts', foreignKey: 'work_order_id' });
+WorkOrder.hasMany(WorkOrderInventoryItem, { as: 'used_parts', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WorkOrderInventoryItem.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 InventoryItem.hasMany(WorkOrderInventoryItem, { foreignKey: 'inventory_item_id' });
 WorkOrderInventoryItem.belongsTo(InventoryItem, { as: 'item', foreignKey: 'inventory_item_id' });
 
-WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id' });
+WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WOAttachment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 
