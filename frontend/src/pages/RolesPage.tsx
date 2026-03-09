@@ -122,7 +122,7 @@ export default function RolesPage() {
 
       <div className="flex gap-6 flex-1 overflow-hidden">
         {/* Left Sidebar - Roles List */}
-        <Card className="w-1/3 flex flex-col shadow-sm max-w-[350px]">
+        <Card className="w-1/3 flex flex-col shadow-sm max-w-[420px]">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" /> Roles
@@ -162,7 +162,7 @@ export default function RolesPage() {
                       >
                         <div className="flex items-center gap-3">
                           <UserCog className={`w-4 h-4 ${selectedRoleId === role.id ? 'text-primary' : 'opacity-70'}`} />
-                          <span>{role.name}</span>
+                          <span className="text-sm">{role.name}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -194,7 +194,7 @@ export default function RolesPage() {
                     >
                       <div className="flex items-center gap-3">
                         <Lock className={`w-4 h-4 ${selectedRoleId === role.id ? 'text-primary' : 'opacity-50'}`} />
-                        <span>{role.name}</span>
+                        <span className="text-sm">{role.name}</span>
                       </div>
                       <Badge variant="secondary" className="text-[10px] font-medium uppercase px-2 py-0">System</Badge>
                     </div>

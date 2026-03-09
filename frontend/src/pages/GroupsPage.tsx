@@ -129,7 +129,7 @@ export default function GroupsPage() {
 
       <div className="flex gap-6 flex-1 overflow-hidden">
         {/* Left Sidebar - Groups List */}
-        <Card className="w-1/3 flex flex-col shadow-sm max-w-[350px]">
+        <Card className="w-1/3 flex flex-col shadow-sm max-w-[420px]">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" /> Groups
