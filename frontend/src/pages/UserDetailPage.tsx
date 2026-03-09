@@ -11,6 +11,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Save, User as UserIcon } from 'lucide-react';
+import { format } from 'date-fns';
 
 const UserDetailPage = () => {
   const { id } = useParams();
@@ -44,7 +45,7 @@ const UserDetailPage = () => {
         email: user.email || '',
         username: user.username || '',
         phone: user.phone || '',
-        role_id: user.role_id?.toString() || '',
+        role_id: (user.role_id || user.role?.id || user.Role?.id || (user.Roles?.[0]?.id))?.toString() || '',
       });
     }
   }, [user]);
@@ -193,14 +194,20 @@ const UserDetailPage = () => {
               <div>
                 <p className="font-medium">{user.is_active ? 'Active' : 'Deactivated'}</p>
                 <p className="text-sm text-muted-foreground">
-                  Member since {format(new Date(user.created_at), 'MMMM yyyy')}
+                  Member since {user.created_at ? format(new Date(user.created_at), 'MMMM yyyy') : 'Unknown'}
                 </p>
               </div>
             </div>
             <div className="pt-4 border-t">
               <p className="text-sm text-muted-foreground">Last Login</p>
               <p className="font-medium">
-                {user.last_login ? format(new Date(user.last_login), 'PPP p') : 'Never'}
+                {user.last_login ? (() => {
+                  try {
+                    return format(new Date(user.last_login), 'PPP p');
+                  } catch (e) {
+                    return 'Invalid Date';
+                  }
+                })() : 'Never'}
               </p>
             </div>
           </CardContent>

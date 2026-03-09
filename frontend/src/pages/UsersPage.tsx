@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Checkbox } from '../components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Loader2, Users, Trash } from 'lucide-react';
+import { Plus, Search, Trash2, Loader2, Users, Trash } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUsers, useCreateUser, useBulkDeleteUsers, useDeleteUser } from '../hooks/api/useUsers';
 import { rolesApi } from '../lib/api';
@@ -26,7 +25,7 @@ const UsersPage = () => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
-  const { user: currentUser, isAdmin, hasRole } = useAuth();
+  const { user: currentUser, isAdmin, isManager, hasRole } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
   const isSuperAdmin = (currentUser?.role?.name || currentUser?.Role?.name || '').toLowerCase() === 'super_admin';
@@ -213,23 +212,17 @@ const UsersPage = () => {
                     <TableCell className="text-muted-foreground">
                       {u.last_login ? format(new Date(u.last_login), 'MMM d, yyyy') : '-'}
                     </TableCell>
-                    <TableCell>
-                      {isAdmin() && u.id !== currentUser?.id && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/users/${u.id}`)}>
-                              <Edit className="mr-2 h-4 w-4" />Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Deactivate' : 'Delete Permanently'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    <TableCell className="text-right">
+                      {(isAdmin() || isManager()) && u.id !== currentUser?.id && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteUser(u.id)}
+                          data-testid={`user-delete-${u.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>

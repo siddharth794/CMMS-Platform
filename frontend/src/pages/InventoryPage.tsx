@@ -7,17 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Switch } from '../components/ui/switch';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, Trash2, Trash, Loader2, AlertTriangle, DollarSign } from 'lucide-react';
+import { Plus, Search, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
 import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
-const UNITS = ['pcs', 'liters', 'kg', 'meters', 'kits', 'boxes', 'rolls', 'sets'];
 const DEFAULT_CATEGORIES = ['Filters', 'HVAC', 'Lubricants', 'Elevator Parts', 'Safety Equipment', 'Electrical', 'Plumbing', 'Tools', 'Other'];
 
 const InventoryPage = () => {
@@ -33,22 +30,9 @@ const InventoryPage = () => {
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
   const [selectedIds, setSelectedIds] = useState([]);
-  const { isManager, hasRole } = useAuth();
-  const isRestricted = hasRole(['technician', 'requestor']);
+  const { isManager } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    sku: '',
-    category: '',
-    quantity: 0,
-    min_quantity: 0,
-    unit: 'pcs',
-    unit_cost: '0',
-    storage_location: '',
-  });
 
   useEffect(() => {
     fetchData();
@@ -73,38 +57,6 @@ const InventoryPage = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      sku: '',
-      category: '',
-      quantity: 0,
-      min_quantity: 0,
-      unit: 'pcs',
-      unit_cost: '0',
-      storage_location: '',
-    });
-    setSelectedItem(null);
-  };
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await inventoryApi.create(formData);
-      addNotification('success', 'Item added to inventory');
-      setCreateOpen(false);
-      resetForm();
-      fetchData();
-    } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to add item');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  
   const handleDelete = async (itemId) => {
     if (!window.confirm(recordStatus === 'active' ? 'Delete this inventory item?' : 'Permanently delete this inventory item?')) return;
     try {
