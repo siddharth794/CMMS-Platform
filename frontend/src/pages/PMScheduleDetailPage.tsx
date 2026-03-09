@@ -259,21 +259,23 @@ const PMScheduleDetailPage = () => {
                 </p>
               </div>
 
-              {formData.schedule_logic === 'FIXED' && (
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date / Reference Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Used to set the recurring day (e.g., if you pick 15th, it repeats on 15th).
-                  </p>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="startDate">
+                  {formData.schedule_logic === 'FIXED' ? 'Start Date / Reference Date' : 'First Service Date'}
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formData.schedule_logic === 'FIXED' 
+                    ? 'Used to set the recurring day (e.g., if you pick 15th, it repeats on 15th).' 
+                    : 'The very first work order will start based on this date.'}
+                </p>
+              </div>
 
               <div className="space-y-2">
                 <Label>Work Order Priority</Label>
