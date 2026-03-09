@@ -7,14 +7,84 @@ import { buttonVariants } from "@/components/ui/button";
 
 const Pagination = ({
   className,
+  currentPage,
+  totalItems,
+  onPageChange,
+  itemsPerPage = 10,
   ...props
-}) => (
-  <nav
-    role="navigation"
-    aria-label="pagination"
-    className={cn("mx-auto flex w-full justify-center", className)}
-    {...props} />
-)
+}) => {
+  if (totalItems === undefined) {
+    return (
+      <nav
+        role="navigation"
+        aria-label="pagination"
+        className={cn("mx-auto flex w-full justify-center", className)}
+        {...props} />
+    )
+  }
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  
+  if (totalPages <= 1) return null;
+
+  const getPageNumbers = () => {
+    const pages = []
+    const maxVisible = 5
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, 'ellipsis', totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, 'ellipsis', totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+      } else {
+        pages.push(1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages)
+      }
+    }
+    return pages
+  }
+
+  return (
+    <nav
+      role="navigation"
+      aria-label="pagination"
+      className={cn("mx-auto flex w-full justify-center mt-4", className)}
+      {...props}
+    >
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious 
+            onClick={() => currentPage > 1 && onPageChange?.(currentPage - 1)}
+            className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+          />
+        </PaginationItem>
+        
+        {getPageNumbers().map((pageNum, idx) => (
+          <PaginationItem key={idx}>
+            {pageNum === 'ellipsis' ? (
+              <PaginationEllipsis />
+            ) : (
+              <PaginationLink
+                isActive={pageNum === currentPage}
+                onClick={() => onPageChange?.(pageNum)}
+                className="cursor-pointer"
+              >
+                {pageNum}
+              </PaginationLink>
+            )}
+          </PaginationItem>
+        ))}
+
+        <PaginationItem>
+          <PaginationNext 
+            onClick={() => currentPage < totalPages && onPageChange?.(currentPage + 1)}
+            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </nav>
+  )
+}
 Pagination.displayName = "Pagination"
 
 const PaginationContent = React.forwardRef(({ className, ...props }, ref) => (

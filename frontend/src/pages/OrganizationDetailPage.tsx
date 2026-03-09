@@ -12,6 +12,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Pagination } from '../components/ui/pagination';
 import { Separator } from '../components/ui/separator';
 import { Badge } from '../components/ui/badge';
 import { useNotification } from '../context/NotificationContext';
@@ -28,11 +29,16 @@ const OrganizationDetailPage = () => {
   const createMutation = useCreateOrganization();
   const updateMutation = useUpdateOrganization();
 
+  const [usersPage, setUsersPage] = useState(1);
+  const [woPage, setWoPage] = useState(1);
+  const [assetsPage, setAssetsPage] = useState(1);
+  const [invPage, setInvPage] = useState(1);
+
   // Associated Data Hooks
-  const { data: usersData, isLoading: isLoadingUsers } = useUsers({ org_id: id, limit: 10 });
-  const { data: workOrdersData, isLoading: isLoadingWO } = useWorkOrders({ org_id: id, limit: 10 });
-  const { data: assetsData, isLoading: isLoadingAssets } = useAssetsData({ org_id: id, limit: 10 });
-  const { data: inventoryData, isLoading: isLoadingInv } = useInventoryData({ org_id: id, limit: 10 });
+  const { data: usersData, isLoading: isLoadingUsers } = useUsers({ org_id: id, limit: 10, skip: (usersPage - 1) * 10 });
+  const { data: workOrdersData, isLoading: isLoadingWO } = useWorkOrders({ org_id: id, limit: 10, skip: (woPage - 1) * 10 });
+  const { data: assetsData, isLoading: isLoadingAssets } = useAssetsData({ org_id: id, limit: 10, skip: (assetsPage - 1) * 10 });
+  const { data: inventoryData, isLoading: isLoadingInv } = useInventoryData({ org_id: id, limit: 10, skip: (invPage - 1) * 10 });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -315,6 +321,13 @@ const OrganizationDetailPage = () => {
                   </TableBody>
                 </Table>
               )}
+              {!isLoadingUsers && usersData?.total > 10 && (
+                <Pagination
+                  currentPage={usersPage}
+                  totalItems={usersData.total}
+                  onPageChange={setUsersPage}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -368,6 +381,13 @@ const OrganizationDetailPage = () => {
                   </TableBody>
                 </Table>
               )}
+              {!isLoadingWO && workOrdersData?.total > 10 && (
+                <Pagination
+                  currentPage={woPage}
+                  totalItems={workOrdersData.total}
+                  onPageChange={setWoPage}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -416,6 +436,13 @@ const OrganizationDetailPage = () => {
                     )}
                   </TableBody>
                 </Table>
+              )}
+              {!isLoadingAssets && assetsData?.total > 10 && (
+                <Pagination
+                  currentPage={assetsPage}
+                  totalItems={assetsData.total}
+                  onPageChange={setAssetsPage}
+                />
               )}
             </CardContent>
           </Card>
@@ -469,6 +496,13 @@ const OrganizationDetailPage = () => {
                     )}
                   </TableBody>
                 </Table>
+              )}
+              {!isLoadingInv && inventoryData?.total > 10 && (
+                <Pagination
+                  currentPage={invPage}
+                  totalItems={inventoryData.total}
+                  onPageChange={setInvPage}
+                />
               )}
             </CardContent>
           </Card>

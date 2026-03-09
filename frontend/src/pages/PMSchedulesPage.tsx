@@ -13,17 +13,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Pagination } from '../components/ui/pagination';
 import { Plus, MoreHorizontal, Edit, Trash2, Loader2, CalendarIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 import { format, isBefore, addDays } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useNotification } from '../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
 
 const PMSchedulesPage = () => {
   const [schedules, setSchedules] = useState([]);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
-      const [selectedPM, setSelectedPM] = useState(null);
+  const [selectedPM, setSelectedPM] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  const paginatedSchedules = schedules.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  
+  const navigate = useNavigate();
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
 
@@ -294,7 +302,7 @@ const PMSchedulesPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                schedules.map((pm) => (
+                paginatedSchedules.map((pm) => (
                   <TableRow key={pm.id} data-testid={`pm-row-${pm.id}`}>
                     <TableCell className="font-medium">{pm.name}</TableCell>
                     <TableCell className="text-muted-foreground">{pm.asset?.name || '-'}</TableCell>
@@ -340,6 +348,14 @@ const PMSchedulesPage = () => {
               )}
             </TableBody>
           </Table>
+          {!loading && schedules.length > 0 && (
+            <Pagination
+              currentPage={page}
+              totalItems={schedules.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setPage}
+            />
+          )}
         </CardContent>
       </Card>
 
