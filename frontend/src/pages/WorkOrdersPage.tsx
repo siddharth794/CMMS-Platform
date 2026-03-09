@@ -259,33 +259,37 @@ const WorkOrdersPage = () => {
                 <TableHead className="min-w-[180px] whitespace-nowrap">WO Number</TableHead>
                 <TableHead className="min-w-[250px]">Title</TableHead>
                 <TableHead className="min-w-[160px]">
-                  <Select value={filters.status || "all"} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={filters.status || "all"} onValueChange={(v) => { setFilters({ ...filters, status: v === 'all' ? '' : v }); setPage(1); }}>
+                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableHead>
                 <TableHead className="min-w-[160px]">
-                  <Select value={filters.priority || "all"} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priorities</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={filters.priority || "all"} onValueChange={(v) => { setFilters({ ...filters, priority: v === 'all' ? '' : v }); setPage(1); }}>
+                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableHead>
                 <TableHead className="min-w-[200px]">Asset</TableHead>
                 <TableHead className="min-w-[200px]">Assignee</TableHead>
@@ -339,42 +343,44 @@ const WorkOrdersPage = () => {
                     </TableCell>
                     {!isRequester() && (
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />View
-                            </DropdownMenuItem>
-                            {isManager() && (
-                              <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
-                                <UserPlus className="mr-2 h-4 w-4" />Assign
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" data-testid={`wo-actions-${wo.id}`}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />View
                               </DropdownMenuItem>
-                            )}
-                            {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
-                              <>
-                                {wo.status !== 'in_progress' && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
-                                    Start Work
-                                  </DropdownMenuItem>
-                                )}
-                                {wo.status === 'in_progress' && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
-                                    Complete
-                                  </DropdownMenuItem>
-                                )}
-                              </>
-                            )}
-                            {isManager() && (
-                              <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {isManager() && (
+                                <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
+                                  <UserPlus className="mr-2 h-4 w-4" />Assign
+                                </DropdownMenuItem>
+                              )}
+                              {!isManager() && !isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                                <>
+                                  {wo.status !== 'in_progress' && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
+                                      Start Work
+                                    </DropdownMenuItem>
+                                  )}
+                                  {wo.status === 'in_progress' && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
+                                      Complete
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                              {isManager() && (
+                                <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

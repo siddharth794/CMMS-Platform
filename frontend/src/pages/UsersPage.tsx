@@ -222,7 +222,7 @@ const UsersPage = () => {
                           className="text-destructive h-8 w-8 hover:bg-destructive/10"
                           onClick={() => handleDeleteUser(u.id)}
                         >
-                          <Trash className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </TableCell>
