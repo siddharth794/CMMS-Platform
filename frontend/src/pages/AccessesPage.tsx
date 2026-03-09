@@ -90,36 +90,36 @@ export default function AccessesPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {Object.entries(accessesByModule).map(([moduleName, moduleAccesses]) => (
-          <Card key={moduleName} className="shadow-sm border">
-            <CardHeader className="py-4 border-b bg-muted/10">
-              <CardTitle className="text-base font-semibold text-foreground/90">{moduleName}</CardTitle>
+          <Card key={moduleName} className="shadow-md border border-border/60 overflow-hidden flex flex-col">
+            <CardHeader className="py-5 px-6 border-b bg-muted/20">
+              <CardTitle className="text-lg font-semibold text-foreground/90">{moduleName}</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 flex-1">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-2/3">Permission Key</TableHead>
-                    <TableHead className="w-1/3 text-right">Type</TableHead>
+                    <TableHead className="w-2/3 px-6 py-3">Permission Key</TableHead>
+                    <TableHead className="w-1/3 px-6 py-3 text-right">Type</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {moduleAccesses.map((a: any) => (
                     <TableRow key={a.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-medium font-mono text-xs text-muted-foreground">
-                        {a.name}
+                      <TableCell className="px-6 py-4 font-medium font-mono text-xs text-foreground/80">
+                        <span className="bg-muted/50 px-2 py-1 rounded-md border border-border/50">{a.name}</span>
                         {a.description && (
-                          <p className="font-sans text-xs text-muted-foreground mt-1 opacity-70">
+                          <p className="font-sans text-xs text-muted-foreground mt-2 leading-relaxed opacity-80">
                             {a.description}
                           </p>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="px-6 py-4 text-right">
                         {a.is_system ? (
-                          <Badge variant="secondary" className="text-[10px] font-medium uppercase px-2 py-0">Core</Badge>
+                          <Badge variant="secondary" className="text-[10px] font-medium uppercase px-2.5 py-0.5">Core</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] font-medium uppercase px-2 py-0">Custom</Badge>
+                          <Badge variant="outline" className="text-[10px] font-medium uppercase px-2.5 py-0.5 border-primary/30 text-primary">Custom</Badge>
                         )}
                       </TableCell>
                     </TableRow>
