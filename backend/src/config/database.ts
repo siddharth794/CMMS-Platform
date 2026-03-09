@@ -5,7 +5,7 @@ dotenv.config();
 const sequelize = new Sequelize(
     process.env.DB_NAME || 'cmms_dev',
     process.env.DB_USER || 'cmms_user',
-    process.env.DB_PASS || 'cmms_password',
+    process.env.DB_PASSWORD || 'cmms_password',
     {
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '3306'),

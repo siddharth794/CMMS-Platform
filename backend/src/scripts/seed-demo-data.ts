@@ -1,13 +1,19 @@
-import { Asset, InventoryItem, WorkOrder, User, sequelize, WorkOrderInventoryItem } from '../models';
-
-const ORG_ID = 'c268d2da-201b-450b-ad9c-63441ae83c1d';
+import { Asset, InventoryItem, WorkOrder, User, sequelize, WorkOrderInventoryItem, Organization } from '../models';
 
 async function seedDemoData() {
     try {
         await sequelize.authenticate();
         console.log('Connection established successfully.');
 
-        console.log(`Seeding demo data for Organization ID: ${ORG_ID}`);
+        // Dynamically get the first organization
+        const organization: any = await Organization.findOne();
+        if (!organization) {
+            console.error('No organization found. Please run the base seed script first.');
+            process.exit(1);
+        }
+        const ORG_ID = organization.id;
+
+        console.log(`Seeding demo data for Organization: ${organization.name} (ID: ${ORG_ID})`);
 
         // Get a user to act as requester and assignee (if available)
         const users: any = await User.findAll({ where: { org_id: ORG_ID }, limit: 2 });

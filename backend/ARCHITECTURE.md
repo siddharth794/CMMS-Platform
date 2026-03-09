@@ -388,7 +388,7 @@ sequenceDiagram
 
 Environment variables configure the infrastructure dependencies:
 - Loaded dynamically via `dotenv`.
-- **Database:** `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`.
+- **Database:** `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`.
 - **Security:** `JWT_SECRET` (critical for signing auth tokens).
 - **Application:** `PORT` (default 8000), `LOG_LEVEL` (default 'info').
 
