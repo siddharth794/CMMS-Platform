@@ -36,7 +36,8 @@ const UsersPage = () => {
     record_status: recordStatus,
     search,
     skip: (page - 1) * 10,
-    limit: 10
+    limit: 10,
+    ...(isSuperAdmin ? { org_id: 'all' } : {})
   });
 
   const { data: roles = [] } = useQuery({

@@ -8,7 +8,7 @@ import { AuditContext, BulkDeleteDTO } from '../types/common.dto';
 import { NotFoundError, ConflictError, ForbiddenError, BadRequestError } from '../errors/AppError';
 
 class UserService {
-    async getAll(orgId: string, query: UserListQuery): Promise<any> {
+    async getAll(orgId: string | null, query: UserListQuery): Promise<any> {
         const { skip = 0, limit = 100, record_status } = query;
         let where: any = {};
         let paranoid = true;

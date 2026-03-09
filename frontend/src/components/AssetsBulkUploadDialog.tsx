@@ -40,13 +40,18 @@ const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
                 // Map common column headers to API field names
                 const mappedAssets = json.map(row => ({
                     name: row['Name'] || row['name'] || '',
-                    asset_type: row['Type'] || row['asset_type'] || row['Type '] || 'equipment',
+                    asset_tag: row['Asset Tag'] || row['asset_tag'] || row['Tag'] || '',
+                    asset_type: row['Type'] || row['asset_type'] || 'movable',
+                    category: row['Category'] || row['category'] || '',
                     description: row['Description'] || row['description'] || '',
                     location: row['Location'] || row['location'] || '',
                     manufacturer: row['Manufacturer'] || row['manufacturer'] || '',
                     model: row['Model'] || row['model'] || '',
                     serial_number: row['Serial Number'] || row['serial_number'] || row['Serial'] || '',
-                    status: row['Status'] || row['status'] || 'operational',
+                    purchase_date: row['Purchase Date'] || row['purchase_date'] || '',
+                    purchase_cost: row['Purchase Cost'] || row['purchase_cost'] || '',
+                    warranty_expiry: row['Warranty Expiry'] || row['warranty_expiry'] || '',
+                    status: row['Status'] || row['status'] || 'active',
                 })).filter(asset => asset.name); // Filter out empty rows without a name
 
                 setAssetsToUpload(mappedAssets);
@@ -82,8 +87,36 @@ const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
 
     const downloadTemplate = () => {
         const ws = XLSX.utils.json_to_sheet([
-            { Name: 'HVAC Unit 1', Type: 'equipment', Location: 'Roof', Manufacturer: 'Trane', Model: 'XL15i', 'Serial Number': 'TR-12345', Status: 'operational', Description: 'Main building cooling unit' },
-            { Name: 'Backup Generator', Type: 'equipment', Location: 'Basement', Manufacturer: 'Caterpillar', Model: 'C15', 'Serial Number': 'CAT-98765', Status: 'operational', Description: 'Emergency power' }
+            { 
+                Name: 'HVAC Unit 1', 
+                'Asset Tag': 'ASSET-001',
+                Type: 'immovable', 
+                Category: 'HVAC',
+                Location: 'Roof', 
+                Manufacturer: 'Trane', 
+                Model: 'XL15i', 
+                'Serial Number': 'TR-12345', 
+                'Purchase Date': '2023-01-15',
+                'Purchase Cost': '5000',
+                'Warranty Expiry': '2028-01-15',
+                Status: 'active', 
+                Description: 'Main building cooling unit' 
+            },
+            { 
+                Name: 'Backup Generator', 
+                'Asset Tag': 'ASSET-002',
+                Type: 'movable', 
+                Category: 'Power',
+                Location: 'Basement', 
+                Manufacturer: 'Caterpillar', 
+                Model: 'C15', 
+                'Serial Number': 'CAT-98765', 
+                'Purchase Date': '2022-06-20',
+                'Purchase Cost': '15000',
+                'Warranty Expiry': '2027-06-20',
+                Status: 'active', 
+                Description: 'Emergency power' 
+            }
         ]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Template');

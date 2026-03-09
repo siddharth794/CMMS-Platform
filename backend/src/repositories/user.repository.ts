@@ -28,9 +28,14 @@ class UserRepository {
         return User.findByPk(userId, { include: [{ model: Role }] });
     }
 
-    async findAndCountAll(orgId: string, skip: number, limit: number, paranoid: boolean, where: any): Promise<{ rows: any[]; count: number }> {
+    async findAndCountAll(orgId: string | null, skip: number, limit: number, paranoid: boolean, where: any): Promise<{ rows: any[]; count: number }> {
+        const queryWhere = { ...where };
+        if (orgId !== null) {
+            queryWhere.org_id = orgId;
+        }
+
         return User.findAndCountAll({
-            where: { org_id: orgId, ...where },
+            where: queryWhere,
             paranoid,
             include: [{ model: Role }],
             offset: skip,
