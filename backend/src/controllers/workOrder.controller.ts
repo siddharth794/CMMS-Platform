@@ -49,7 +49,7 @@ class WorkOrderController {
     }
 
     updateStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const wo = await workOrderService.updateStatus(req.params.wo_id as string, req.user!.org_id, req.body as StatusUpdateDTO, this.getAuditContext(req));
+        const wo = await workOrderService.updateStatus(req.params.wo_id as string, req.user!.org_id, req.body as StatusUpdateDTO, req.user!, this.getAuditContext(req));
         res.json(wo);
     }
 

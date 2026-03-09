@@ -55,6 +55,7 @@ export interface WorkOrder {
   estimated_hours?: number;
   actual_hours?: number;
   is_active: boolean;
+  resolution_notes?: string;
   created_at?: string;
   updated_at?: string;
 }

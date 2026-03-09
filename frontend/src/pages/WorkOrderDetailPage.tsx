@@ -21,6 +21,7 @@ const StatusBadge = ({ status }) => {
     open: 'status-open',
     in_progress: 'status-in_progress',
     on_hold: 'status-on_hold',
+    pending_review: 'status-open',
     completed: 'status-completed',
     cancelled: 'status-cancelled',
   };
@@ -298,6 +299,22 @@ const WorkOrderDetailPage = () => {
               </p>
             </CardContent>
           </Card>
+
+          {workOrder.resolution_notes && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-primary flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  Resolution & Completion Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">
+                  {workOrder.resolution_notes}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {workOrder.notes && (
             <Card>
@@ -661,7 +678,8 @@ const WorkOrderDetailPage = () => {
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="on_hold">On Hold</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending_review">Submit for Review</SelectItem>
+                  {isManager() && <SelectItem value="completed">Approve & Complete</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
