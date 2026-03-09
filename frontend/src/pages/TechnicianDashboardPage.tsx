@@ -75,9 +75,9 @@ const TechnicianDashboardPage = () => {
     }
 
     const stats = data?.stats || {};
-    const woByStatus = data?.my_wo_by_status || [];
-    const woByPriority = data?.my_wo_by_priority || [];
-    const recentWorkOrders = data?.my_recent_work_orders || [];
+    const woByStatus = data?.wo_by_status || data?.my_wo_by_status || [];
+    const woByPriority = data?.wo_by_priority || data?.my_wo_by_priority || [];
+    const recentWorkOrders = data?.recent_work_orders || data?.my_recent_work_orders || [];
 
     return (
         <div className="space-y-8" data-testid="tech-dashboard-page">

@@ -61,8 +61,8 @@ const TechnicianAnalyticsPage = () => {
     }
 
     const stats = data?.stats || {};
-    const woByStatus = data?.my_wo_by_status?.filter(s => s.count > 0) || [];
-    const woByPriority = data?.my_wo_by_priority || [];
+    const woByStatus = (data?.wo_by_status || data?.my_wo_by_status || []).filter(s => s.count > 0);
+    const woByPriority = data?.wo_by_priority || data?.my_wo_by_priority || [];
 
     return (
         <div className="space-y-8" data-testid="tech-analytics-page">
@@ -247,7 +247,7 @@ const TechnicianAnalyticsPage = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            {data?.my_wo_by_status?.map((item) => (
+                            {(data?.wo_by_status || data?.my_wo_by_status || []).map((item) => (
                                 <div key={item.status} className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div
