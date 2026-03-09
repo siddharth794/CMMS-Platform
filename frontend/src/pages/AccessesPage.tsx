@@ -16,13 +16,19 @@ export default function AccessesPage() {
   
   const [newAccessName, setNewAccessName] = useState('');
   const [newAccessModule, setNewAccessModule] = useState('');
+  const [newAccessDescription, setNewAccessDescription] = useState('');
 
   const handleCreate = async () => {
     if (!newAccessName || !newAccessModule) return;
     try {
-      await createAccess.mutateAsync({ name: newAccessName, module: newAccessModule });
+      await createAccess.mutateAsync({ 
+        name: newAccessName, 
+        module: newAccessModule,
+        description: newAccessDescription 
+      });
       setNewAccessName('');
       setNewAccessModule('');
+      setNewAccessDescription('');
       addNotification('success', 'Custom permission key created successfully');
     } catch (e) {
       addNotification('error', 'Failed to create permission key');
@@ -63,27 +69,37 @@ export default function AccessesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 max-w-2xl">
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium">Permission Key</label>
-              <Input 
-                placeholder="e.g. custom_app:export" 
-                value={newAccessName} 
-                onChange={(e) => setNewAccessName(e.target.value)} 
-              />
+          <div className="flex flex-col gap-4 max-w-3xl">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium">Permission Key</label>
+                <Input 
+                  placeholder="e.g. custom_app:export" 
+                  value={newAccessName} 
+                  onChange={(e) => setNewAccessName(e.target.value)} 
+                />
+              </div>
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium">Module / Category</label>
+                <Input 
+                  placeholder="e.g. Analytics" 
+                  value={newAccessModule} 
+                  onChange={(e) => setNewAccessModule(e.target.value)} 
+                />
+              </div>
             </div>
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium">Module / Category</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description (Optional)</label>
               <div className="flex gap-2">
-                 <Input 
-                   placeholder="e.g. Analytics" 
-                   value={newAccessModule} 
-                   onChange={(e) => setNewAccessModule(e.target.value)} 
-                   className="flex-1"
-                 />
-                 <Button onClick={handleCreate} disabled={createAccess.isPending || !newAccessName || !newAccessModule}>
-                   {createAccess.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2"/>} Add
-                 </Button>
+                <Input 
+                  placeholder="What does this permission allow the user to do?" 
+                  value={newAccessDescription} 
+                  onChange={(e) => setNewAccessDescription(e.target.value)} 
+                  className="flex-1"
+                />
+                <Button onClick={handleCreate} disabled={createAccess.isPending || !newAccessName || !newAccessModule}>
+                  {createAccess.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2"/>} Add
+                </Button>
               </div>
             </div>
           </div>
