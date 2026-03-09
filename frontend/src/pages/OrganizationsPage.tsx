@@ -18,9 +18,7 @@ import { useOrganizations, useCreateOrganization, useUpdateOrganization, useDele
 import { Organization } from '../types/models';
 
 const OrganizationsPage = () => {
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+      const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [recordStatus, setRecordStatus] = useState('active');
@@ -106,59 +104,7 @@ const OrganizationsPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
           <p className="text-muted-foreground">Manage system organizations</p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Create Organization</DialogTitle>
-              <DialogDescription>Fill in the details for the new organization</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Organization Name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description..."
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Physical address..."
-                  rows={2}
-                />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        
       </div>
 
       <Card>
@@ -261,62 +207,7 @@ const OrganizationsPage = () => {
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Organization</DialogTitle>
-            <DialogDescription>Update organization details</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Organization Name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description..."
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-address">Address</Label>
-              <Textarea
-                id="edit-address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Physical address..."
-                rows={2}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <input 
-                type="checkbox" 
-                id="edit-active" 
-                checked={formData.is_active} 
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              />
-              <Label htmlFor="edit-active">Active</Label>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      
     </div>
   );
 };

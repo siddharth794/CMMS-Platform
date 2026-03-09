@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useNotification } from '../context/NotificationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Checkbox } from '../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
@@ -20,8 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Pagination } from '../components/ui/pagination';
 
 const UsersPage = () => {
-  const [userDialogOpen, setUserDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+    const [editingUser, setEditingUser] = useState(null);
   const [recordStatus, setRecordStatus] = useState('active');
   const [roleFilter, setRoleFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -32,16 +31,7 @@ const UsersPage = () => {
   const navigate = useNavigate();
   const isSuperAdmin = (currentUser?.role?.name || currentUser?.Role?.name || '').toLowerCase() === 'super_admin';
 
-  const [userForm, setUserForm] = useState({
-    email: '',
-    username: '',
-    password: '',
-    first_name: '',
-    last_name: '',
-    phone: '',
-    role_id: '',
-  });
-
+  
   const { data: usersData, isLoading: loading } = useUsers({
     record_status: recordStatus,
     search,
@@ -57,38 +47,14 @@ const UsersPage = () => {
     }
   });
 
-  const createUserMutation = useCreateUser();
-  const deleteUserMutation = useDeleteUser();
+    const deleteUserMutation = useDeleteUser();
   const bulkDeleteMutation = useBulkDeleteUsers();
 
   const users = usersData?.data || [];
   const total = usersData?.total || 0;
 
-  const resetUserForm = () => {
-    setUserForm({
-      email: '',
-      username: '',
-      password: '',
-      first_name: '',
-      last_name: '',
-      phone: '',
-      role_id: '',
-    });
-    setEditingUser(null);
-  };
-
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    try {
-      await createUserMutation.mutateAsync({ ...userForm, role_id: parseInt(userForm.role_id) });
-      addNotification('success', 'User created');
-      setUserDialogOpen(false);
-      resetUserForm();
-    } catch (error) {
-      addNotification('error', error.response?.data?.detail || 'Failed to create user');
-    }
-  };
-
+  
+  
   const handleDeleteUser = async (userId) => {
     if (!window.confirm(recordStatus === 'active' ? 'Deactivate this user?' : 'Permanently delete this user?')) return;
     try {
@@ -133,102 +99,10 @@ const UsersPage = () => {
         </div>
         <div className="flex items-center gap-2">
           {isAdmin() && (
-            <Dialog open={userDialogOpen} onOpenChange={(open) => { setUserDialogOpen(open); if (!open) resetUserForm(); }}>
-              <DialogTrigger asChild>
-                <Button data-testid="add-user-btn">
+            <Button data-testid="add-user-btn" onClick={() => navigate('/users/new')}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add User
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Add New User</DialogTitle>
-                  <DialogDescription>Create a new user account</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateUser} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first_name">First Name</Label>
-                      <Input
-                        id="first_name"
-                        value={userForm.first_name}
-                        onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
-                        data-testid="user-firstname-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="last_name">Last Name</Label>
-                      <Input
-                        id="last_name"
-                        value={userForm.last_name}
-                        onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
-                        data-testid="user-lastname-input"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={userForm.email}
-                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                      required
-                      data-testid="user-email-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username *</Label>
-                    <Input
-                      id="username"
-                      value={userForm.username}
-                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                      required
-                      data-testid="user-username-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={userForm.password}
-                      onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                      required
-                      data-testid="user-password-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Role *</Label>
-                    <Select value={userForm.role_id} onValueChange={(v) => setUserForm({ ...userForm, role_id: v })} required>
-                      <SelectTrigger data-testid="user-role-select">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles
-                          .filter(role => {
-                            const roleName = role.name.toLowerCase();
-                            if (isSuperAdmin) return roleName !== 'super_admin';
-                            return !['super_admin', 'org_admin'].includes(roleName);
-                          })
-                          .map((role) => (
-                            <SelectItem key={role.id} value={role.id.toString()}>
-                              {role.name.replace('_', ' ')}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setUserDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={createUserMutation.isPending}>
-                      {createUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
           )}
         </div>
       </div>

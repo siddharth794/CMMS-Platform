@@ -85,7 +85,49 @@ Always choose to "Deactivate" them instead. Deleting a user might cause confusio
 
 ---
 
-## 4. Frequently Asked Questions (FAQ)
+## 4. Real-World Examples & Scenarios
+
+Here are a few common situations you might face, and the best way to handle them in the system.
+
+### Scenario A: Hiring a New Technician
+**The Situation:** You just hired Sarah as a new maintenance technician.
+**The Solution:**
+1. You navigate to **Users** and click **Add User**.
+2. You fill out Sarah's name, email, and password.
+3. Instead of scrolling through roles, you simply click the "Groups" dropdown and select the **"Maintenance Team"** group.
+4. You click Save. 
+**Result:** Because the "Maintenance Team" group already has the *Technician* role attached to it, Sarah instantly gets all the correct permissions to see and close work orders.
+
+### Scenario B: Setting Up a Read-Only Auditor
+**The Situation:** A health and safety inspector (or external auditor) is coming next week. They need to see your assets, PM schedules, and work order history, but you definitely don't want them editing or deleting anything.
+**The Solution:**
+1. Navigate to **Roles** and click **Create New Role**. Name it `"External Auditor"`.
+2. Scroll through the Accesses (Permissions) checklist. **Only** check the "View" boxes (e.g., *View Work Orders*, *View Assets*, *View Inventory*). Do not check any "Create", "Edit", or "Delete" boxes. Save the Role.
+3. Navigate to **Users** and create a user account for "Inspector Bob".
+4. Do not put Bob in any groups. Instead, assign him the **"External Auditor"** role directly.
+**Result:** Bob can safely log in, click around, and read data without the ability to accidentally break anything.
+
+### Scenario C: Promoting a Technician to Shift Supervisor
+**The Situation:** Mike is a great Technician. You just promoted him to Shift Supervisor. He still needs to do technician work (fixing things), but now he also needs the ability to assign new work orders to other staff members and manage inventory stock.
+**The Solution:**
+1. First, navigate to **Roles** and create a new role called `"Shift Supervisor"`. Give this role the specific extra permissions Mike needs (e.g., *Assign Work Orders*, *Edit Inventory*).
+2. Navigate to **Users** and edit Mike's profile.
+3. Leave Mike in the **"Maintenance Team"** group (so he doesn't lose his basic Technician abilities).
+4. Under the "Direct Roles" section, add your new `"Shift Supervisor"` role.
+**Result:** The system "stacks" Mike's permissions. He has his basic Technician permissions from his group, *plus* his new Dispatcher/Inventory permissions from his direct role.
+
+### Scenario D: An Employee Leaves the Company
+**The Situation:** John Doe resigned and his last day is today.
+**The Solution:**
+1. Navigate to **Users** and search for John Doe.
+2. Edit his profile.
+3. Find the "Status" toggle and switch it from **Active** to **Inactive**.
+4. Save the user.
+**Result:** John can no longer log in. However, when you run a report next year on "Who completed the plumbing work order in Building B?", John's name will still show up perfectly.
+
+---
+
+## 5. Frequently Asked Questions (FAQ)
 
 **What happens if a user is in two different groups?**
 The system is smart! It combines their permissions. If Group A gives them permission to *Edit Assets*, and Group B gives them permission to *Create Work Orders*, the user will be able to do **both**.

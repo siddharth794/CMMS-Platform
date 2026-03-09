@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '../hooks/api/useInventory';
+import { useInventoryItem, useCreateInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '../hooks/api/useInventory';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,9 +13,11 @@ import { format } from 'date-fns';
 
 const InventoryDetailPage = () => {
   const { id } = useParams();
+  const isNew = id === 'new';
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { data: item, isLoading, isError } = useInventoryItem(id);
+  const createMutation = useCreateInventoryItem();
   const updateMutation = useUpdateInventoryItem();
   const deleteMutation = useDeleteInventoryItem();
 
@@ -31,7 +33,7 @@ const InventoryDetailPage = () => {
   });
 
   useEffect(() => {
-    if (item) {
+    if (item && !isNew) {
       setFormData({
         name: item.name || '',
         sku: item.sku || '',
@@ -43,7 +45,7 @@ const InventoryDetailPage = () => {
         unit_cost: item.unit_cost || 0,
       });
     }
-  }, [item]);
+  }, [item, isNew]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,7 +71,7 @@ const InventoryDetailPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !isNew) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -77,7 +79,7 @@ const InventoryDetailPage = () => {
     );
   }
 
-  if (isError || !item) {
+  if ((isError || !item) && !isNew) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold">Item not found</h2>

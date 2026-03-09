@@ -22,9 +22,7 @@ const PMSchedulesPage = () => {
   const [schedules, setSchedules] = useState([]);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [selectedPM, setSelectedPM] = useState(null);
+      const [selectedPM, setSelectedPM] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
@@ -129,21 +127,7 @@ const PMSchedulesPage = () => {
     }
   };
 
-  const openEditDialog = (pm) => {
-    setSelectedPM(pm);
-    setFormData({
-      name: pm.name,
-      description: pm.description || '',
-      asset_id: pm.asset_id,
-      frequency_type: pm.frequency_type,
-      frequency_value: pm.frequency_value,
-      priority: pm.priority,
-      estimated_hours: pm.estimated_hours || '',
-      next_due: new Date(pm.next_due),
-    });
-    setEditOpen(true);
-  };
-
+  
   const isOverdue = (date) => isBefore(new Date(date), new Date());
 
   const PMForm = ({ onSubmit, isEdit = false }) => (
@@ -261,15 +245,7 @@ const PMSchedulesPage = () => {
         />
       </div>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={() => isEdit ? setEditOpen(false) : setCreateOpen(false)}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={submitting} data-testid="pm-submit-btn">
-          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEdit ? 'Update' : 'Create'}
-        </Button>
-      </DialogFooter>
+      
     </form>
   );
 
@@ -282,21 +258,10 @@ const PMSchedulesPage = () => {
           <p className="text-muted-foreground">Schedule recurring maintenance tasks</p>
         </div>
         {isManager() && (
-          <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button data-testid="create-pm-btn">
+          <Button data-testid="create-pm-btn" onClick={() => navigate('/pm-schedules/new')}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Schedule
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create PM Schedule</DialogTitle>
-                <DialogDescription>Set up a recurring maintenance schedule</DialogDescription>
-              </DialogHeader>
-              <PMForm onSubmit={handleCreate} />
-            </DialogContent>
-          </Dialog>
         )}
       </div>
 
@@ -379,15 +344,7 @@ const PMSchedulesPage = () => {
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) { setSelectedPM(null); resetForm(); } }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit PM Schedule</DialogTitle>
-            <DialogDescription>Update the maintenance schedule</DialogDescription>
-          </DialogHeader>
-          <PMForm onSubmit={handleEdit} isEdit />
-        </DialogContent>
-      </Dialog>
+      
     </div>
   );
 };

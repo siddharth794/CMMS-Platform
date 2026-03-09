@@ -135,77 +135,10 @@ const RequesterDashboardPage = () => {
                     <p className="text-muted-foreground">Track and submit maintenance requests</p>
                 </div>
 
-                <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button data-testid="create-wo-btn">
+                <Button data-testid="create-wo-btn" onClick={() => navigate('/work-orders/new')}>
                             <Plus className="mr-2 h-4 w-4" />
                             New Request
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                            <DialogTitle>Submit New Request</DialogTitle>
-                            <DialogDescription>Describe the issue and we'll route it to our technicians.</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleCreate} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Title *</Label>
-                                <Input
-                                    id="title"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="Brief description (e.g., Leaking faucet)"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Description</Label>
-                                <Textarea
-                                    id="description"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Provide more details..."
-                                    rows={4}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="priority">Priority</Label>
-                                    <Select
-                                        value={formData.priority}
-                                        onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                                    >
-                                        <SelectTrigger id="priority">
-                                            <SelectValue placeholder="Select priority" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="low">Low</SelectItem>
-                                            <SelectItem value="medium">Medium</SelectItem>
-                                            <SelectItem value="high">High</SelectItem>
-                                            <SelectItem value="critical">Critical</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="location">Location</Label>
-                                    <Input
-                                        id="location"
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                        placeholder="e.g., Room 101"
-                                    />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                                <Button type="submit" disabled={submitting}>
-                                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Submit Request
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

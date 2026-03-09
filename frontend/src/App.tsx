@@ -13,6 +13,8 @@ const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
 const TechnicianDashboardPage = React.lazy(() => import('./pages/TechnicianDashboardPage'));
 const RequesterDashboardPage = React.lazy(() => import('./pages/RequesterDashboardPage'));
+const CreateWorkOrderPage = React.lazy(() => import('./pages/CreateWorkOrderPage'));
+const CreatePMSchedulePage = React.lazy(() => import('./pages/CreatePMSchedulePage'));
 const WorkOrdersPage = React.lazy(() => import('./pages/WorkOrdersPage'));
 const WorkOrderDetailPage = React.lazy(() => import('./pages/WorkOrderDetailPage'));
 const AssetsPage = React.lazy(() => import('./pages/AssetsPage'));
@@ -26,6 +28,7 @@ const OrganizationDetailPage = React.lazy(() => import('./pages/OrganizationDeta
 const AssetDetailPage = React.lazy(() => import('./pages/AssetDetailPage'));
 const InventoryDetailPage = React.lazy(() => import('./pages/InventoryDetailPage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
+const CreateUserPage = React.lazy(() => import('./pages/CreateUserPage'));
 const UserDetailPage = React.lazy(() => import('./pages/UserDetailPage'));
 
 const RolesPage = React.lazy(() => import('./pages/RolesPage'));
@@ -136,16 +139,21 @@ const AppRoutes = () => {
         >
           <Route index element={<RoleBasedDashboard />} />
           <Route path="work-orders" element={<HideFromRequesterRoute><WorkOrdersPage /></HideFromRequesterRoute>} />
+          <Route path="work-orders/new" element={<HideFromRequesterRoute><CreateWorkOrderPage /></HideFromRequesterRoute>} />
           <Route path="work-orders/:id" element={<HideFromRequesterRoute><WorkOrderDetailPage /></HideFromRequesterRoute>} />
           <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
           <Route path="assets/:id" element={<HideFromRequesterRoute><AssetDetailPage /></HideFromRequesterRoute>} />
           <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
+          <Route path="inventory/new" element={<HideFromRequesterRoute><InventoryDetailPage /></HideFromRequesterRoute>} />
           <Route path="inventory/:id" element={<HideFromRequesterRoute><InventoryDetailPage /></HideFromRequesterRoute>} />
           <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
+          <Route path="pm-schedules/new" element={<ManagerRoute><CreatePMSchedulePage /></ManagerRoute>} />
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
+          <Route path="organizations/new" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
           <Route path="users" element={<ManagerRoute><UsersPage /></ManagerRoute>} />
+          <Route path="users/new" element={<ManagerRoute><CreateUserPage /></ManagerRoute>} />
           <Route path="users/:id" element={<ManagerRoute><UserDetailPage /></ManagerRoute>} />
 
           <Route path="roles" element={<ManagerRoute><RolesPage /></ManagerRoute>} />

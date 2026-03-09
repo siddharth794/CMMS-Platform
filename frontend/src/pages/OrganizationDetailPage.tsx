@@ -20,9 +20,11 @@ import { format } from 'date-fns';
 
 const OrganizationDetailPage = () => {
   const { id } = useParams();
+  const isNew = id === 'new';
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { data: organization, isLoading, isError } = useOrganization(id);
+  const createMutation = useCreateOrganization();
   const updateMutation = useUpdateOrganization();
 
   // Associated Data Hooks
@@ -68,7 +70,7 @@ const OrganizationDetailPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !isNew) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -76,7 +78,7 @@ const OrganizationDetailPage = () => {
     );
   }
 
-  if (isError || !organization) {
+  if ((isError || !organization) && !isNew) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold">Organization not found</h2>
@@ -92,11 +94,11 @@ const OrganizationDetailPage = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate('/organizations')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">{formData.name || organization.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{isNew ? 'Create Organization' : (formData.name || organization.name)}</h1>
         </div>
-        <Button onClick={handleSubmit} disabled={updateMutation.isPending}>
-          {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Save Changes
+        <Button onClick={handleSubmit} disabled={isNew ? createMutation.isPending : updateMutation.isPending}>
+          {(isNew ? createMutation.isPending : updateMutation.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {isNew ? 'Create Organization' : 'Save Changes'}
         </Button>
       </div>
 
