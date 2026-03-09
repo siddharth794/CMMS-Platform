@@ -16,11 +16,13 @@ PM Schedules (Preventive Maintenance) ka use karke aap apne assets ke liye recur
 
 ## 2. Schedule Logic (Fixed vs Floating)
 
-Aapko do types ki logic milti hai:
-
-*   **Fixed (Strict Calendar)**: Ye hamesha exact date par trigger hoga. Agar aapne 1st date set ki hai, toh har mahine ki 1st ko hi WO banega.
-    *   **Date Kaise Set Karein?**: "Start Date" field ka use karke aap exact day select kar sakte hain. Agar aap Monthly frequency select karke 15th date pick karte hain, toh system har mahine ki 15 ko hi schedule banayega.
-*   **Floating (From last completion)**: Ye pichle Work Order ke khatam hone ke baad hi agla trigger calculate karega.
+*   **Fixed (Strict Calendar)**: Ye bilkul **Calendar** ki tarah hai. Agar aapne 15th date set ki hai, toh system hamesha 15th ko hi pakadega, chahe pichla kaam kabhi bhi khatam hua ho. (Jaise: Bijli ka bill bharna).
+    *   **Date Setting**: "Start Date" field se aap wo date select karein jo har baar repeat hogi.
+*   **Floating (From last completion)**: Ye depend karta hai ki pichla kaam **kab khatam** hua. 
+    *   **Pehla WO kaise banega?**: Floating mein bhi aapko ek **"First Service Date"** deni hogi. System pehla Work Order usi date par banayega, aur uske baad wale Work Orders floating logic se chalenge.
+    *   *Example*: Maan lijiye aapka monthly service 1st March ko due tha (First Service Date), par technician ne usse 10th March ko khatam kiya. 
+    *   **Fixed** mein agla WO 1st April ko hi banega.
+    *   **Floating** mein agla WO 10th April (10 March + 1 mahina) ko banega.
 
 ---
 

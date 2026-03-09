@@ -21,7 +21,7 @@ const PMScheduleDetailPage = () => {
 
   const { data: pm, isLoading, isError } = usePMSchedule(id);
   const updateMutation = useUpdatePMSchedule();
-  const deleteMutation = useDeletePMSchedule();
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -127,20 +127,14 @@ const PMScheduleDetailPage = () => {
       await updateMutation.mutateAsync({ id, data: payload });
       addNotification('success', 'PM Schedule updated successfully');
     } catch (error) {
-      addNotification('error', error.message || error.response?.data?.detail || 'Failed to update PM schedule');
+      const errorMsg = error.response?.data?.errors 
+        ? Object.entries(error.response.data.errors).map(([field, msgs]) => `${field}: ${msgs}`).join(', ')
+        : error.response?.data?.detail || error.message || 'Failed to update PM schedule';
+      addNotification('error', errorMsg);
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this PM schedule?')) return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      addNotification('success', 'PM Schedule deleted updated');
-      navigate('/pm-schedules');
-    } catch (error) {
-      addNotification('error', 'Failed to delete PM schedule');
-    }
-  };
+
 
   if (isLoading) {
     return (
@@ -174,10 +168,7 @@ const PMScheduleDetailPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="destructive" onClick={handleDelete} disabled={isSaving}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+
           <Button type="submit" form="pm-form" disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Changes
