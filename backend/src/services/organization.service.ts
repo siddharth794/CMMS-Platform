@@ -3,7 +3,6 @@ import { CreateOrganizationDTO } from '../types/dto';
 import { ConflictError, NotFoundError, ForbiddenError } from '../errors/AppError';
 
 const DEFAULT_ROLES = [
-    { name: "Super_Admin", description: "Full system access", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
     { name: "Org_Admin", description: "Organization administrator", permissions: { "all": { "read": true, "write": true } }, is_system_role: true },
     { name: "Facility_Manager", description: "Manages facilities and work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true, "write": true }, "pm_schedules": { "read": true, "write": true }, "analytics": { "read": true } }, is_system_role: true },
     { name: "Technician", description: "Executes work orders", permissions: { "work_orders": { "read": true, "write": true }, "assets": { "read": true } }, is_system_role: true },
@@ -17,7 +16,7 @@ class OrganizationService {
 
         const orgRoles = DEFAULT_ROLES.map(role => ({
             ...role,
-            name: `${dto.name}_${role.name}`
+            name: role.name
         }));
 
         return organizationRepository.createWithRoles(dto, orgRoles);
