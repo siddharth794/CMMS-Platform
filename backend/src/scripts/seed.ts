@@ -7,7 +7,7 @@ async function seed() {
         console.log('Connection has been established successfully.');
 
         // Force true only if you want to drop and recreate tables, let's keep it safe with alter: true or just rely on existing schema sync
-        await sequelize.sync();
+        await sequelize.sync({ force: true });
 
         console.log('Seeding initial data...');
 
