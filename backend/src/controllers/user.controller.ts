@@ -28,7 +28,11 @@ class UserController {
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const dto: CreateUserDTO = req.body;
-        const user = await userService.create(req.user!.org_id, dto, this.getAuditContext(req), this.getRequestorRole(req));
+        const userRole = this.getRequestorRole(req);
+        // Allow super_admin to specify target org_id for new users
+        const targetOrgId = (userRole === 'super_admin' && (dto as any).org_id) ? (dto as any).org_id : req.user!.org_id;
+
+        const user = await userService.create(targetOrgId, dto, this.getAuditContext(req), userRole);
         res.status(201).json(user);
     }
 

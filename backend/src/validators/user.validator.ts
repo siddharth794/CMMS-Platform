@@ -8,6 +8,7 @@ export const CreateUserSchema = z.object({
     first_name: z.string().max(100).optional(),
     last_name: z.string().max(100).optional(),
     phone: z.string().max(20).optional(),
+    org_id: z.string().uuid().optional(),
 }).strict();
 
 export const UpdateUserSchema = z.object({

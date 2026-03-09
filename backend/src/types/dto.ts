@@ -18,6 +18,7 @@ export interface CreateUserDTO {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    org_id?: string;
 }
 
 export interface UpdateUserDTO {
