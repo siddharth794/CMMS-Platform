@@ -29,6 +29,18 @@ class AnalyticsService {
             stats.total_assets = 0;
             stats.active_pm_schedules = 0;
             stats.overdue_pms = techCounts.myOverdue;
+
+            // Also provide the specific my_* keys expected by TechnicianDashboardPage
+            stats.my_assigned = techCounts.myAssigned;
+            stats.my_completed = techCounts.myCompleted;
+            stats.my_in_progress = techCounts.myInProgress;
+            stats.my_pending = techCounts.myPending;
+            stats.my_overdue = techCounts.myOverdue;
+            
+            const completionRate = techCounts.myAssigned > 0
+                ? Math.round((techCounts.myCompleted / techCounts.myAssigned) * 100)
+                : 0;
+            stats.my_completion_rate = completionRate;
         } else {
             const dashCounts = counts as any;
             stats.total_work_orders = dashCounts.totalWorkOrders;
