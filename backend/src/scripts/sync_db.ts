@@ -1,5 +1,5 @@
-import sequelize from './src/config/database';
-import { WOComment } from './src/models';
+import sequelize from '../config/database';
+import { WOComment } from '../models';
 
 async function sync() {
   await WOComment.sync({ alter: true });

@@ -1,5 +1,5 @@
-import sequelize from './src/config/database';
-import { Notification } from './src/models';
+import sequelize from '../config/database';
+import { Notification } from '../models';
 
 async function sync() {
   await Notification.sync({ alter: true });

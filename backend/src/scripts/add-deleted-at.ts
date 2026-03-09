@@ -1,4 +1,4 @@
-import sequelize from './src/config/database';
+import sequelize from '../config/database';
 
 /**
  * One-time migration to:

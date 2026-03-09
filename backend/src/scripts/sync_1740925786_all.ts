@@ -1,5 +1,5 @@
-import sequelize from './src/config/database';
-import { WOAttachment, WorkOrderInventoryItem, Notification } from './src/models';
+import sequelize from '../config/database';
+import { WOAttachment, WorkOrderInventoryItem, Notification } from '../models';
 
 async function sync() {
   await WOAttachment.sync({ alter: true });

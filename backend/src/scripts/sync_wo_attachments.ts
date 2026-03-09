@@ -1,5 +1,5 @@
-import sequelize from './src/config/database';
-import { WOAttachment } from './src/models';
+import sequelize from '../config/database';
+import { WOAttachment } from '../models';
 
 async function sync() {
   await WOAttachment.sync({ alter: true });

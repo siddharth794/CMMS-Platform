@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { Organization, Role, User, sequelize } from './src/models';
+import { Organization, Role, User, sequelize } from '../models';
 
 async function seed() {
     try {
