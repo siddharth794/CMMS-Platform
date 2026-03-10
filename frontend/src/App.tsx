@@ -103,6 +103,14 @@ const HideFromRequesterRoute = ({ children }) => {
   return children;
 };
 
+const HideFromTechnicianRoute = ({ children }) => {
+  const { hasRole } = useAuth();
+  if (hasRole(['technician'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 const SuperAdminRoute = ({ children }) => {
   const { hasRole } = useAuth();
   if (!hasRole(['super_admin'])) {
@@ -139,7 +147,7 @@ const AppRoutes = () => {
         >
           <Route index element={<RoleBasedDashboard />} />
           <Route path="work-orders" element={<HideFromRequesterRoute><WorkOrdersPage /></HideFromRequesterRoute>} />
-          <Route path="work-orders/new" element={<ManagerRoute><CreateWorkOrderPage /></ManagerRoute>} />
+          <Route path="work-orders/new" element={<HideFromTechnicianRoute><CreateWorkOrderPage /></HideFromTechnicianRoute>} />
           <Route path="work-orders/:id" element={<HideFromRequesterRoute><WorkOrderDetailPage /></HideFromRequesterRoute>} />
           <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
           <Route path="assets/:id" element={<ManagerRoute><AssetDetailPage /></ManagerRoute>} />

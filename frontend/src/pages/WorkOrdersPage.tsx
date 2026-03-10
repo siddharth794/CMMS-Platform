@@ -206,7 +206,7 @@ const WorkOrdersPage = () => {
             <Download className="mr-2 h-4 w-4" />
             Export to Excel
           </Button>
-          {isManager() && (
+          {(isManager() || isRequester()) && (
             <Button data-testid="create-wo-btn" onClick={() => navigate('/work-orders/new')}>
               <Plus className="mr-2 h-4 w-4" />
               New Work Order
