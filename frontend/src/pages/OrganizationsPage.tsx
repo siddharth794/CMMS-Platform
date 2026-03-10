@@ -56,7 +56,18 @@ const OrganizationsPage = () => {
       setCreateOpen(false);
       setFormData({ name: '', description: '', address: '', is_active: true });
     } catch (error: any) {
-      addNotification('error', error.response?.data?.detail || 'Failed to create organization');
+      const detail = error.response?.data?.detail;
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        Object.keys(errors).forEach(field => {
+          const fieldErrors = errors[field];
+          if (Array.isArray(fieldErrors)) {
+            fieldErrors.forEach(msg => addNotification('error', `${field}: ${msg}`));
+          }
+        });
+      } else {
+        addNotification('error', detail || 'Failed to create organization');
+      }
     }
   };
 
@@ -70,7 +81,18 @@ const OrganizationsPage = () => {
       setSelectedOrg(null);
       setFormData({ name: '', description: '', address: '', is_active: true });
     } catch (error: any) {
-      addNotification('error', error.response?.data?.detail || 'Failed to update organization');
+      const detail = error.response?.data?.detail;
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        Object.keys(errors).forEach(field => {
+          const fieldErrors = errors[field];
+          if (Array.isArray(fieldErrors)) {
+            fieldErrors.forEach(msg => addNotification('error', `${field}: ${msg}`));
+          }
+        });
+      } else {
+        addNotification('error', detail || 'Failed to update organization');
+      }
     }
   };
 
