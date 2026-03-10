@@ -119,6 +119,14 @@ const SuperAdminRoute = ({ children }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { isAdmin } = useAuth();
+  if (!isAdmin()) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 const SuspenseFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -159,12 +167,12 @@ const AppRoutes = () => {
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
-          <Route path="users" element={<ManagerRoute><UsersPage /></ManagerRoute>} />
-          <Route path="users/new" element={<ManagerRoute><CreateUserPage /></ManagerRoute>} />
-          <Route path="users/:id" element={<ManagerRoute><UserDetailPage /></ManagerRoute>} />
+          <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+          <Route path="users/new" element={<AdminRoute><CreateUserPage /></AdminRoute>} />
+          <Route path="users/:id" element={<AdminRoute><UserDetailPage /></AdminRoute>} />
 
-          <Route path="roles" element={<ManagerRoute><RolesPage /></ManagerRoute>} />
-          <Route path="groups" element={<ManagerRoute><GroupsPage /></ManagerRoute>} />
+          <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
+          <Route path="groups" element={<AdminRoute><GroupsPage /></AdminRoute>} />
           <Route path="accesses" element={<SuperAdminRoute><AccessesPage /></SuperAdminRoute>} />
           <Route path="profile" element={<ProfilePage />} />
 

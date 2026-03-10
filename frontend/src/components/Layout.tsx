@@ -17,7 +17,7 @@ import {
 
 const Sidebar = ({ className = '' }) => {
   const location = useLocation();
-  const { user, isTechnician, hasRole } = useAuth();
+  const { user, isTechnician, hasRole, isAdmin } = useAuth();
   const isTech = isTechnician();
   const isRestricted = hasRole(['technician', 'requestor']);
 
@@ -29,15 +29,16 @@ const Sidebar = ({ className = '' }) => {
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     
     { name: 'Organizations', href: '/organizations', icon: Building2, superAdminOnly: true },
-    { name: 'Roles', href: '/roles', icon: Shield, managerOnly: true },
-    { name: 'Groups', href: '/groups', icon: Users, managerOnly: true },
+    { name: 'Roles', href: '/roles', icon: Shield, adminOnly: true },
+    { name: 'Groups', href: '/groups', icon: Users, adminOnly: true },
     { name: 'Accesses', href: '/accesses', icon: Lock, superAdminOnly: true },
-    { name: 'Users', href: '/users', icon: User, managerOnly: true },
+    { name: 'Users', href: '/users', icon: User, adminOnly: true },
 
     { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3, hideFromRequester: true },
     { name: 'Profile', href: '/profile', icon: User },
   ].filter(item => {
     if (item.superAdminOnly && !hasRole(['super_admin'])) return false;
+    if (item.adminOnly && !isAdmin()) return false;
     if (item.managerOnly && isRestricted) return false;
     if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
     return true;
