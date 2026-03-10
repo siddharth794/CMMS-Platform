@@ -23,7 +23,6 @@ const PMSchedulesPage = React.lazy(() => import('./pages/PMSchedulesPage'));
 const PMScheduleDetailPage = React.lazy(() => import('./pages/PMScheduleDetailPage'));
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const TechnicianAnalyticsPage = React.lazy(() => import('./pages/TechnicianAnalyticsPage'));
-const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const OrganizationsPage = React.lazy(() => import('./pages/OrganizationsPage'));
 const OrganizationDetailPage = React.lazy(() => import('./pages/OrganizationDetailPage'));
 const AssetDetailPage = React.lazy(() => import('./pages/AssetDetailPage'));
@@ -161,7 +160,6 @@ const AppRoutes = () => {
           <Route path="accesses" element={<SuperAdminRoute><AccessesPage /></SuperAdminRoute>} />
           <Route path="profile" element={<ProfilePage />} />
 
-          <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

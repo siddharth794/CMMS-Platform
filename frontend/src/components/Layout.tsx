@@ -35,7 +35,7 @@ const Sidebar = ({ className = '' }) => {
     { name: 'Users', href: '/users', icon: User, managerOnly: true },
 
     { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3, hideFromRequester: true },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'Profile', href: '/profile', icon: User },
   ].filter(item => {
     if (item.superAdminOnly && !hasRole(['super_admin'])) return false;
     if (item.managerOnly && isRestricted) return false;
@@ -216,15 +216,9 @@ const Layout = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
+                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
                     <User className="h-4 w-4" />
                     Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
-                    <Settings className="h-4 w-4" />
-                    Settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
