@@ -24,8 +24,8 @@ const Sidebar = ({ className = '' }) => {
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true },
-    { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
-    { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
+    { name: 'Assets', href: '/assets', icon: Box, managerOnly: true },
+    { name: 'Inventory', href: '/inventory', icon: Package, managerOnly: true },
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     
     { name: 'Organizations', href: '/organizations', icon: Building2, superAdminOnly: true },
