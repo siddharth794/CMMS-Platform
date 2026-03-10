@@ -38,7 +38,7 @@ const CreateWorkOrderPage = () => {
       }
       const wo = await createMutation.mutateAsync(payload);
       addNotification('success', 'Work order created successfully');
-      navigate(`/work-orders/${wo.id}`);
+      navigate('/work-orders');
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to create work order');
     }
