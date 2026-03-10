@@ -195,9 +195,13 @@ const AssetsPage = () => {
                       </TableCell>
                     )}
                     <TableCell className="font-medium">
-                      <Link to={`/assets/${asset.id}`} className="text-primary hover:underline">
-                        {asset.name}
-                      </Link>
+                      {isManager() ? (
+                        <Link to={`/assets/${asset.id}`} className="text-primary hover:underline">
+                          {asset.name}
+                        </Link>
+                      ) : (
+                        asset.name
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{asset.asset_tag}</TableCell>
                     <TableCell>

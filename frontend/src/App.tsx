@@ -141,9 +141,9 @@ const AppRoutes = () => {
           <Route path="work-orders" element={<HideFromRequesterRoute><WorkOrdersPage /></HideFromRequesterRoute>} />
           <Route path="work-orders/new" element={<ManagerRoute><CreateWorkOrderPage /></ManagerRoute>} />
           <Route path="work-orders/:id" element={<HideFromRequesterRoute><WorkOrderDetailPage /></HideFromRequesterRoute>} />
-          <Route path="assets" element={<ManagerRoute><AssetsPage /></ManagerRoute>} />
+          <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
           <Route path="assets/:id" element={<ManagerRoute><AssetDetailPage /></ManagerRoute>} />
-          <Route path="inventory" element={<ManagerRoute><InventoryPage /></ManagerRoute>} />
+          <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
           <Route path="inventory/:id" element={<ManagerRoute><InventoryDetailPage /></ManagerRoute>} />
           <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
           <Route path="pm-schedules/new" element={<ManagerRoute><CreatePMSchedulePage /></ManagerRoute>} />
