@@ -13,7 +13,7 @@ import { cn } from '../lib/utils';
 
 const COLORS = ['#6366f1', '#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6'];
 const PRIORITY_COLORS = { low: '#94a3b8', medium: '#3b82f6', high: '#f59e0b', critical: '#ef4444' };
-const STATUS_COLORS = { new: '#94a3b8', open: '#3b82f6', in_progress: '#f59e0b', on_hold: '#f97316', completed: '#10b981', cancelled: '#ef4444' };
+const STATUS_COLORS = { new: '#94a3b8', open: '#3b82f6', in_progress: '#f59e0b', on_hold: '#f97316', pending_review: '#8b5cf6', completed: '#10b981', cancelled: '#ef4444' };
 
 const AnalyticsPage = () => {
   const [data, setData] = useState(null);

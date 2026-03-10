@@ -43,8 +43,8 @@ export const useAssignWorkOrder = () => {
 export const useUpdateWorkOrderStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { data } = await workOrdersApi.updateStatus(id, { status });
+    mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
+      const { data } = await workOrdersApi.updateStatus(id, { status, notes });
       return data;
     },
     onSuccess: () => {

@@ -78,8 +78,22 @@ const OrganizationDetailPage = () => {
         });
         addNotification('success', 'Organization updated successfully');
       }
-    } catch (error) {
-      addNotification('error', error.response?.data?.detail || `Failed to ${isNew ? 'create' : 'update'} organization`);
+    } catch (error: any) {
+      const detail = error.response?.data?.detail;
+      const errors = error.response?.data?.errors;
+      
+      if (errors) {
+        Object.keys(errors).forEach(field => {
+          const fieldErrors = errors[field];
+          if (Array.isArray(fieldErrors)) {
+            fieldErrors.forEach(msg => {
+              addNotification('error', `${field}: ${msg}`);
+            });
+          }
+        });
+      } else {
+        addNotification('error', detail || `Failed to ${isNew ? 'create' : 'update'} organization`);
+      }
     }
   };
 

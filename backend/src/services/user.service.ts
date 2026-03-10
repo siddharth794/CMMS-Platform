@@ -27,7 +27,7 @@ class UserService {
         return { data: result.rows, total: result.count };
     }
 
-    async getById(userId: string, orgId: string): Promise<any> {
+    async getById(userId: string, orgId: string | null): Promise<any> {
         const user = await userRepository.findById(userId, orgId);
         if (!user) throw new NotFoundError('User');
         return user;

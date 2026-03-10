@@ -21,7 +21,10 @@ class AnalyticsRepository {
             WorkOrder.count({ where: { org_id: orgId, status: 'in_progress' } }),
             Asset.count({ where: { org_id: orgId, is_active: true } }),
             PMSchedule.count({ where: { org_id: orgId, is_active: true } }),
-            PMSchedule.count({ where: { org_id: orgId, is_active: true, next_due: { [Op.lt]: new Date() } } })
+            // next_due column was removed in PM Schema redesign.
+            // Overdue PMs are now tracked via pm_executions or calculated differently. 
+            // For now, returning 0 to prevent crashes.
+            Promise.resolve(0)
         ]);
         return { totalWorkOrders, completedWorkOrders, pendingWorkOrders, inProgressWorkOrders, totalAssets, activePmSchedules, overduePms };
     }
@@ -44,7 +47,7 @@ class AnalyticsRepository {
         return WorkOrder.findAll({
             where,
             include: [
-                { model: Asset },
+                { model: Asset, as: 'asset' },
                 { model: User, as: 'assignee', include: [{ model: Role }] },
                 { model: User, as: 'requester', include: [{ model: Role }] }
             ],

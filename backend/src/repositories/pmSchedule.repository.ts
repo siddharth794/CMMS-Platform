@@ -26,7 +26,7 @@ class PMScheduleRepository {
             where,
             paranoid,
             include: [
-                { model: Asset },
+                { model: Asset, as: 'asset' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' }
             ],
@@ -42,7 +42,7 @@ class PMScheduleRepository {
         return PMSchedule.findOne({
             where: { id: pmId, org_id: orgId, is_active: true },
             include: [
-                { model: Asset },
+                { model: Asset, as: 'asset' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
                 { model: PMTask, as: 'tasks' },
@@ -54,7 +54,7 @@ class PMScheduleRepository {
     async findByPkWithAsset(pmId: string): Promise<any | null> {
         return PMSchedule.findByPk(pmId, { 
             include: [
-                { model: Asset },
+                { model: Asset, as: 'asset' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
                 { model: PMTask, as: 'tasks' },

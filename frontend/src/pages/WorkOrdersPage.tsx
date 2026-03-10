@@ -28,6 +28,7 @@ const StatusBadge = ({ status }) => {
     open: 'status-open',
     in_progress: 'status-in_progress',
     on_hold: 'status-on_hold',
+    pending_review: 'status-open', // using open style for now, or define a new one in CSS
     completed: 'status-completed',
     cancelled: 'status-cancelled',
   };
@@ -120,12 +121,12 @@ const WorkOrdersPage = () => {
     }
   };
 
-  const handleStatusChange = async (woId: string, status: string) => {
+  const handleStatusChange = async (woId: string, status: string, notes?: string) => {
     try {
-      await updateStatusMutation.mutateAsync({ id: woId, status });
+      await updateStatusMutation.mutateAsync({ id: woId, status, notes });
       addNotification('success', 'Status updated');
     } catch (error: any) {
-      addNotification('error', error.response?.data?.detail || 'Failed to update status');
+      addNotification('error', error.response?.data?.detail || error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -205,10 +206,12 @@ const WorkOrdersPage = () => {
             <Download className="mr-2 h-4 w-4" />
             Export to Excel
           </Button>
-          <Button data-testid="create-wo-btn" onClick={() => navigate('/work-orders/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Work Order
-              </Button>
+          {(isManager() || isRequester()) && (
+            <Button data-testid="create-wo-btn" onClick={() => navigate('/work-orders/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Work Order
+            </Button>
+          )}
         </div>
       </div>
 
@@ -269,6 +272,7 @@ const WorkOrdersPage = () => {
                         <SelectItem value="new">New</SelectItem>
                         <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="pending_review">Pending Review</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
@@ -358,20 +362,52 @@ const WorkOrdersPage = () => {
                                   <UserPlus className="mr-2 h-4 w-4" />Assign
                                 </DropdownMenuItem>
                               )}
-                              {!isRequester() && wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                              
+                              {/* Status Update Actions */}
+                              {!isRequester() && (
                                 <>
-                                  {wo.status !== 'in_progress' && (
-                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'in_progress')}>
+                                  {/* Technician / Manager Actions */}
+                                  {wo.status === WO_STATUS.OPEN && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, WO_STATUS.IN_PROGRESS)}>
                                       Start Work
                                     </DropdownMenuItem>
                                   )}
-                                  {wo.status === 'in_progress' && (
-                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'completed')}>
-                                      Complete
+                                  
+                                  {wo.status === WO_STATUS.IN_PROGRESS && (
+                                    <DropdownMenuItem onClick={() => {
+                                      const notes = window.prompt('Enter Resolution Notes (Mandatory):');
+                                      if (notes !== null) {
+                                        if (!notes.trim()) return addNotification('error', 'Resolution notes are mandatory');
+                                        handleStatusChange(wo.id, WO_STATUS.PENDING_REVIEW, notes);
+                                      }
+                                    }}>
+                                      Submit for Review
                                     </DropdownMenuItem>
+                                  )}
+
+                                  {/* Manager Only Actions */}
+                                  {isManager() && wo.status === WO_STATUS.PENDING_REVIEW && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => {
+                                        const notes = window.prompt('Final Completion Notes (Optional):');
+                                        if (notes !== null) handleStatusChange(wo.id, WO_STATUS.COMPLETED, notes);
+                                      }}>
+                                        Approve & Complete
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => {
+                                        const notes = window.prompt('Reason for Rejection (Mandatory):');
+                                        if (notes !== null) {
+                                          if (!notes.trim()) return addNotification('error', 'Rejection reason is mandatory');
+                                          handleStatusChange(wo.id, WO_STATUS.IN_PROGRESS, notes);
+                                        }
+                                      }} className="text-warning">
+                                        Reject & Send Back
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </>
                               )}
+
                               {isManager() && (
                                 <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
                                   <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}

@@ -100,7 +100,7 @@ WorkOrder.init({
     asset_id: { type: DataTypes.UUID },
     assignee_id: { type: DataTypes.UUID },
     requester_id: { type: DataTypes.UUID },
-    status: { type: DataTypes.ENUM('new', 'open', 'in_progress', 'on_hold', 'completed', 'cancelled'), defaultValue: 'new' },
+    status: { type: DataTypes.ENUM('new', 'open', 'in_progress', 'on_hold', 'pending_review', 'completed', 'cancelled'), defaultValue: 'new' },
     priority: { type: DataTypes.ENUM('low', 'medium', 'high', 'critical'), defaultValue: 'medium' },
     location: { type: DataTypes.STRING(100) },
     scheduled_start: { type: DataTypes.DATE },
@@ -110,6 +110,7 @@ WorkOrder.init({
     estimated_hours: { type: DataTypes.INTEGER },
     actual_hours: { type: DataTypes.INTEGER },
     notes: { type: DataTypes.TEXT },
+    resolution_notes: { type: DataTypes.TEXT },
     is_pm_generated: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { sequelize, tableName: 'work_orders', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
@@ -272,11 +273,11 @@ PMSchedule.belongsTo(Organization, { foreignKey: 'org_id' });
 Organization.hasMany(InventoryItem, { foreignKey: 'org_id' });
 InventoryItem.belongsTo(Organization, { foreignKey: 'org_id' });
 
-Asset.hasMany(WorkOrder, { foreignKey: 'asset_id' });
-WorkOrder.belongsTo(Asset, { foreignKey: 'asset_id' });
+Asset.hasMany(WorkOrder, { foreignKey: 'asset_id', as: 'work_orders' });
+WorkOrder.belongsTo(Asset, { foreignKey: 'asset_id', as: 'asset' });
 
-Asset.hasMany(PMSchedule, { foreignKey: 'asset_id' });
-PMSchedule.belongsTo(Asset, { foreignKey: 'asset_id' });
+Asset.hasMany(PMSchedule, { foreignKey: 'asset_id', as: 'pm_schedules' });
+PMSchedule.belongsTo(Asset, { foreignKey: 'asset_id', as: 'asset' });
 
 PMSchedule.hasMany(PMTrigger, { as: 'triggers', foreignKey: 'pm_schedule_id' });
 PMTrigger.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });

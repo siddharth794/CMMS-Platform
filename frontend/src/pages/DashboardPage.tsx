@@ -19,6 +19,7 @@ const StatusBadge = ({ status }) => {
     open: 'status-open',
     in_progress: 'status-in_progress',
     on_hold: 'status-on_hold',
+    pending_review: 'status-open',
     completed: 'status-completed',
     cancelled: 'status-cancelled',
   };

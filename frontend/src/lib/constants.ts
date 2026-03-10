@@ -3,6 +3,7 @@ export const WO_STATUS = {
   OPEN: 'open',
   IN_PROGRESS: 'in_progress',
   ON_HOLD: 'on_hold',
+  PENDING_REVIEW: 'pending_review',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 } as const;

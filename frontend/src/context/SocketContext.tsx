@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { BACKEND_URL } from '../lib/api';
 
 const SocketContext = createContext();
 
@@ -11,7 +12,7 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         if (token && user) {
-            const newSocket = io('http://localhost:8000', {
+            const newSocket = io(BACKEND_URL, {
                 auth: { token },
             });
 

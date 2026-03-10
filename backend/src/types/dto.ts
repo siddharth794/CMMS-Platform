@@ -47,6 +47,7 @@ export interface CreateOrganizationDTO {
     website_url?: string;
     email?: string;
     phone?: string;
+    is_active?: boolean;
 }
 
 // ─── Role DTOs ────────────────────────────────────────────────────

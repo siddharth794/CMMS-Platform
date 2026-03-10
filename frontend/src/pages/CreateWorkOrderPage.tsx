@@ -15,6 +15,7 @@ import { useAssetsData } from '../hooks/api/useAssets';
 
 const CreateWorkOrderPage = () => {
   const navigate = useNavigate();
+  const { isRequester } = useAuth();
   const { addNotification } = useNotification();
   const createMutation = useCreateWorkOrder();
   const { data: assetsData } = useAssetsData();
@@ -37,7 +38,7 @@ const CreateWorkOrderPage = () => {
       }
       const wo = await createMutation.mutateAsync(payload);
       addNotification('success', 'Work order created successfully');
-      navigate(`/work-orders/${wo.id}`);
+      navigate('/work-orders');
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to create work order');
     }
@@ -51,7 +52,9 @@ const CreateWorkOrderPage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Create Work Order</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {isRequester() ? 'New Request' : 'Create Work Order'}
+            </h1>
             <p className="text-muted-foreground">Submit a new maintenance request or issue.</p>
           </div>
         </div>
@@ -61,7 +64,7 @@ const CreateWorkOrderPage = () => {
           </Button>
           <Button type="submit" form="wo-form" disabled={createMutation.isPending}>
             {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Work Order
+            {isRequester() ? 'Submit Request' : 'Create Work Order'}
           </Button>
         </div>
       </div>

@@ -7,8 +7,9 @@ import {
     StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
 } from '../types/dto';
 import { AuditContext, BulkDeleteDTO, PaginatedResponse } from '../types/common.dto';
-import { NotFoundError, BadRequestError } from '../errors/AppError';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/AppError';
 import { AuthenticatedUser } from '../types/express';
+import { WO_STATUS, WO_STATUS_TRANSITIONS } from '../constants/workOrder';
 
 function generateWoNumber(): string {
     const prefix = "WO";
@@ -76,6 +77,12 @@ class WorkOrderService {
         await wo.update(updateData);
 
         if (dto.status && dto.status !== oldStatus) {
+            // Check transition
+            const allowed = WO_STATUS_TRANSITIONS[oldStatus] || [];
+            if (!allowed.includes(dto.status)) {
+                throw new BadRequestError(`Invalid status transition from ${oldStatus} to ${dto.status}`);
+            }
+
             if (dto.status === 'in_progress' && !wo.actual_start) wo.actual_start = new Date();
             else if (dto.status === 'completed' && !wo.actual_end) wo.actual_end = new Date();
             await wo.save();
@@ -85,24 +92,56 @@ class WorkOrderService {
         return workOrderRepository.findByPkFull(wo.id);
     }
 
-    async updateStatus(woId: string, orgId: string, dto: StatusUpdateDTO, audit: AuditContext): Promise<any> {
+    async updateStatus(woId: string, orgId: string, dto: StatusUpdateDTO, user: AuthenticatedUser, audit: AuditContext): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
-        if (dto.status === 'completed') {
-            const count = await workOrderRepository.countAttachments(wo.id);
-            if (count === 0) throw new BadRequestError('Cannot mark as completed without uploading at least one image/attachment.');
+        const roleName = user.Role?.name.toLowerCase() || '';
+        const oldStatus = wo.status;
+
+        // 1. Check Transition Validity
+        const allowed = WO_STATUS_TRANSITIONS[oldStatus] || [];
+        const isSelfTransitionWithNotes = dto.status === oldStatus && dto.notes;
+        
+        if (!allowed.includes(dto.status) && !isSelfTransitionWithNotes) {
+            throw new BadRequestError(`Invalid status transition from ${oldStatus} to ${dto.status}`);
         }
 
-        const oldStatus = wo.status;
+        // 2. Role-Based Restrictions
+        if (dto.status === WO_STATUS.COMPLETED || (oldStatus === WO_STATUS.PENDING_REVIEW && dto.status === WO_STATUS.IN_PROGRESS)) {
+            const isManager = ['super_admin', 'org_admin', 'facility_manager'].includes(roleName);
+            if (!isManager) {
+                throw new ForbiddenError('Only managers can approve or reject work orders.');
+            }
+        }
+
+        // 3. Mandatory Checklists/Fields
+        if (dto.status === WO_STATUS.PENDING_REVIEW || dto.status === WO_STATUS.COMPLETED) {
+            if (!dto.notes && !wo.resolution_notes) {
+                throw new BadRequestError('Resolution notes are required when completing or submitting for review.');
+            }
+            
+            if (['high', 'critical'].includes(wo.priority)) {
+                const attachmentCount = await workOrderRepository.countAttachments(wo.id);
+                if (attachmentCount === 0) {
+                    throw new BadRequestError('Attachments (proof of work) are required for High/Critical priority work orders.');
+                }
+            }
+        }
+
+        // 4. Update Status and related fields
         wo.status = dto.status;
 
         if (dto.notes) {
-            wo.notes = (wo.notes || "") + `\n[${new Date().toISOString()}] Status changed to ${dto.status}: ${dto.notes}`;
+            wo.resolution_notes = dto.notes;
+            wo.notes = (wo.notes || "") + `\n[${new Date().toISOString()}] Status changed to ${dto.status} by ${user.first_name}: ${dto.notes}`;
         }
 
-        if (dto.status === 'in_progress' && !wo.actual_start) wo.actual_start = new Date();
-        else if (dto.status === 'completed' && !wo.actual_end) wo.actual_end = new Date();
+        if (dto.status === WO_STATUS.IN_PROGRESS && !wo.actual_start) {
+            wo.actual_start = new Date();
+        } else if (dto.status === WO_STATUS.COMPLETED && !wo.actual_end) {
+            wo.actual_end = new Date();
+        }
 
         await wo.save();
 

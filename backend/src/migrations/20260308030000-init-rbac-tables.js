@@ -2,6 +2,12 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const tableNames = await queryInterface.showAllTables();
+    if (tableNames.includes('accesses')) {
+        console.log('RBAC tables already exist. Skipping migration.');
+        return;
+    }
+
     // 1. Create accesses table
     await queryInterface.createTable('accesses', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },

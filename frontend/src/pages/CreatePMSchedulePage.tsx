@@ -7,10 +7,14 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Calendar } from '../components/ui/calendar';
 import { useNotification } from '../context/NotificationContext';
-import { Loader2, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, CalendarIcon } from 'lucide-react';
 import { pmSchedulesApi } from '../lib/api';
 import { useAssetsData } from '../hooks/api/useAssets';
+import { format } from 'date-fns';
+import { cn } from '../lib/utils';
 
 const CreatePMSchedulePage = () => {
   const navigate = useNavigate();
@@ -196,13 +200,28 @@ const CreatePMSchedulePage = () => {
                 <Label htmlFor="startDate">
                   {formData.schedule_logic === 'FIXED' ? 'Start Date / Reference Date' : 'First Service Date'}
                 </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  required
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.startDate ? format(new Date(formData.startDate), "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.startDate ? new Date(formData.startDate) : undefined}
+                      onSelect={(date) => setFormData({ ...formData, startDate: date ? date.toISOString().split('T')[0] : '' })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <p className="text-xs text-muted-foreground mt-1">
                   {formData.schedule_logic === 'FIXED' 
                     ? 'Used to set the recurring day (e.g., if you pick 15th, it repeats on 15th).' 

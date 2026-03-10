@@ -55,8 +55,11 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+        <p className="text-muted-foreground">Manage your account settings and personal information</p>
+      </div>
 
       <Card>
         <CardHeader>
@@ -73,6 +76,16 @@ export default function ProfilePage() {
               <div className="space-y-2">
                 <Label>Last Name</Label>
                 <Input value={profile.last_name} onChange={e => setProfile({...profile, last_name: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Email</Label>
+                <p className="font-medium">{user?.email}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Role</Label>
+                <p className="font-medium">{(user?.role?.name || user?.Role?.name || '').replace('_', ' ')}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

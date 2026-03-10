@@ -23,7 +23,6 @@ const PMSchedulesPage = React.lazy(() => import('./pages/PMSchedulesPage'));
 const PMScheduleDetailPage = React.lazy(() => import('./pages/PMScheduleDetailPage'));
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const TechnicianAnalyticsPage = React.lazy(() => import('./pages/TechnicianAnalyticsPage'));
-const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const OrganizationsPage = React.lazy(() => import('./pages/OrganizationsPage'));
 const OrganizationDetailPage = React.lazy(() => import('./pages/OrganizationDetailPage'));
 const AssetDetailPage = React.lazy(() => import('./pages/AssetDetailPage'));
@@ -104,9 +103,25 @@ const HideFromRequesterRoute = ({ children }) => {
   return children;
 };
 
+const HideFromTechnicianRoute = ({ children }) => {
+  const { hasRole } = useAuth();
+  if (hasRole(['technician'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 const SuperAdminRoute = ({ children }) => {
   const { hasRole } = useAuth();
   if (!hasRole(['super_admin'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAdmin } = useAuth();
+  if (!isAdmin()) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -140,28 +155,27 @@ const AppRoutes = () => {
         >
           <Route index element={<RoleBasedDashboard />} />
           <Route path="work-orders" element={<HideFromRequesterRoute><WorkOrdersPage /></HideFromRequesterRoute>} />
-          <Route path="work-orders/new" element={<HideFromRequesterRoute><CreateWorkOrderPage /></HideFromRequesterRoute>} />
+          <Route path="work-orders/new" element={<HideFromTechnicianRoute><CreateWorkOrderPage /></HideFromTechnicianRoute>} />
           <Route path="work-orders/:id" element={<HideFromRequesterRoute><WorkOrderDetailPage /></HideFromRequesterRoute>} />
           <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
-          <Route path="assets/:id" element={<HideFromRequesterRoute><AssetDetailPage /></HideFromRequesterRoute>} />
+          <Route path="assets/:id" element={<ManagerRoute><AssetDetailPage /></ManagerRoute>} />
           <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
-          <Route path="inventory/:id" element={<HideFromRequesterRoute><InventoryDetailPage /></HideFromRequesterRoute>} />
+          <Route path="inventory/:id" element={<ManagerRoute><InventoryDetailPage /></ManagerRoute>} />
           <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
           <Route path="pm-schedules/new" element={<ManagerRoute><CreatePMSchedulePage /></ManagerRoute>} />
           <Route path="pm-schedules/:id" element={<ManagerRoute><PMScheduleDetailPage /></ManagerRoute>} />
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
-          <Route path="users" element={<ManagerRoute><UsersPage /></ManagerRoute>} />
-          <Route path="users/new" element={<ManagerRoute><CreateUserPage /></ManagerRoute>} />
-          <Route path="users/:id" element={<ManagerRoute><UserDetailPage /></ManagerRoute>} />
+          <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+          <Route path="users/new" element={<AdminRoute><CreateUserPage /></AdminRoute>} />
+          <Route path="users/:id" element={<AdminRoute><UserDetailPage /></AdminRoute>} />
 
-          <Route path="roles" element={<ManagerRoute><RolesPage /></ManagerRoute>} />
-          <Route path="groups" element={<ManagerRoute><GroupsPage /></ManagerRoute>} />
+          <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
+          <Route path="groups" element={<AdminRoute><GroupsPage /></AdminRoute>} />
           <Route path="accesses" element={<SuperAdminRoute><AccessesPage /></SuperAdminRoute>} />
           <Route path="profile" element={<ProfilePage />} />
 
-          <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

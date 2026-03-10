@@ -1,0 +1,19 @@
+export const WO_STATUS = {
+    NEW: 'new',
+    OPEN: 'open',
+    IN_PROGRESS: 'in_progress',
+    ON_HOLD: 'on_hold',
+    PENDING_REVIEW: 'pending_review',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+};
+
+export const WO_STATUS_TRANSITIONS: Record<string, string[]> = {
+    [WO_STATUS.NEW]: [WO_STATUS.OPEN, WO_STATUS.CANCELLED],
+    [WO_STATUS.OPEN]: [WO_STATUS.IN_PROGRESS, WO_STATUS.CANCELLED],
+    [WO_STATUS.IN_PROGRESS]: [WO_STATUS.PENDING_REVIEW, WO_STATUS.ON_HOLD, WO_STATUS.CANCELLED],
+    [WO_STATUS.ON_HOLD]: [WO_STATUS.IN_PROGRESS, WO_STATUS.CANCELLED],
+    [WO_STATUS.PENDING_REVIEW]: [WO_STATUS.COMPLETED, WO_STATUS.IN_PROGRESS, WO_STATUS.CANCELLED],
+    [WO_STATUS.COMPLETED]: [], // Terminal state
+    [WO_STATUS.CANCELLED]: [], // Terminal state
+};

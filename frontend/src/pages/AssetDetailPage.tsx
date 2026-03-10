@@ -148,7 +148,7 @@ const AssetDetailPage = () => {
             <CardDescription>{isNew ? 'Enter details for the new asset' : 'Update asset details and specifications'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form id="asset-form" onSubmit={handleSubmit} className="space-y-6">
+            <form id="asset-form" key={asset?.id || 'new'} onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="name">Asset Name *</Label>
@@ -173,9 +173,13 @@ const AssetDetailPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Asset Type</Label>
-                  <Select value={formData.asset_type} onValueChange={(v) => setFormData({ ...formData, asset_type: v })}>
+                  <Select 
+                    key={formData.asset_type || 'none'}
+                    value={formData.asset_type} 
+                    onValueChange={(v) => setFormData({ ...formData, asset_type: v })}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="movable">Movable</SelectItem>
@@ -186,7 +190,7 @@ const AssetDetailPage = () => {
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <Select 
-                    key={`${formData.category}-${asset?.id}`}
+                    key={formData.category || 'none'}
                     value={formData.category} 
                     onValueChange={(v) => setFormData({ ...formData, category: v })}
                   >

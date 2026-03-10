@@ -39,7 +39,7 @@ class AssetService {
         return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
     }
 
-    async getById(assetId: string, orgId: string): Promise<any> {
+    async getById(assetId: string, orgId: string | null): Promise<any> {
         const asset = await assetRepository.findById(assetId, orgId);
         if (!asset) throw new NotFoundError('Asset');
         return asset;
@@ -64,7 +64,7 @@ class AssetService {
         return assetRepository.bulkCreateWithTransaction(prepared);
     }
 
-    async update(assetId: string, orgId: string, dto: UpdateAssetDTO, audit: AuditContext): Promise<any> {
+    async update(assetId: string, orgId: string | null, dto: UpdateAssetDTO, audit: AuditContext): Promise<any> {
         const asset = await assetRepository.findById(assetId, orgId);
         if (!asset) throw new NotFoundError('Asset');
 
@@ -75,7 +75,7 @@ class AssetService {
         return asset;
     }
 
-    async delete(assetId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+    async delete(assetId: string, orgId: string | null, audit: AuditContext): Promise<{ message: string }> {
         const asset = await assetRepository.findByIdParanoid(assetId, orgId);
         if (!asset) throw new NotFoundError('Asset');
 
