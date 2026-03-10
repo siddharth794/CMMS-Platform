@@ -12,10 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Pagination } from '../components/ui/pagination';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Trash, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Trash, Loader2, AlertTriangle, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { addDays, format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Calendar } from '../components/ui/calendar';
 
 const PMSchedulesPage = () => {
   const [schedules, setSchedules] = useState([]);
@@ -30,10 +33,35 @@ const PMSchedulesPage = () => {
   const navigate = useNavigate();
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
+  
+  const [assets, setAssets] = useState([]);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    asset_id: '',
+    frequency_type: 'days',
+    frequency_value: 30,
+    priority: 'medium',
+    estimated_hours: '',
+    next_due: new Date(),
+  });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedPM, setSelectedPM] = useState(null);
 
   useEffect(() => {
     fetchData();
+    fetchAssets();
   }, [search, page, recordStatus]);
+
+  const fetchAssets = async () => {
+    try {
+      const res = await assetsApi.list();
+      setAssets(res.data.data || res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch assets', error);
+    }
+  };
 
   const fetchData = async () => {
     try {

@@ -9,8 +9,11 @@ class PMScheduleController {
     }
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const { skip = 0, limit = 100, asset_id, search, record_status } = req.query;
-        const result = await pmScheduleService.getAll(req.user!.org_id, {
+        const { skip = 0, limit = 100, asset_id, search, record_status, org_id } = req.query;
+        const roleName = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = (roleName === 'super_admin' && org_id) ? String(org_id) : req.user!.org_id;
+
+        const result = await pmScheduleService.getAll(targetOrgId, {
             asset_id: asset_id as string | undefined,
             skip: Number(skip),
             limit: Number(limit),
