@@ -17,9 +17,13 @@ class UserRepository {
         });
     }
 
-    async findById(userId: string, orgId: string): Promise<any | null> {
+    async findById(userId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: userId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
         return User.findOne({
-            where: { id: userId, org_id: orgId },
+            where,
             include: [{ model: Role }]
         });
     }
@@ -86,9 +90,13 @@ class UserRepository {
         await user.destroy({ force: true });
     }
 
-    async findByIdParanoid(userId: string, orgId: string): Promise<any | null> {
+    async findByIdParanoid(userId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: userId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
         return User.findOne({
-            where: { id: userId, org_id: orgId },
+            where,
             paranoid: false
         });
     }

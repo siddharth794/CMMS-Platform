@@ -30,7 +30,9 @@ class UserController {
     }
 
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const user = await userService.getById(req.params.user_id as string, req.user!.org_id);
+        const userRole = this.getRequestorRole(req);
+        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const user = await userService.getById(req.params.user_id as string, targetOrgId);
         res.json(user);
     }
 

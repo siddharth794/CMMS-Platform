@@ -17,7 +17,9 @@ class AssetController {
     }
 
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const asset = await assetService.getById(req.params.asset_id as string, req.user!.org_id);
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const asset = await assetService.getById(req.params.asset_id as string, targetOrgId);
         res.json(asset);
     }
 
@@ -32,12 +34,16 @@ class AssetController {
     }
 
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const asset = await assetService.update(req.params.asset_id as string, req.user!.org_id, req.body as UpdateAssetDTO, this.getAuditContext(req));
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const asset = await assetService.update(req.params.asset_id as string, targetOrgId, req.body as UpdateAssetDTO, this.getAuditContext(req));
         res.json(asset);
     }
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await assetService.delete(req.params.asset_id as string, req.user!.org_id, this.getAuditContext(req));
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const result = await assetService.delete(req.params.asset_id as string, targetOrgId, this.getAuditContext(req));
         res.json(result);
     }
 

@@ -11,12 +11,20 @@ class AssetRepository {
         });
     }
 
-    async findById(assetId: string, orgId: string): Promise<any | null> {
-        return Asset.findOne({ where: { id: assetId, org_id: orgId } });
+    async findById(assetId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: assetId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return Asset.findOne({ where });
     }
 
-    async findByIdParanoid(assetId: string, orgId: string): Promise<any | null> {
-        return Asset.findOne({ where: { id: assetId, org_id: orgId }, paranoid: false });
+    async findByIdParanoid(assetId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: assetId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return Asset.findOne({ where, paranoid: false });
     }
 
     async create(data: Record<string, any>): Promise<any> {
