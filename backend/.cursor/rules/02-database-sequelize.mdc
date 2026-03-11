@@ -1,0 +1,28 @@
+---
+description: Rules for modifying the database, creating models, and migrations.
+globs: backend/src/models/*, backend/migrations/*
+---
+# Database, Models & Migration Rules
+
+When adding new tables or modifying the database schema in this CMMS platform, follow these strict guidelines:
+
+1. **Multi-Tenancy Enforced (`org_id`)**: 
+   - Almost all operational tables (Users, Work Orders, Assets, Inventory) MUST have an `org_id` (UUID) column. 
+   - Never query these tables without explicitly including `where: { org_id: currentOrgId }` in your repository.
+
+2. **Soft Deletes**: 
+   - Use `paranoid: true` and include a `deleted_at` timestamp column for core entities to prevent accidental data loss. 
+   - Only lookup or join tables (like `user_roles`) should use hard deletes.
+
+3. **Migrations**: 
+   - Never modify the database schema directly. 
+   - Always generate a Sequelize migration (`npx sequelize-cli migration:generate --name add_new_column_name`).
+   - Write both `up` (to apply) and `down` (to revert) logic using `queryInterface`.
+
+4. **Model Definitions**: 
+   - Update `src/models/index.ts` to register new models and define associations (`hasMany`, `belongsTo`, `belongsToMany`). 
+   - Use `UUIDv4` for primary keys unless it's a legacy static lookup table.
+
+5. **Atomic Operations**: 
+   - For operations involving inventory deduction, status changes, or bulk updates, use Sequelize transactions (`sequelize.transaction()`). 
+   - This prevents race conditions and ensures data integrity if a step fails midway.

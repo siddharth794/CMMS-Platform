@@ -1,0 +1,30 @@
+---
+description: Standards for adding new features, routes, and layered architecture.
+globs: backend/src/**/*
+---
+# Architecture & Layered API Rules
+
+When creating a new feature or API endpoint in the CMMS backend, strictly follow the N-Tier layered architecture to ensure separation of concerns:
+
+1. **Route (`src/routes/`)**: 
+   - Define the HTTP method and path (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`). 
+   - Attach authentication, RBAC, and Zod validation middleware here.
+   - Example: `router.post('/work-orders', authenticate, requirePermission('create_wo'), validate(createWoSchema), createWorkOrderController);`
+
+2. **Validator (`src/validators/`)**: 
+   - Use `zod` to strictly validate `req.body`, `req.query`, and `req.params`. 
+   - Ensure you define error messages for missing or invalid data types.
+
+3. **Controller (`src/controllers/`)**: 
+   - Extract validated data (`req.body`) and user context (`req.user.org_id`, `req.user.id`). 
+   - Pass this extracted data to the corresponding Service layer.
+   - **Crucial**: Do NOT put heavy business logic or database logic here. The controller only parses the request and formats the response (e.g., `res.status(201).json({ ... })`).
+
+4. **Service (`src/services/`)**: 
+   - Contains the core business logic. 
+   - Handle complex domain rules (e.g., status transitions, calculating estimated hours).
+   - Orchestrate multiple repository calls and trigger notifications (`notificationService`) or audit logs.
+
+5. **Repository (`src/repositories/`)**: 
+   - All Sequelize database queries (`Model.find()`, `Model.create()`) go here. 
+   - **CRITICAL**: Always scope queries by `org_id` to maintain multi-tenancy and prevent cross-tenant data leaks.
