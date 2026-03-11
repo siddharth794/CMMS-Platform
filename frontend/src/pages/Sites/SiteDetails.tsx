@@ -6,7 +6,6 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
-import { Switch } from '../../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -70,10 +69,6 @@ export default function SiteDetails() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, is_active: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -213,15 +208,6 @@ export default function SiteDetails() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} rows={3} />
                 </div>
-                {!isNew && (
-                  <div className="flex items-center justify-between p-3 border rounded-md">
-                    <div className="space-y-0.5">
-                      <Label>Active Status</Label>
-                      <p className="text-sm text-muted-foreground">Is this site currently operational?</p>
-                    </div>
-                    <Switch checked={formData.is_active} onCheckedChange={handleSwitchChange} />
-                  </div>
-                )}
                 
                 <div className="space-y-2 pt-4 border-t">
                   <Label htmlFor="manager">Facility Manager</Label>
