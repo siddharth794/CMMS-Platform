@@ -81,7 +81,7 @@ export default function SiteDetails() {
           payload.manager_id = selectedManager;
         }
         await createMutation.mutateAsync(payload);
-        addNotification('Site created successfully', 'success');
+        addNotification('success', 'Site created successfully');
         navigate('/sites');
       } else {
         // Update Site Info
@@ -95,10 +95,10 @@ export default function SiteDetails() {
           });
         }
         
-        addNotification('Site updated successfully', 'success');
+        addNotification('success', 'Site updated successfully');
       }
     } catch (error: any) {
-      addNotification(error.response?.data?.error || `Failed to ${isNew ? 'create' : 'update'} site`, 'error');
+      addNotification('error', error.response?.data?.detail || error.response?.data?.error || `Failed to ${isNew ? 'create' : 'update'} site`);
     }
   };
 
@@ -109,10 +109,10 @@ export default function SiteDetails() {
         id: id as string,
         userId: selectedTechnician,
       });
-      addNotification('Technician assigned successfully', 'success');
+      addNotification('success', 'Technician assigned successfully');
       setSelectedTechnician('');
     } catch (error: any) {
-      addNotification(error.response?.data?.error || 'Failed to assign technician', 'error');
+      addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to assign technician');
     }
   };
 
@@ -123,9 +123,9 @@ export default function SiteDetails() {
           id: id as string,
           userId,
         });
-        addNotification('Technician removed successfully', 'success');
+        addNotification('success', 'Technician removed successfully');
       } catch (error: any) {
-        addNotification(error.response?.data?.error || 'Failed to remove technician', 'error');
+        addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to remove technician');
       }
     }
   };

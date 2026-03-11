@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,10 +39,10 @@ export default function SitesList() {
     setSubmitting(true);
     try {
       await bulkDeleteMutation.mutateAsync({ ids: selectedIds, force: recordStatus === 'inactive' });
-      addNotification(`${selectedIds.length} sites ${recordStatus === 'active' ? 'deleted' : 'permanently deleted'} successfully`, 'success');
+      addNotification('success', `${selectedIds.length} sites ${recordStatus === 'active' ? 'deleted' : 'permanently deleted'} successfully`);
       setSelectedIds([]);
     } catch (error: any) {
-      addNotification(error.response?.data?.error || 'Failed to bulk delete sites', 'error');
+      addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to bulk delete sites');
     } finally {
       setSubmitting(false);
     }
@@ -67,9 +67,9 @@ export default function SitesList() {
     if (window.confirm('Are you sure you want to delete this site?')) {
       try {
         await deleteMutation.mutateAsync(id);
-        addNotification('Site deleted successfully', 'success');
+        addNotification('success', 'Site deleted successfully');
       } catch (error: any) {
-        addNotification(error.response?.data?.error || 'Failed to delete site', 'error');
+        addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to delete site');
       }
     }
   };

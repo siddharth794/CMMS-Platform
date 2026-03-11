@@ -172,7 +172,7 @@ export class SiteService {
         if (!user) throw new NotFoundError('User not found');
 
         // Check user role
-        const roleName = user.Role?.name || (user.Roles?.[0]?.name);
+        const roleName = user.Role?.name || user.Roles?.[0]?.name || user.role?.name;
         if (!roleName || roleName.toLowerCase() !== 'technician') {
             throw new BadRequestError('User is not a Technician');
         }
