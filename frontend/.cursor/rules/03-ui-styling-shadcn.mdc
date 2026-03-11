@@ -1,0 +1,21 @@
+---
+description: Rules for styling, Tailwind CSS, shadcn/ui, and Icons.
+globs: frontend/src/components/*, frontend/src/pages/*
+---
+# UI Styling & Component Rules
+
+This application uses **Tailwind CSS**, **shadcn/ui**, and **Lucide Icons** exclusively for styling.
+
+1. **Tailwind CSS (`className`)**:
+   - Write all styling inline using Tailwind utility classes (`className="flex flex-col gap-4 p-6 bg-white"`).
+   - NEVER write custom CSS in `.css` files unless absolutely unavoidable for complex animations or global overrides (which should go in `index.css`).
+
+2. **UI Framework (`shadcn/ui`)**:
+   - Instead of building common components (like inputs, modals, select boxes) from scratch, always use or install the corresponding `shadcn/ui` component.
+   - Example: For a popup, use `Dialog` from `@radix-ui/react-dialog` (via your local `components/ui/dialog.tsx`).
+   - Combine Tailwind classes cleanly using `cn` (clsx + tailwind-merge) utility if you need dynamic classes.
+
+3. **Icons (`lucide-react`)**:
+   - Only use standard icons from `lucide-react`.
+   - Example: `<CheckCircle className="h-5 w-5 text-green-500" />`.
+   - NEVER import external icon libraries (FontAwesome, Material Icons, Heroicons).

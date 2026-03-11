@@ -1,0 +1,21 @@
+---
+description: Data fetching, API calls, and state management rules.
+globs: frontend/src/pages/*, frontend/src/hooks/*, frontend/src/lib/*
+---
+# Data Fetching & State Management Rules
+
+We use **TanStack React Query** (`@tanstack/react-query`) for all server-state management and **Axios** for API calls.
+
+1. **Server State (React Query)**:
+   - NEVER use `useEffect` + `useState` to fetch data from the API.
+   - Always use `useQuery` for fetching data (GET requests).
+   - Always use `useMutation` for creating, updating, or deleting data (POST, PUT, PATCH, DELETE).
+   - Invalidate queries on successful mutations (e.g., `queryClient.invalidateQueries({ queryKey: ['workOrders'] })`) to trigger automatic UI refreshes.
+
+2. **API Client (`Axios`)**:
+   - All API calls must go through the configured Axios instance (usually defined in `src/lib/axios.ts` or `src/lib/api.ts`).
+   - This instance should automatically attach the JWT token (via interceptors or local storage lookup) to the `Authorization` header.
+
+3. **Client State**:
+   - Use standard React `useState` and `useReducer` for pure UI state (e.g., modal open/close, active tab).
+   - Do not duplicate server data into client state. Rely on the data returned directly by `useQuery`.

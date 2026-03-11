@@ -1,0 +1,24 @@
+---
+description: React architecture, component organization, and routing rules.
+globs: frontend/src/**/*
+---
+# React Architecture & Organization Rules
+
+This is a modern React + Vite + TypeScript application. When creating or modifying UI components and pages, strictly adhere to this structure:
+
+1. **Pages (`src/pages/`)**:
+   - Place all top-level route components here (e.g., `Dashboard.tsx`, `WorkOrders.tsx`).
+   - Pages should handle high-level layout, data fetching orchestration (via React Query hooks), and pass props down to dumb components.
+
+2. **Components (`src/components/`)**:
+   - `src/components/ui/`: Reserved strictly for reusable, atomic shadcn/ui components (e.g., `Button`, `Dialog`, `Input`). Do not modify these unless globally necessary.
+   - `src/components/`: Place domain-specific reusable components here (e.g., `WorkOrderCard.tsx`, `AssetList.tsx`). These should ideally be "dumb" components that receive data via props.
+
+3. **Routing (`react-router-dom`)**:
+   - Define all routes in the root router configuration (usually `App.tsx` or a dedicated routes file).
+   - Use `useNavigate` for programmatic navigation and `<Link>` for declarative navigation.
+   - Protect private routes using an authentication wrapper component (e.g., `<ProtectedRoute>`).
+
+4. **Types (`src/types/`)**:
+   - Define all shared TypeScript interfaces and types here (e.g., `WorkOrder`, `User`). 
+   - Keep types strictly aligned with the backend's Zod schemas and DTOs.
