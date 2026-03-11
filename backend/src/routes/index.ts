@@ -10,6 +10,7 @@ import woRoutes from './workOrders';
 import pmRoutes from './pmSchedules';
 import invRoutes from './inventory';
 import analyticsRoutes from './analytics';
+import siteRoutes from './sites';
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use('/work-orders', woRoutes);
 router.use('/pm-schedules', pmRoutes);
 router.use('/inventory', invRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/sites', siteRoutes);
 
 export default router;

@@ -230,3 +230,26 @@ export interface CreateAccessDTO {
 }
 
 export type UpdateAccessDTO = Partial<CreateAccessDTO>;
+
+// ─── Site DTOs ────────────────────────────────────────────────────
+export interface CreateSiteDTO {
+    name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    country?: string;
+    phone?: string;
+    description?: string;
+    is_active?: boolean;
+    manager_id?: string | null;
+}
+
+export type UpdateSiteDTO = Partial<CreateSiteDTO>;
+
+export interface SiteListQuery {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    record_status?: string;
+}

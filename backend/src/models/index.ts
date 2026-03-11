@@ -14,6 +14,27 @@ Organization.init({
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'organizations', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
+class Site extends Model {
+  public id!: string;
+  public name!: string;
+  public org_id!: string;
+  public manager_id!: string | null;
+}
+Site.init({
+  id:          { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  org_id:      { type: DataTypes.UUID, allowNull: false },
+  name:        { type: DataTypes.STRING, allowNull: false },
+  address:     { type: DataTypes.TEXT },
+  city:        { type: DataTypes.STRING(100) },
+  state:       { type: DataTypes.STRING(100) },
+  zip_code:    { type: DataTypes.STRING(20) },
+  country:     { type: DataTypes.STRING(100) },
+  phone:       { type: DataTypes.STRING(20) },
+  description: { type: DataTypes.TEXT },
+  is_active:   { type: DataTypes.BOOLEAN, defaultValue: true },
+  manager_id:  { type: DataTypes.UUID, allowNull: true },
+}, { sequelize, tableName: 'sites', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
 class Role extends Model { public id!: number; public name!: string; public org_id?: string; public is_system_role!: boolean; }
 Role.init({
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -46,7 +67,8 @@ class User extends Model {
     public id!: string; 
     public email!: string; 
     public password_hash!: string; 
-    public org_id!: string; 
+    public org_id!: string;
+    public site_id?: string | null;
     
     toJSON() {
         const values = Object.assign({}, this.get());
@@ -60,6 +82,7 @@ class User extends Model {
 User.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
+    site_id: { type: DataTypes.UUID, allowNull: true },
     email: { type: DataTypes.STRING, allowNull: false, unique: true },
     username: { type: DataTypes.STRING(100), allowNull: false },
     first_name: { type: DataTypes.STRING(100) },
@@ -322,9 +345,22 @@ WorkOrderInventoryItem.belongsTo(InventoryItem, { as: 'item', foreignKey: 'inven
 WorkOrder.hasMany(WOAttachment, { as: 'attachments', foreignKey: 'work_order_id', onDelete: 'CASCADE' });
 WOAttachment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
+// Organization -> Sites
+Organization.hasMany(Site, { foreignKey: 'org_id' });
+Site.belongsTo(Organization, { foreignKey: 'org_id' });
+
+// Site -> Facility Manager (1:1)
+Site.belongsTo(User, { as: 'manager', foreignKey: 'manager_id' });
+User.hasOne(Site, { as: 'managed_site', foreignKey: 'manager_id' });
+
+// Site -> Technicians (1:N)
+Site.hasMany(User, { as: 'technicians', foreignKey: 'site_id' });
+User.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+
 
 export {
     Organization,
+    Site,
     Role,
     Access,
     Group,

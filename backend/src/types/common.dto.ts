@@ -29,6 +29,7 @@ export interface AuditContext {
     orgId: string;
     userId: string;
     userEmail: string;
+    ipAddress?: string;
 }
 
 /** Standard message response */
