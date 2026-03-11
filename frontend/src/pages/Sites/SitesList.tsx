@@ -19,7 +19,7 @@ export default function SitesList() {
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 
-  const { data: sitesData, isLoading: loading } = useSites({
+  const { data: sitesData, isLoading: loading, isError } = useSites({
     search,
     record_status: recordStatus,
     skip: (page - 1) * 10,
@@ -96,10 +96,10 @@ export default function SitesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sitesData?.data?.length === 0 ? (
+                {isError || !sitesData?.data || sitesData.data.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No sites found
+                      {isError ? 'Failed to load sites. Please try again.' : 'No sites found'}
                     </TableCell>
                   </TableRow>
                 ) : (

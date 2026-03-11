@@ -155,7 +155,8 @@ export default function SiteDetails() {
   // Filter users by role
   const facilityManagers = allUsers.filter((u: User) => {
     const roleName = u.Role?.name || u.role?.name || '';
-    return roleName.toLowerCase() === 'facility manager';
+    const roleNameLower = roleName.toLowerCase();
+    return roleNameLower === 'facility manager' || roleNameLower === 'facility_manager';
   });
   const technicians = allUsers.filter((u: User) => {
     const roleName = u.Role?.name || u.role?.name || '';
@@ -212,13 +213,15 @@ export default function SiteDetails() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} rows={3} />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
-                  <div className="space-y-0.5">
-                    <Label>Active Status</Label>
-                    <p className="text-sm text-muted-foreground">Is this site currently operational?</p>
+                {!isNew && (
+                  <div className="flex items-center justify-between p-3 border rounded-md">
+                    <div className="space-y-0.5">
+                      <Label>Active Status</Label>
+                      <p className="text-sm text-muted-foreground">Is this site currently operational?</p>
+                    </div>
+                    <Switch checked={formData.is_active} onCheckedChange={handleSwitchChange} />
                   </div>
-                  <Switch checked={formData.is_active} onCheckedChange={handleSwitchChange} />
-                </div>
+                )}
                 
                 <div className="space-y-2 pt-4 border-t">
                   <Label htmlFor="manager">Facility Manager</Label>

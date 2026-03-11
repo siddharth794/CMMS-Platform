@@ -9,6 +9,7 @@ export const CreateUserSchema = z.object({
     last_name: z.string().max(100).optional(),
     phone: z.string().max(20).optional(),
     org_id: z.string().uuid().optional(),
+    site_id: z.string().uuid().nullable().optional(),
 }).strict();
 
 export const UpdateUserSchema = z.object({
@@ -20,6 +21,7 @@ export const UpdateUserSchema = z.object({
     last_name: z.string().max(100).optional(),
     phone: z.string().max(20).optional(),
     is_active: z.boolean().optional(),
+    site_id: z.string().uuid().nullable().optional(),
 }).strict();
 
 export const BulkDeleteSchema = z.object({

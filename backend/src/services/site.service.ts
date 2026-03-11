@@ -28,13 +28,15 @@ export class SiteService {
             ];
         }
 
-        const { rows, count } = await siteRepository.findAll(orgId, skip, limit, where);
+        const parsedSkip = Number(skip) || 0;
+        const parsedLimit = Number(limit) || 100;
+        const { rows, count } = await siteRepository.findAll(orgId, parsedSkip, parsedLimit, where);
 
         return {
             data: rows,
             total: count,
-            skip,
-            limit
+            skip: parsedSkip,
+            limit: parsedLimit
         };
     }
 
@@ -220,7 +222,8 @@ export class SiteService {
 
         const roleName = user.Role?.name || (user.Roles?.[0]?.name);
         // Note: the existing system uses "Facility Manager" role name
-        if (!roleName || roleName.toLowerCase() !== 'facility manager') {
+        const roleNameLower = roleName ? roleName.toLowerCase() : '';
+        if (roleNameLower !== 'facility manager' && roleNameLower !== 'facility_manager') {
             throw new BadRequestError('User does not have the Facility Manager role');
         }
 

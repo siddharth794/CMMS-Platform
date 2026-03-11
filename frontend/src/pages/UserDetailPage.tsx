@@ -41,7 +41,20 @@ const UserDetailPage = () => {
     username: '',
     phone: '',
     role_id: '',
+    site_id: 'none',
   });
+
+  const selectedOrgId = isSuperAdmin ? user?.org_id : currentUser?.org_id;
+  const { data: sitesData, isLoading: isLoadingSites } = useQuery({
+    queryKey: ['sites', { org_id: selectedOrgId, limit: 100 }],
+    queryFn: async () => {
+      const { sitesApi } = await import('../lib/api');
+      const { data } = await sitesApi.list({ org_id: selectedOrgId, limit: 100 });
+      return data;
+    },
+    enabled: !!selectedOrgId
+  });
+  const sites = sitesData?.data || [];
 
   useEffect(() => {
     if (user && roles.length > 0) {
@@ -56,6 +69,7 @@ const UserDetailPage = () => {
         username: user.username || '',
         phone: user.phone || '',
         role_id: assignedRoleId,
+        site_id: user.site_id || 'none',
       });
     } else if (user) {
       // Fallback if roles aren't loaded yet
@@ -66,6 +80,7 @@ const UserDetailPage = () => {
         email: user.email || '',
         username: user.username || '',
         phone: user.phone || '',
+        site_id: user.site_id || 'none',
       }));
     }
   }, [user, roles]);

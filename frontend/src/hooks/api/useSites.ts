@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { sitesApi } from '../../lib/api';
 import { Site, PaginatedResponse } from '../../types/models';
 
@@ -9,7 +9,7 @@ export const useSites = (params: any) => {
       const { data } = await sitesApi.list(params);
       return data;
     },
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 };
 

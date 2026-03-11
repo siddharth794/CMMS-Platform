@@ -38,6 +38,18 @@ const CreateUserPage = () => {
   const { data: orgsData, isLoading: isLoadingOrgs } = useOrganizations({ limit: 100 });
   const organizations = orgsData?.data || [];
 
+  const selectedOrgId = isSuperAdmin ? userForm.org_id : currentUser?.org_id;
+  const { data: sitesData, isLoading: isLoadingSites } = useQuery({
+    queryKey: ['sites', { org_id: selectedOrgId, limit: 100 }],
+    queryFn: async () => {
+      const { sitesApi } = await import('../lib/api');
+      const { data } = await sitesApi.list({ org_id: selectedOrgId, limit: 100 });
+      return data;
+    },
+    enabled: !!selectedOrgId
+  });
+  const sites = sitesData?.data || [];
+
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {

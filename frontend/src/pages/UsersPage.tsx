@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, Trash2, Loader2, Users, Trash } from 'lucide-react';
+import { Plus, Search, Trash2, Loader2, Users, Trash, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUsers, useCreateUser, useBulkDeleteUsers, useDeleteUser } from '../hooks/api/useUsers';
 import { rolesApi } from '../lib/api';
@@ -152,19 +152,8 @@ const UsersPage = () => {
                 )}
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>
-                  <Select value={roleFilter || "all"} onValueChange={(v) => { setRoleFilter(v === "all" ? "" : v); setPage(1); }}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none w-[140px] p-0 h-auto font-medium text-muted-foreground hover:text-foreground focus:ring-0">
-                      <SelectValue placeholder="Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      {roles.map(role => (
-                        <SelectItem key={role.id} value={role.name}>{role.name.replace('_', ' ')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Assigned Site</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -173,13 +162,13 @@ const UsersPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin() ? 7 : 6} className="text-center py-8">
+                  <TableCell colSpan={isAdmin() ? 8 : 7} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin() ? 7 : 6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isAdmin() ? 8 : 7} className="text-center text-muted-foreground py-8">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -205,6 +194,14 @@ const UsersPage = () => {
                       <span className="status-badge status-open">
                         {(u.role?.name || u.Role?.name || '').replace('_', ' ')}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {u.site?.name ? (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {u.site.name}
+                        </div>
+                      ) : '-'}
                     </TableCell>
                     <TableCell>
                       <span className={`status-badge ${u.is_active ? 'status-completed' : 'status-cancelled'}`}>
