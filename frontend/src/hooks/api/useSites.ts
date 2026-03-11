@@ -64,6 +64,19 @@ export const useDeleteSite = () => {
   });
 };
 
+export const useBulkDeleteSites = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { ids: string[]; force?: boolean }) => {
+      const { data: responseData } = await sitesApi.bulkDelete(data);
+      return responseData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+    },
+  });
+};
+
 export const useAssignSiteManager = () => {
   const queryClient = useQueryClient();
   return useMutation({

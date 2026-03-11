@@ -7,15 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
-import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Loader2, MapPin } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Search, Trash, Trash2, Loader2, MapPin } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
-import { useSites, useDeleteSite } from '../../hooks/api/useSites';
+import { useAuth } from '../../context/AuthContext';
+import { useSites, useDeleteSite, useBulkDeleteSites } from '../../hooks/api/useSites';
 
 export default function SitesList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const { addNotification } = useNotification();
+  const { isManager } = useAuth();
   const navigate = useNavigate();
 
   const { data: sitesData, isLoading: loading, isError } = useSites({
@@ -26,6 +31,37 @@ export default function SitesList() {
   });
 
   const deleteMutation = useDeleteSite();
+  const bulkDeleteMutation = useBulkDeleteSites();
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} sites?`)) return;
+    
+    setSubmitting(true);
+    try {
+      await bulkDeleteMutation.mutateAsync({ ids: selectedIds, force: recordStatus === 'inactive' });
+      addNotification(`${selectedIds.length} sites ${recordStatus === 'active' ? 'deleted' : 'permanently deleted'} successfully`, 'success');
+      setSelectedIds([]);
+    } catch (error: any) {
+      addNotification(error.response?.data?.error || 'Failed to bulk delete sites', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    const sites = sitesData?.data || [];
+    if (selectedIds.length === sites.length && sites.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(sites.map((s: any) => s.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this site?')) {
@@ -64,8 +100,15 @@ export default function SitesList() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <div className="w-[180px]">
-              <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
+            <div className="flex items-center gap-2">
+              {isManager() && selectedIds.length > 0 && (
+                <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+              <div className="w-[180px]">
+                <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Record Status" />
                 </SelectTrigger>
@@ -75,6 +118,7 @@ export default function SitesList() {
                 </SelectContent>
               </Select>
             </div>
+            </div>
           </div>
         </div>
         
@@ -83,10 +127,18 @@ export default function SitesList() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <>
+          <CardContent className="pt-6">
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isManager() && (
+                    <TableHead className="w-[40px]">
+                      <Checkbox 
+                        checked={sitesData?.data?.length > 0 && selectedIds.length === sitesData.data.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Name</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Facility Manager</TableHead>
@@ -97,13 +149,21 @@ export default function SitesList() {
               <TableBody>
                 {isError || !sitesData?.data || sitesData.data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={isManager() ? 6 : 5} className="text-center py-8 text-muted-foreground">
                       {isError ? 'Failed to load sites. Please try again.' : 'No sites found'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   sitesData?.data?.map((site: any) => (
                     <TableRow key={site.id}>
+                      {isManager() && (
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedIds.includes(site.id)}
+                            onCheckedChange={() => toggleSelect(site.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -126,14 +186,16 @@ export default function SitesList() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive h-8 w-8"
-                          onClick={() => handleDelete(site.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {isManager() && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive h-8 w-8"
+                            onClick={() => handleDelete(site.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -149,7 +211,7 @@ export default function SitesList() {
                 onPageChange={setPage}
               />
             </div>
-          </>
+          </CardContent>
         )}
       </Card>
     </div>
