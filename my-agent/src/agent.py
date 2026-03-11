@@ -1,5 +1,7 @@
 import logging
+import os
 
+import httpx
 from dotenv import load_dotenv
 from livekit import rtc
 from livekit.agents import (
@@ -8,7 +10,9 @@ from livekit.agents import (
     AgentSession,
     JobContext,
     JobProcess,
+    RunContext,
     cli,
+    function_tool,
     inference,
     room_io,
 )
@@ -20,31 +24,91 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 
+CMMS_API_URL = os.getenv("CMMS_API_URL", "http://localhost:8000/api")
+CMMS_API_TOKEN = os.getenv("CMMS_API_TOKEN", "")
+
+
 class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions="""You are a helpful voice AI assistant. The user is interacting with you via voice, even if you perceive the conversation as text.
-            You eagerly assist users with their questions by providing information from your extensive knowledge.
-            Your responses are concise, to the point, and without any complex formatting or punctuation including emojis, asterisks, or other symbols.
-            You are curious, friendly, and have a sense of humor.""",
+            instructions="""You are the AI Voice Assistant for Spartans FMS, a Computerized Maintenance Management System.
+            You help field technicians and maintenance managers handle their tasks hands-free via voice.
+            You can check their open work orders, update work order statuses, and check inventory.
+
+            Guidelines:
+            - Keep your responses concise, clear, and professional, as they are spoken out loud over a phone or headset.
+            - NEVER use complex formatting, emojis, asterisks, or markdown.
+            - When reading out work order numbers or IDs, speak them clearly (e.g., "Work Order 1 0 5").""",
         )
 
-    # To add tools, use the @function_tool decorator.
-    # Here's an example that adds a simple weather tool.
-    # You also have to add `from livekit.agents import function_tool, RunContext` to the top of this file
-    # @function_tool
-    # async def lookup_weather(self, context: RunContext, location: str):
-    #     """Use this tool to look up current weather information in the given location.
-    #
-    #     If the location is not supported by the weather service, the tool will indicate this. You must tell the user the location's weather is unavailable.
-    #
-    #     Args:
-    #         location: The location to look up weather information for (e.g. city name)
-    #     """
-    #
-    #     logger.info(f"Looking up weather for {location}")
-    #
-    #     return "sunny with a temperature of 70 degrees."
+    @function_tool
+    async def get_open_work_orders(
+        self, context: RunContext, status: str = "OPEN"
+    ) -> str:
+        """Use this tool to find work orders based on their status (e.g., OPEN, IN_PROGRESS).
+
+        Args:
+            status: The status of the work orders to retrieve.
+        """
+        logger.info(f"Fetching work orders with status: {status}")
+        headers = {"Authorization": f"Bearer {CMMS_API_TOKEN}"}
+
+        async with httpx.AsyncClient() as client:
+            try:
+                # Calls existing Express GET /api/work-orders endpoint
+                response = await client.get(
+                    f"{CMMS_API_URL}/work-orders",
+                    params={"status": status},
+                    headers=headers,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                if not data or len(data) == 0:
+                    return f"There are no work orders currently in {status} status."
+
+                # Format a concise summary suitable for Voice TTS
+                summaries = [
+                    f"ID {wo.get('wo_id')}: {wo.get('title', 'No title')}"
+                    for wo in data[:3]
+                ]
+                return (
+                    f"I found {len(data)} {status} work orders. The first few are: "
+                    + ", ".join(summaries)
+                )
+            except Exception as e:
+                logger.error(f"Error fetching work orders: {e}")
+                return "I'm sorry, I encountered an error while trying to fetch the work orders from the backend."
+
+    @function_tool
+    async def update_work_order_status(
+        self, context: RunContext, wo_id: int, new_status: str
+    ) -> str:
+        """Use this tool when a technician wants to update the status of a specific work order.
+
+        Args:
+            wo_id: The numerical ID of the work order.
+            new_status: The new status to set (e.g., 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD').
+        """
+        logger.info(f"Updating WO {wo_id} to {new_status}")
+        headers = {"Authorization": f"Bearer {CMMS_API_TOKEN}"}
+
+        async with httpx.AsyncClient() as client:
+            try:
+                # Calls existing Express PATCH /api/work-orders/:wo_id/status endpoint
+                response = await client.patch(
+                    f"{CMMS_API_URL}/work-orders/{wo_id}/status",
+                    json={"status": new_status},
+                    headers=headers,
+                )
+                response.raise_for_status()
+                return f"Successfully updated work order {wo_id} to {new_status}."
+            except httpx.HTTPStatusError as e:
+                logger.error(f"HTTP Error: {e.response.text}")
+                return "I couldn't update the work order. The server responded with an error."
+            except Exception as e:
+                logger.error(f"Error updating work order: {e}")
+                return f"I'm sorry, I couldn't update work order {wo_id}."
 
 
 server = AgentServer()
