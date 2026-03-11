@@ -63,6 +63,7 @@ const CreateUserPage = () => {
       const payload = { ...userForm, role_id: parseInt(userForm.role_id) };
       // Omit org_id if not super admin to let backend default to their own
       if (!isSuperAdmin) delete payload.org_id;
+      if (payload.site_id === 'none') delete payload.site_id;
       
       const createdUser = await createUserMutation.mutateAsync(payload);
       const newUserId = createdUser.id;
@@ -213,32 +214,69 @@ const CreateUserPage = () => {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>Core Role *</Label>
-              {isLoadingRoles ? (
-                <div className="flex items-center h-10 px-3 py-2 border rounded-md opacity-50">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading roles...
-                </div>
-              ) : (
-                <Select value={userForm.role_id} onValueChange={(v) => setUserForm({ ...userForm, role_id: v })} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles
-                      .filter(role => {
-                        const roleName = role.name.toLowerCase();
-                        if (isSuperAdmin) return roleName !== 'super_admin';
-                        return !['super_admin', 'org_admin'].includes(roleName);
-                      })
-                      .map((role) => (
-                        <SelectItem key={role.id} value={role.id.toString()}>
-                          {role.name.replace('_', ' ')}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Core Role *</Label>
+                {isLoadingRoles ? (
+                  <div className="flex items-center h-10 px-3 py-2 border rounded-md opacity-50">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading roles...
+                  </div>
+                ) : (
+                  <Select value={userForm.role_id} onValueChange={(v) => setUserForm({ ...userForm, role_id: v })} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles
+                        .filter(role => {
+                          const roleName = role.name.toLowerCase();
+                          if (isSuperAdmin) return roleName !== 'super_admin';
+                          return !['super_admin', 'org_admin'].includes(roleName);
+                        })
+                        .map((role) => (
+                          <SelectItem key={role.id} value={role.id.toString()}>
+                            {role.name.replace('_', ' ')}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {userForm.role_id && (() => {
+                const selectedRole = roles.find(r => r.id.toString() === userForm.role_id);
+                const roleName = selectedRole?.name?.toLowerCase() || '';
+                if (roleName === 'technician' || roleName === 'facility manager') {
+                  return (
+                    <div className="space-y-2">
+                      <Label>Assigned Site</Label>
+                      {isLoadingSites ? (
+                        <div className="flex items-center h-10 px-3 py-2 border rounded-md opacity-50">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading sites...
+                        </div>
+                      ) : (
+                        <Select value={userForm.site_id} onValueChange={(v) => setUserForm({ ...userForm, site_id: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a site" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">-- Unassigned --</SelectItem>
+                            {sites.map((site) => (
+                              <SelectItem key={site.id} value={site.id}>
+                                {site.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Optional. Links this user directly to a specific site.
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </CardContent>
         </Card>

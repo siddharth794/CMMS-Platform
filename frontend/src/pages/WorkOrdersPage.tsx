@@ -86,7 +86,9 @@ const WorkOrdersPage = () => {
   const total = woData?.total || 0;
 
   const { data: assets = [] } = useAssets();
-  const { data: users = [] } = useUsers();
+  // useUsers from useSharedQueries might return an object with data property if not handled cleanly or an array
+  const { data: usersData } = useUsers();
+  const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
 
   const createMutation = useCreateWorkOrder();
   const assignMutation = useAssignWorkOrder();

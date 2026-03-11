@@ -151,6 +151,19 @@ export const inventoryApi = {
   getCategories: () => api.get('/inventory/categories'),
 };
 
+// Sites
+export const sitesApi = {
+  list: (params: any) => api.get('/sites', { params }),
+  get: (id: string) => api.get(`/sites/${id}`),
+  create: (data: any) => api.post('/sites', data),
+  update: (id: string, data: any) => api.put(`/sites/${id}`, data),
+  delete: (id: string) => api.delete(`/sites/${id}`),
+  bulkDelete: (data: any) => api.post('/sites/bulk-delete', data),
+  assignManager: (id: string, managerId: string | null) => api.put(`/sites/${id}/manager`, { manager_id: managerId }),
+  assignTechnician: (id: string, userId: string) => api.put(`/sites/${id}/technicians/${userId}`),
+  removeTechnician: (id: string, userId: string) => api.delete(`/sites/${id}/technicians/${userId}`),
+};
+
 // Seed Demo Data
 export const seedDemoData = () => api.post('/seed-demo-data');
 

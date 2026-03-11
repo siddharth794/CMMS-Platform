@@ -7,7 +7,7 @@ export const useAssets = (params?: any) => {
     queryKey: ['assets', params],
     queryFn: async (): Promise<Asset[]> => {
       const { data } = await assetsApi.list(params || { limit: 1000 });
-      return data.data || data;
+      return Array.isArray(data) ? data : (data?.data || []);
     },
   });
 };
@@ -17,7 +17,7 @@ export const useUsers = (params?: any) => {
     queryKey: ['users', params],
     queryFn: async (): Promise<User[]> => {
       const { data } = await usersApi.list(params || { limit: 1000 });
-      return data.data || data;
+      return Array.isArray(data) ? data : (data?.data || []);
     },
   });
 };

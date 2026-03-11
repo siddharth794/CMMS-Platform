@@ -8,7 +8,26 @@ export interface User {
   Role?: Role; // sometimes capitalized in the current code
   department?: string;
   is_active: boolean;
+  site_id?: string | null;
   created_at?: string;
+}
+
+export interface Site {
+  id: string;
+  name: string;
+  org_id: string;
+  manager_id?: string | null;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+  phone?: string;
+  description?: string;
+  is_active: boolean;
+  created_at?: string;
+  manager?: User;
+  technicians?: User[];
 }
 
 export interface Role {
