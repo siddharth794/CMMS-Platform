@@ -12,6 +12,7 @@ import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useCreateWorkOrder } from '../hooks/api/useWorkOrders';
 import { useAssetsData } from '../hooks/api/useAssets';
+import { useSites } from '../hooks/api/useSharedQueries';
 
 const CreateWorkOrderPage = () => {
   const navigate = useNavigate();
@@ -20,22 +21,33 @@ const CreateWorkOrderPage = () => {
   const createMutation = useCreateWorkOrder();
   const { data: assetsData } = useAssetsData();
   const assets = assetsData?.data || [];
+  const { data: sites = [] } = useSites();
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'medium',
     asset_id: '',
+    site_id: '',
     location: '',
   });
+
+  const handleAssetChange = (assetId: string) => {
+    const selectedAsset = assets.find(a => a.id === assetId);
+    setFormData(prev => ({
+      ...prev,
+      asset_id: assetId === 'none' ? '' : assetId,
+      site_id: selectedAsset?.site_id || prev.site_id,
+      location: selectedAsset?.location || prev.location
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const payload = { ...formData };
-      if (payload.asset_id === 'none') {
-        delete payload.asset_id;
-      }
+      if (payload.asset_id === 'none' || !payload.asset_id) delete payload.asset_id;
+      if (payload.site_id === 'none' || !payload.site_id) delete payload.site_id;
       const wo = await createMutation.mutateAsync(payload);
       addNotification('success', 'Work order created successfully');
       navigate('/work-orders');
@@ -116,7 +128,7 @@ const CreateWorkOrderPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="asset_id">Related Asset</Label>
-                <Select value={formData.asset_id} onValueChange={(v) => setFormData({ ...formData, asset_id: v })}>
+                <Select value={formData.asset_id || "none"} onValueChange={handleAssetChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select an asset (optional)" />
                   </SelectTrigger>
@@ -124,6 +136,21 @@ const CreateWorkOrderPage = () => {
                     <SelectItem value="none">None</SelectItem>
                     {assets.map(a => (
                       <SelectItem key={a.id} value={a.id}>{a.name} ({a.asset_tag})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="site_id">Site</Label>
+                <Select value={formData.site_id || "none"} onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a site (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {sites.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

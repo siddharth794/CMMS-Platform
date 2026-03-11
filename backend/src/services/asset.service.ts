@@ -11,7 +11,7 @@ function generateAssetTag(): string {
 
 class AssetService {
     async getAll(orgId: string, query: AssetListQuery): Promise<PaginatedResponse<any>> {
-        const { skip = 0, limit = 100, search, asset_type, status, record_status } = query;
+        const { skip = 0, limit = 100, search, asset_type, status, record_status, site_id } = query;
         let where: any = {};
         let paranoid = true;
 
@@ -34,6 +34,7 @@ class AssetService {
         }
         if (asset_type) where.asset_type = asset_type;
         if (status) where.status = status;
+        if (site_id) where.site_id = site_id;
 
         const result = await assetRepository.findAndCountAll(orgId, where, paranoid, Number(skip), Number(limit));
         return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };

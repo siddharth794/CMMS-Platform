@@ -53,6 +53,8 @@ export interface Asset {
   asset_tag?: string;
   is_active: boolean;
   parent_asset_id?: string;
+  site_id?: string | null;
+  site?: Site | null;
   created_at?: string;
 }
 
@@ -76,6 +78,8 @@ export interface WorkOrder {
   actual_hours?: number;
   is_active: boolean;
   resolution_notes?: string;
+  site_id?: string | null;
+  site?: Site | null;
   created_at?: string;
   updated_at?: string;
 }

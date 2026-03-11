@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const CreateAssetSchema = z.object({
     name: z.string().min(1, 'Name is required').max(255),
+    site_id: z.string().uuid().nullable().optional(),
     asset_tag: z.string().max(100).optional(),
     asset_type: z.enum(['movable', 'immovable']).default('movable'),
     category: z.string().max(100).optional(),

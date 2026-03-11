@@ -78,6 +78,7 @@ export interface CreateAssetDTO {
     purchase_cost?: string;
     warranty_expiry?: string;
     status?: string;
+    site_id?: string;
 }
 
 export interface UpdateAssetDTO {
@@ -94,6 +95,7 @@ export interface UpdateAssetDTO {
     purchase_cost?: string;
     warranty_expiry?: string;
     status?: string;
+    site_id?: string | null;
 }
 
 export interface AssetListQuery {
@@ -103,6 +105,7 @@ export interface AssetListQuery {
     asset_type?: string;
     status?: string;
     record_status?: string;
+    site_id?: string;
 }
 
 // ─── Inventory DTOs ───────────────────────────────────────────────
@@ -150,6 +153,7 @@ export interface CreateWorkOrderDTO {
     scheduled_start?: string;
     scheduled_end?: string;
     estimated_hours?: number;
+    site_id?: string;
 }
 
 export interface UpdateWorkOrderDTO {
@@ -165,6 +169,7 @@ export interface UpdateWorkOrderDTO {
     estimated_hours?: number;
     actual_hours?: number;
     notes?: string;
+    site_id?: string | null;
 }
 
 export interface WorkOrderListQuery {
@@ -176,6 +181,7 @@ export interface WorkOrderListQuery {
     asset_id?: string;
     search?: string;
     record_status?: string;
+    site_id?: string;
 }
 
 export interface StatusUpdateDTO {

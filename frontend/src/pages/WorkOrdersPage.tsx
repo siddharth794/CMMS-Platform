@@ -18,9 +18,9 @@ import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Load
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 import { useWorkOrders, useCreateWorkOrder, useAssignWorkOrder, useUpdateWorkOrderStatus, useDeleteWorkOrder, useBulkDeleteWorkOrders } from '../hooks/api/useWorkOrders';
-import { useAssets, useUsers } from '../hooks/api/useSharedQueries';
+import { useAssets, useUsers, useSites } from '../hooks/api/useSharedQueries';
 import { WO_STATUS, WO_PRIORITY, USER_ROLES } from '../lib/constants';
-import { WorkOrder, PaginatedResponse, User } from '../types/models';
+import { WorkOrder, PaginatedResponse, User, Site } from '../types/models';
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
@@ -57,7 +57,7 @@ const WorkOrdersPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
-  const [filters, setFilters] = useState({ status: '', priority: '' });
+  const [filters, setFilters] = useState({ status: '', priority: '', site_id: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [recordStatus, setRecordStatus] = useState('active');
@@ -89,6 +89,7 @@ const WorkOrdersPage = () => {
   // useUsers from useSharedQueries might return an object with data property if not handled cleanly or an array
   const { data: usersData } = useUsers();
   const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
+  const { data: sites = [] } = useSites();
 
   const createMutation = useCreateWorkOrder();
   const assignMutation = useAssignWorkOrder();
@@ -298,6 +299,21 @@ const WorkOrdersPage = () => {
                   </div>
                 </TableHead>
                 <TableHead className="min-w-[200px]">Asset</TableHead>
+                <TableHead className="min-w-[150px]">
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={filters.site_id || "all"} onValueChange={(v) => { setFilters({ ...filters, site_id: v === 'all' ? '' : v }); setPage(1); }}>
+                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[130px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectValue placeholder="Site" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sites</SelectItem>
+                        {sites.map(site => (
+                          <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TableHead>
                 <TableHead className="min-w-[200px]">Assignee</TableHead>
                 <TableHead className="min-w-[150px] whitespace-nowrap">Created</TableHead>
                 {!isRequester() && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
@@ -340,6 +356,7 @@ const WorkOrdersPage = () => {
                     <TableCell><StatusBadge status={wo.status} /></TableCell>
                     <TableCell><PriorityBadge priority={wo.priority} /></TableCell>
                     <TableCell className="text-muted-foreground">{wo.asset?.name || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{wo.site?.name || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {wo.assignee ? `${wo.assignee.first_name} ${wo.assignee.last_name}` : '-'}
                     </TableCell>

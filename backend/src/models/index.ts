@@ -93,10 +93,11 @@ User.init({
     last_login: { type: DataTypes.DATE },
 }, { sequelize, tableName: 'users', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class Asset extends Model { public id!: string; public name!: string; }
+class Asset extends Model { public id!: string; public name!: string; public site_id?: string | null; }
 Asset.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
+    site_id: { type: DataTypes.UUID, allowNull: true },
     name: { type: DataTypes.STRING, allowNull: false },
     asset_tag: { type: DataTypes.STRING(100), unique: true },
     asset_type: { type: DataTypes.ENUM('movable', 'immovable'), defaultValue: 'movable' },
@@ -113,10 +114,11 @@ Asset.init({
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { sequelize, tableName: 'assets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; }
+class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; public site_id?: string | null; }
 WorkOrder.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
+    site_id: { type: DataTypes.UUID, allowNull: true },
     wo_number: { type: DataTypes.STRING(50), unique: true },
     title: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT },
@@ -356,6 +358,14 @@ User.hasOne(Site, { as: 'managed_site', foreignKey: 'manager_id' });
 // Site -> Technicians (1:N)
 Site.hasMany(User, { as: 'technicians', foreignKey: 'site_id' });
 User.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+
+// Site -> Assets (1:N)
+Site.hasMany(Asset, { as: 'assets', foreignKey: 'site_id' });
+Asset.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+
+// Site -> WorkOrders (1:N)
+Site.hasMany(WorkOrder, { as: 'work_orders', foreignKey: 'site_id' });
+WorkOrder.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 
 
 export {
