@@ -168,7 +168,10 @@ export class SiteService {
         const site = await siteRepository.findById(siteId, orgId);
         if (!site) throw new NotFoundError('Site not found');
 
-        const user = await User.findOne({ where: { id: userId, org_id: orgId }, include: [{ model: Role }] }) as any;
+        const user = await User.findOne({ 
+            where: { id: userId, org_id: orgId }, 
+            include: [{ model: Role, as: 'Roles' }] 
+        }) as any;
         if (!user) throw new NotFoundError('User not found');
 
         // Check user role

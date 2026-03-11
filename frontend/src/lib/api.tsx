@@ -160,7 +160,7 @@ export const sitesApi = {
   delete: (id: string) => api.delete(`/sites/${id}`),
   bulkDelete: (data: any) => api.post('/sites/bulk-delete', data),
   assignManager: (id: string, managerId: string | null) => api.put(`/sites/${id}/manager`, { manager_id: managerId }),
-  assignTechnician: (id: string, userId: string) => api.put(`/sites/${id}/technicians/${userId}`),
+  assignTechnician: (id: string, userId: string) => api.put(`/sites/${id}/technicians/${userId}`, {}),
   removeTechnician: (id: string, userId: string) => api.delete(`/sites/${id}/technicians/${userId}`),
 };
 

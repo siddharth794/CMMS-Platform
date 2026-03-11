@@ -21,7 +21,7 @@ export const AssignManagerSchema = z.object({
 
 export const AssignTechnicianSchema = z.object({
     // user_id is coming from params
-}).strict();
+});
 
 export const BulkDeleteSchema = z.object({
     ids: z.array(z.string().uuid()).min(1, 'At least one ID is required'),
