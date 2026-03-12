@@ -41,6 +41,12 @@ class Assistant(Agent):
             - When reading out work order numbers or IDs, speak them clearly (e.g., "Work Order 1 0 5").""",
         )
 
+    async def on_enter(self) -> None:
+        await self.session.generate_reply(instructions="Greet the user with a warm welcome")
+
+    async def on_exit(self):
+        await self.session.generate_reply(instructions="Tell the user a friendly goodbye before you exit.")
+        
     @function_tool
     async def get_open_work_orders(
         self, context: RunContext, status: str = "OPEN"
