@@ -25,7 +25,28 @@ load_dotenv(".env.local")
 
 
 CMMS_API_URL = os.getenv("CMMS_API_URL", "http://localhost:8000/api")
-CMMS_API_TOKEN = os.getenv("CMMS_API_TOKEN", "")
+
+_CMMS_API_TOKEN = None
+
+
+async def get_cmms_token() -> str:
+    global _CMMS_API_TOKEN
+    if _CMMS_API_TOKEN:
+        return _CMMS_API_TOKEN
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{CMMS_API_URL}/auth/login",
+                json={"email": "admin@demo.com", "password": "admin123"},
+            )
+            response.raise_for_status()
+            data = response.json()
+            _CMMS_API_TOKEN = data.get("access_token")
+            return _CMMS_API_TOKEN
+        except Exception as e:
+            logger.error(f"Failed to authenticate with CMMS API: {e}")
+            return ""
 
 
 class Assistant(Agent):
@@ -67,7 +88,7 @@ You are interacting with the user via voice, and must apply the following rules 
 
     async def on_enter(self) -> None:
         await self.session.generate_reply(
-            instructions="Greet the user with a warm welcome in hindi"
+            instructions="Greet the user with a warm welcome in hindi and briefly explain how you can help them (e.g., managing work orders, checking status, or logging inventory)."
         )
 
     async def on_exit(self):
@@ -85,7 +106,8 @@ You are interacting with the user via voice, and must apply the following rules 
             status: The status of the work orders to retrieve.
         """
         logger.info(f"Fetching work orders with status: {status}")
-        headers = {"Authorization": f"Bearer {CMMS_API_TOKEN}"}
+        token = await get_cmms_token()
+        headers = {"Authorization": f"Bearer {token}"}
 
         async with httpx.AsyncClient() as client:
             try:
@@ -125,7 +147,8 @@ You are interacting with the user via voice, and must apply the following rules 
             new_status: The new status to set (e.g., 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD').
         """
         logger.info(f"Updating WO {wo_id} to {new_status}")
-        headers = {"Authorization": f"Bearer {CMMS_API_TOKEN}"}
+        token = await get_cmms_token()
+        headers = {"Authorization": f"Bearer {token}"}
 
         async with httpx.AsyncClient() as client:
             try:
