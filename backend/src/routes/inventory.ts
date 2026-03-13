@@ -16,6 +16,7 @@ router.post('/bulk', requireRole(MANAGER_ROLES), validate(BulkCreateInventorySch
 router.get('/:item_id', inventoryController.getById);
 router.put('/:item_id', requireRole(MANAGER_ROLES), validate(UpdateInventoryItemSchema), inventoryController.update);
 router.delete('/:item_id', requireRole(MANAGER_ROLES), inventoryController.delete);
+router.post('/:item_id/restore', requireRole(MANAGER_ROLES), inventoryController.restore);
 router.post('/bulk-delete', requireRole(MANAGER_ROLES), validate(BulkDeleteSchema), inventoryController.bulkDelete);
 
 export default router;

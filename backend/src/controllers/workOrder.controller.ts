@@ -63,6 +63,11 @@ class WorkOrderController {
         res.json(result);
     }
 
+    restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await workOrderService.restore(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
+        res.json(result);
+    }
+
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const result = await workOrderService.bulkDelete(req.user!.org_id, req.body as BulkDeleteDTO, this.getAuditContext(req));
         res.json(result);

@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import AssetsBulkUploadDialog from '../components/AssetsBulkUploadDialog';
 import { Pagination } from '../components/ui/pagination';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, Loader2, MapPin, Trash, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, MapPin, Trash, Trash2, RefreshCw } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
@@ -56,6 +56,16 @@ const AssetsPage = () => {
   
   
   
+  const handleRestore = async (assetId) => {
+    try {
+      await assetsApi.restore(assetId);
+      addNotification('success', 'Asset restored');
+      fetchAssets();
+    } catch (error) {
+      addNotification('error', 'Failed to restore asset');
+    }
+  };
+
   const handleDelete = async (assetId) => {
     if (!window.confirm(recordStatus === 'active' ? 'Delete this asset?' : 'Permanently delete this asset?')) return;
     try {
@@ -242,15 +252,29 @@ const AssetsPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive h-8 w-8"
-                          onClick={() => handleDelete(asset.id)}
-                          data-testid={`delete-asset-btn-${asset.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {recordStatus === 'inactive' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary h-8 w-8"
+                              onClick={() => handleRestore(asset.id)}
+                              title="Restore asset"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive h-8 w-8"
+                            onClick={() => handleDelete(asset.id)}
+                            data-testid={`delete-asset-btn-${asset.id}`}
+                            title={recordStatus === 'inactive' ? 'Permanently delete' : 'Delete asset'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

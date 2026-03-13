@@ -66,6 +66,19 @@ export const useDeleteWorkOrder = () => {
   });
 };
 
+export const useRestoreWorkOrder = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await workOrdersApi.restore(id);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+    },
+  });
+};
+
 export const useBulkDeleteWorkOrders = () => {
   const queryClient = useQueryClient();
   return useMutation({

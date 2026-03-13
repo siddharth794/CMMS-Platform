@@ -47,6 +47,13 @@ class AssetController {
         res.json(result);
     }
 
+    restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const result = await assetService.restore(req.params.asset_id as string, targetOrgId, this.getAuditContext(req));
+        res.json(result);
+    }
+
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const result = await assetService.bulkDelete(req.user!.org_id, req.body as BulkDeleteDTO, this.getAuditContext(req));
         res.json(result);

@@ -14,10 +14,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download, Trash } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download, Trash, RefreshCw } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
-import { useWorkOrders, useCreateWorkOrder, useAssignWorkOrder, useUpdateWorkOrderStatus, useDeleteWorkOrder, useBulkDeleteWorkOrders } from '../hooks/api/useWorkOrders';
+import { useWorkOrders, useCreateWorkOrder, useAssignWorkOrder, useUpdateWorkOrderStatus, useDeleteWorkOrder, useBulkDeleteWorkOrders, useRestoreWorkOrder } from '../hooks/api/useWorkOrders';
 import { useAssets, useUsers, useSites } from '../hooks/api/useSharedQueries';
 import { WO_STATUS, WO_PRIORITY, USER_ROLES } from '../lib/constants';
 import { WorkOrder, PaginatedResponse, User, Site } from '../types/models';
@@ -96,6 +96,7 @@ const WorkOrdersPage = () => {
   const updateStatusMutation = useUpdateWorkOrderStatus();
   const deleteMutation = useDeleteWorkOrder();
   const bulkDeleteMutation = useBulkDeleteWorkOrders();
+  const restoreMutation = useRestoreWorkOrder();
 
   const submitting = createMutation.isPending || bulkDeleteMutation.isPending;
 
@@ -140,6 +141,15 @@ const WorkOrdersPage = () => {
       addNotification('success', recordStatus === 'active' ? 'Work order deactivated' : 'Work order permanently deleted');
     } catch (error: any) {
       addNotification('error', error.response?.data?.detail || 'Failed to delete work order');
+    }
+  };
+
+  const handleRestore = async (woId: string) => {
+    try {
+      await restoreMutation.mutateAsync(woId);
+      addNotification('success', 'Work order restored');
+    } catch (error: any) {
+      addNotification('error', error.response?.data?.detail || 'Failed to restore work order');
     }
   };
 
@@ -383,7 +393,7 @@ const WorkOrdersPage = () => {
                               )}
                               
                               {/* Status Update Actions */}
-                              {!isRequester() && (
+                              {!isRequester() && recordStatus === 'active' && (
                                 <>
                                   {/* Technician / Manager Actions */}
                                   {wo.status === WO_STATUS.OPEN && (
@@ -428,9 +438,16 @@ const WorkOrdersPage = () => {
                               )}
 
                               {isManager() && (
-                                <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
-                                </DropdownMenuItem>
+                                <>
+                                  {recordStatus === 'inactive' && (
+                                    <DropdownMenuItem onClick={() => handleRestore(wo.id)} className="text-primary">
+                                      <RefreshCw className="mr-2 h-4 w-4" />Restore
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => handleDelete(wo.id)} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />{recordStatus === 'active' ? 'Delete' : 'Delete Permanently'}
+                                  </DropdownMenuItem>
+                                </>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>

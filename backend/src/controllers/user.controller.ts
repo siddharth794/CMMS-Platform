@@ -57,6 +57,11 @@ class UserController {
         res.json(result);
     }
 
+    restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await userService.restore(req.params.user_id as string, req.user!.org_id, this.getAuditContext(req));
+        res.json(result);
+    }
+
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const dto: BulkDeleteDTO = req.body;
         const result = await userService.bulkDelete(req.user!.org_id, dto, this.getAuditContext(req), req.user!.id);

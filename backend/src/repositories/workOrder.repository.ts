@@ -59,6 +59,10 @@ class WorkOrderRepository {
         await wo.destroy();
     }
 
+    async restore(wo: any): Promise<void> {
+        await wo.restore();
+    }
+
     async hardDelete(wo: any): Promise<void> {
         await sequelize.transaction(async (t) => {
             const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');

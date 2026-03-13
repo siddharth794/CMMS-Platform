@@ -147,6 +147,14 @@ class PMScheduleRepository {
         });
     }
 
+    async restoreWithTransaction(pm: any): Promise<void> {
+        await sequelize.transaction(async (t) => {
+            await pm.restore({ transaction: t });
+            pm.is_active = true;
+            await pm.save({ transaction: t });
+        });
+    }
+
     async hardDelete(pm: any): Promise<void> {
         await pm.destroy({ force: true });
     }

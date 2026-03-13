@@ -54,6 +54,14 @@ class AssetRepository {
         });
     }
 
+    async restoreWithTransaction(asset: any): Promise<void> {
+        await sequelize.transaction(async (t) => {
+            await asset.restore({ transaction: t });
+            asset.is_active = true;
+            await asset.save({ transaction: t });
+        });
+    }
+
     async hardDelete(asset: any): Promise<void> {
         await asset.destroy({ force: true });
     }

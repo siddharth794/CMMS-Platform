@@ -18,6 +18,7 @@ router.get('/:user_id', userController.getById);
 
 router.put('/:user_id', requireRole(ADMIN_ROLES), validate(UpdateUserSchema), userController.update);
 router.delete('/:user_id', requireRole(ADMIN_ROLES), userController.delete);
+router.post('/:user_id/restore', requireRole(ADMIN_ROLES), userController.restore);
 router.post('/bulk-delete', requireRole(ADMIN_ROLES), validate(BulkDeleteSchema), userController.bulkDelete);
 
 

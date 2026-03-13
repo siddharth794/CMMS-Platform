@@ -54,6 +54,16 @@ export const useDeleteUser = () => {
   });
 };
 
+export const useRestoreUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => usersApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
 export const useBulkDeleteUsers = () => {
   const queryClient = useQueryClient();
   return useMutation({

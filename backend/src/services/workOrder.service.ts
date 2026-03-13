@@ -177,6 +177,19 @@ class WorkOrderService {
         }
     }
 
+    async restore(woId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+        const wo = await workOrderRepository.findByIdParanoid(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        if (wo.deleted_at !== null) {
+            await workOrderRepository.restore(wo);
+            auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'restore' });
+            return { message: 'Work order restored successfully' };
+        }
+        
+        return { message: 'Work order is already active' };
+    }
+
     async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
         const count = await workOrderRepository.bulkDelete(dto.ids, orgId, !!dto.force);
         auditService.log({ ...audit, entityType: 'WorkOrder', entityId: dto.ids[0], action: dto.force ? 'bulk_hard_delete' : 'bulk_delete', newValues: { deleted_ids: dto.ids, count } });

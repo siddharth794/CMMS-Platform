@@ -86,6 +86,14 @@ class UserRepository {
         });
     }
 
+    async restoreWithTransaction(user: any): Promise<void> {
+        await sequelize.transaction(async (t) => {
+            await user.restore({ transaction: t });
+            user.is_active = true;
+            await user.save({ transaction: t });
+        });
+    }
+
     async hardDelete(user: any): Promise<void> {
         await user.destroy({ force: true });
     }

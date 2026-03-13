@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, Trash2, Loader2, Users, Trash, MapPin } from 'lucide-react';
+import { Plus, Search, Trash2, Loader2, Users, Trash, MapPin, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
-import { useUsers, useCreateUser, useBulkDeleteUsers, useDeleteUser } from '../hooks/api/useUsers';
+import { useUsers, useCreateUser, useBulkDeleteUsers, useDeleteUser, useRestoreUser } from '../hooks/api/useUsers';
 import { rolesApi } from '../lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination } from '../components/ui/pagination';
@@ -49,6 +49,7 @@ const UsersPage = () => {
 
     const deleteUserMutation = useDeleteUser();
   const bulkDeleteMutation = useBulkDeleteUsers();
+  const restoreUserMutation = useRestoreUser();
 
   const users = usersData?.data || [];
   const total = usersData?.total || 0;
@@ -62,6 +63,15 @@ const UsersPage = () => {
       addNotification('success', recordStatus === 'active' ? 'User deactivated' : 'User permanently deleted');
     } catch (error) {
       addNotification('error', 'Failed to delete user');
+    }
+  };
+
+  const handleRestoreUser = async (userId) => {
+    try {
+      await restoreUserMutation.mutateAsync(userId);
+      addNotification('success', 'User restored');
+    } catch (error) {
+      addNotification('error', 'Failed to restore user');
     }
   };
 
@@ -213,14 +223,28 @@ const UsersPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {(isAdmin() || isManager()) && u.id !== currentUser?.id && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="text-destructive h-8 w-8 hover:bg-destructive/10"
-                          onClick={() => handleDeleteUser(u.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {recordStatus === 'inactive' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary h-8 w-8 hover:bg-primary/10"
+                              onClick={() => handleRestoreUser(u.id)}
+                              title="Restore User"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-destructive h-8 w-8 hover:bg-destructive/10"
+                            onClick={() => handleDeleteUser(u.id)}
+                            title={recordStatus === 'active' ? 'Deactivate User' : 'Delete Permanently'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

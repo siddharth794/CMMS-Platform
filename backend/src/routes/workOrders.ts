@@ -19,6 +19,7 @@ router.put('/:wo_id', requireRole(MANAGER_ROLES), validate(UpdateWorkOrderSchema
 router.patch('/:wo_id/status', validate(StatusUpdateSchema), workOrderController.updateStatus);
 router.patch('/:wo_id/assign', requireRole(MANAGER_ROLES), validate(AssignSchema), workOrderController.assign);
 router.delete('/:wo_id', requireRole(MANAGER_ROLES), workOrderController.delete);
+router.post('/:wo_id/restore', requireRole(MANAGER_ROLES), workOrderController.restore);
 router.post('/bulk-delete', requireRole(MANAGER_ROLES), validate(BulkDeleteSchema), workOrderController.bulkDelete);
 
 // ─── Comments ─────────────────────────────────────────────────────

@@ -120,6 +120,19 @@ class UserService {
         }
     }
 
+    async restore(userId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+        const user = await userRepository.findByIdParanoid(userId, orgId);
+        if (!user) throw new NotFoundError('User');
+
+        if (user.deleted_at !== null || user.is_active === false) {
+            await userRepository.restoreWithTransaction(user);
+            auditService.log({ ...audit, entityType: 'User', entityId: userId, action: 'restore' });
+            return { message: 'User restored successfully' };
+        }
+        
+        return { message: 'User is already active' };
+    }
+
     async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext, currentUserId: string): Promise<{ message: string }> {
         const ids = dto.ids.filter(id => id !== currentUserId);
         if (ids.length === 0) throw new BadRequestError('Cannot perform bulk delete exclusively on yourself.');

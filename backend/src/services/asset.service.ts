@@ -91,6 +91,19 @@ class AssetService {
         }
     }
 
+    async restore(assetId: string, orgId: string | null, audit: AuditContext): Promise<{ message: string }> {
+        const asset = await assetRepository.findByIdParanoid(assetId, orgId);
+        if (!asset) throw new NotFoundError('Asset');
+
+        if (asset.deleted_at !== null || asset.is_active === false) {
+            await assetRepository.restoreWithTransaction(asset);
+            auditService.log({ ...audit, entityType: 'Asset', entityId: asset.id, action: 'restore' });
+            return { message: 'Asset restored successfully' };
+        }
+        
+        return { message: 'Asset is already active' };
+    }
+
     async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
         if (!dto.force) await assetRepository.bulkSoftDelete(dto.ids, orgId);
         const count = await assetRepository.bulkDelete(dto.ids, orgId, !!dto.force);

@@ -39,7 +39,12 @@ class PMScheduleController {
     }
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await pmScheduleService.delete(req.params.pm_id as string, req.user!.org_id);
+        const result = await pmScheduleService.delete(req.params.pm_id as string, req.user!.org_id, this.getAuditContext(req));
+        res.json(result);
+    }
+
+    restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await pmScheduleService.restore(req.params.pm_id as string, req.user!.org_id, this.getAuditContext(req));
         res.json(result);
     }
 
