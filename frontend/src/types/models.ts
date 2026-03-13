@@ -10,6 +10,9 @@ export interface User {
   is_active: boolean;
   site_id?: string | null;
   site?: Site | null;
+  org_id?: string;
+  Organization?: Organization;
+  organization?: Organization;
   created_at?: string;
 }
 

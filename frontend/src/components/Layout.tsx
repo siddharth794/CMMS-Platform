@@ -52,7 +52,7 @@ const Sidebar = ({ className = '' }) => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Spartans FMS</span>
+          <span className="text-xl font-bold tracking-tight">{user?.Organization?.name || user?.organization?.name || 'FMS'}</span>
         </Link>
       </div>
 
@@ -98,6 +98,13 @@ const Layout = () => {
   const { theme, toggleTheme } = useTheme();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotification();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  React.useEffect(() => {
+    const orgName = user?.Organization?.name || user?.organization?.name;
+    if (orgName) {
+      document.title = `${orgName} | FMS`;
+    }
+  }, [user]);
 
   return (
     <div className="flex h-screen overflow-hidden">

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User, Role, Access, Group } from '../models';
+import { User, Role, Access, Group, Organization } from '../models';
 import logger from '../config/logger';
 
 export interface AuthRequest extends Request {
@@ -31,7 +31,8 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         const user = await User.findByPk(decoded.sub || decoded.id, {
             include: [
                 { model: Role, include: [{ model: Access }] },
-                { model: Group, include: [{ model: Role, include: [{ model: Access }] }] }
+                { model: Group, include: [{ model: Role, include: [{ model: Access }] }] },
+                { model: Organization }
             ]
         });
 
