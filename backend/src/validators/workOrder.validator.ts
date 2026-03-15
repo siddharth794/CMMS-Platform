@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const CreateWorkOrderSchema = z.object({
     title: z.string().min(1, 'Title is required').max(255),
     description: z.string().max(5000).optional(),
+    org_id: z.string().uuid().optional(),
     asset_id: z.string().uuid().nullable().optional().default(null),
     site_id: z.string().uuid().nullable().optional().default(null),
     assignee_id: z.string().uuid().nullable().optional().default(null),

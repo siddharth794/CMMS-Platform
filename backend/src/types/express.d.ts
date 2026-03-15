@@ -5,6 +5,7 @@
 export interface AuthenticatedUser {
     id: string;
     org_id: string;
+    site_id?: string | null;
     email: string;
     username: string;
     first_name?: string;
@@ -19,6 +20,8 @@ export interface AuthenticatedUser {
         permissions?: Record<string, any>;
         is_system_role?: boolean;
     };
+    effectiveRoles?: any[];
+    effectiveAccesses?: any[];
 }
 
 declare global {
