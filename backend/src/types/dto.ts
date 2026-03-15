@@ -146,6 +146,7 @@ export interface InventoryListQuery {
 export interface CreateWorkOrderDTO {
     title: string;
     description?: string;
+    org_id?: string;
     asset_id?: string;
     assignee_id?: string;
     priority?: string;
