@@ -24,6 +24,7 @@ router.get('/:site_id', siteController.getById);
 router.post('/', requireRole(ADMIN_ROLES), validate(CreateSiteSchema), siteController.create);
 router.put('/:site_id', requireRole(ADMIN_ROLES), validate(UpdateSiteSchema), siteController.update);
 router.delete('/:site_id', requireRole(ADMIN_ROLES), siteController.delete);
+router.post('/:site_id/restore', requireRole(ADMIN_ROLES), siteController.restore);
 router.post('/bulk-delete', requireRole(ADMIN_ROLES), validate(BulkDeleteSchema), siteController.bulkDelete);
 
 // Assign Manager requires ADMIN_ROLES

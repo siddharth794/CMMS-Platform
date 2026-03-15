@@ -7,11 +7,13 @@ import { AuditContext, PaginatedResponse, BulkDeleteDTO } from '../types/common.
 import { NotFoundError, BadRequestError } from '../errors/AppError';
 
 export class SiteService {
-    async getAll(orgId: string, query: SiteListQuery): Promise<PaginatedResponse<any>> {
+    async getAll(orgId: string | null, query: SiteListQuery): Promise<PaginatedResponse<any>> {
         const { skip = 0, limit = 100, search, record_status } = query;
         let where: any = {};
+        let paranoid = true;
 
         if (record_status === 'inactive') {
+            paranoid = false;
             where[Op.or] = [
                 { deleted_at: { [Op.not]: null } },
                 { is_active: false }
@@ -30,7 +32,7 @@ export class SiteService {
 
         const parsedSkip = Number(skip) || 0;
         const parsedLimit = Number(limit) || 100;
-        const { rows, count } = await siteRepository.findAll(orgId, parsedSkip, parsedLimit, where);
+        const { rows, count } = await siteRepository.findAll(orgId, parsedSkip, parsedLimit, where, paranoid);
 
         return {
             data: rows,
@@ -40,8 +42,8 @@ export class SiteService {
         };
     }
 
-    async getById(siteId: string, orgId: string): Promise<any> {
-        const site = await siteRepository.findById(siteId, orgId);
+    async getById(siteId: string, orgId: string | null): Promise<any> {
+        const site = await siteRepository.findById(siteId, orgId, false);
         if (!site) throw new NotFoundError('Site not found');
         return site;
     }
@@ -72,7 +74,7 @@ export class SiteService {
         return newSite;
     }
 
-    async update(siteId: string, orgId: string, data: UpdateSiteDTO, context: AuditContext): Promise<any> {
+    async update(siteId: string, orgId: string | null, data: UpdateSiteDTO, context: AuditContext): Promise<any> {
         const site = await siteRepository.findById(siteId, orgId);
         if (!site) throw new NotFoundError('Site not found');
 
@@ -93,7 +95,7 @@ export class SiteService {
         const updatedSite = await siteRepository.findById(siteId, orgId);
 
         await auditService.log({
-            orgId: orgId,
+            orgId: site.org_id,
             userId: context.userId,
             userEmail: context.userEmail,
             entityType: 'Site',
@@ -106,29 +108,58 @@ export class SiteService {
         return updatedSite;
     }
 
-    async delete(siteId: string, orgId: string, context: AuditContext): Promise<void> {
-        const site = await siteRepository.findById(siteId, orgId);
+    async delete(siteId: string, orgId: string | null, context: AuditContext, force: boolean = false): Promise<void> {
+        const site = await siteRepository.findById(siteId, orgId, false);
         if (!site) throw new NotFoundError('Site not found');
 
-        const isHardDelete = site.deleted_at !== null;
-        await siteRepository.delete(siteId, orgId, isHardDelete);
+        const isHardDelete = force || site.deleted_at !== null;
+        if (!isHardDelete) {
+            await site.destroy(); // Soft delete via Sequelize
+            await auditService.log({
+                orgId: site.org_id,
+                userId: context.userId,
+                userEmail: context.userEmail,
+                entityType: 'Site',
+                entityId: siteId,
+                action: 'delete',
+                oldValues: site.toJSON()
+            });
+        } else {
+            await siteRepository.delete(siteId, orgId, true);
+            await auditService.log({
+                orgId: site.org_id,
+                userId: context.userId,
+                userEmail: context.userEmail,
+                entityType: 'Site',
+                entityId: siteId,
+                action: 'hard_delete',
+                oldValues: site.toJSON()
+            });
+        }
+    }
+
+    async restore(siteId: string, orgId: string | null, context: AuditContext): Promise<void> {
+        const site = await siteRepository.findById(siteId, orgId, false);
+        if (!site) throw new NotFoundError('Site not found');
+
+        await site.restore();
 
         await auditService.log({
-            orgId: orgId,
+            orgId: site.org_id,
             userId: context.userId,
             userEmail: context.userEmail,
             entityType: 'Site',
             entityId: siteId,
-            action: isHardDelete ? 'hard_delete' : 'delete',
-            oldValues: site.toJSON()
+            action: 'restore',
+            newValues: site.toJSON()
         });
     }
 
-    async bulkDelete(orgId: string, data: BulkDeleteDTO, context: AuditContext): Promise<{ count: number }> {
+    async bulkDelete(orgId: string | null, data: BulkDeleteDTO, context: AuditContext): Promise<{ count: number }> {
         let count = 0;
         for (const id of data.ids) {
             try {
-                await this.delete(id, orgId, context);
+                await this.delete(id, orgId, context, data.force);
                 count++;
             } catch (err) {
                 // Ignore errors for individual items
@@ -137,7 +168,7 @@ export class SiteService {
         return { count };
     }
 
-    async assignManager(siteId: string, orgId: string, managerId: string | null, context: AuditContext): Promise<any> {
+    async assignManager(siteId: string, orgId: string | null, managerId: string | null, context: AuditContext): Promise<any> {
         const site = await siteRepository.findById(siteId, orgId);
         if (!site) throw new NotFoundError('Site not found');
 
@@ -151,7 +182,7 @@ export class SiteService {
         const updatedSite = await siteRepository.findById(siteId, orgId);
 
         await auditService.log({
-            orgId: orgId,
+            orgId: site.org_id,
             userId: context.userId,
             userEmail: context.userEmail,
             entityType: 'Site',
@@ -164,7 +195,7 @@ export class SiteService {
         return updatedSite;
     }
 
-    async assignTechnician(siteId: string, orgId: string, userId: string, context: AuditContext): Promise<void> {
+    async assignTechnician(siteId: string, orgId: string | null, userId: string, context: AuditContext): Promise<void> {
         const site = await siteRepository.findById(siteId, orgId);
         if (!site) throw new NotFoundError('Site not found');
 
@@ -183,7 +214,7 @@ export class SiteService {
         await siteRepository.assignTechnician(siteId, userId, orgId);
 
         await auditService.log({
-            orgId: orgId,
+            orgId: site.org_id,
             userId: context.userId,
             userEmail: context.userEmail,
             entityType: 'Site',
@@ -193,7 +224,7 @@ export class SiteService {
         });
     }
 
-    async removeTechnician(siteId: string, orgId: string, userId: string, context: AuditContext): Promise<void> {
+    async removeTechnician(siteId: string, orgId: string | null, userId: string, context: AuditContext): Promise<void> {
         const site = await siteRepository.findById(siteId, orgId);
         if (!site) throw new NotFoundError('Site not found');
 
@@ -206,7 +237,7 @@ export class SiteService {
         await siteRepository.removeTechnician(userId, orgId);
 
         await auditService.log({
-            orgId: orgId,
+            orgId: site.org_id,
             userId: context.userId,
             userEmail: context.userEmail,
             entityType: 'Site',
@@ -218,9 +249,13 @@ export class SiteService {
 
     // --- Private Helpers ---
 
-    private async validateManagerAssignment(managerId: string, orgId: string): Promise<void> {
+    private async validateManagerAssignment(managerId: string, orgId: string | null): Promise<void> {
+        const where: any = { id: managerId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
         // 1. Ensure user exists and is a Facility Manager
-        const user = await User.findOne({ where: { id: managerId, org_id: orgId }, include: [{ model: Role }] }) as any;
+        const user = await User.findOne({ where, include: [{ model: Role }] }) as any;
         if (!user) throw new NotFoundError('Manager user not found');
 
         const roleName = user.Role?.name || (user.Roles?.[0]?.name);

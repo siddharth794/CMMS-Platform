@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Search, Trash, Trash2, Loader2, MapPin } from 'lucide-react';
+import { Plus, Search, Trash, Trash2, Loader2, MapPin, RefreshCw } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
-import { useSites, useDeleteSite, useBulkDeleteSites } from '../../hooks/api/useSites';
+import { useSites, useDeleteSite, useBulkDeleteSites, useRestoreSite } from '../../hooks/api/useSites';
 
 export default function SitesList() {
   const [search, setSearch] = useState('');
@@ -32,6 +32,7 @@ export default function SitesList() {
 
   const deleteMutation = useDeleteSite();
   const bulkDeleteMutation = useBulkDeleteSites();
+  const restoreMutation = useRestoreSite();
 
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} sites?`)) return;
@@ -64,13 +65,22 @@ export default function SitesList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this site?')) {
+    if (window.confirm(recordStatus === 'active' ? 'Delete this site?' : 'Permanently delete this site?')) {
       try {
-        await deleteMutation.mutateAsync(id);
-        addNotification('success', 'Site deleted successfully');
+        await deleteMutation.mutateAsync({ id, force: recordStatus === 'inactive' });
+        addNotification('success', recordStatus === 'active' ? 'Site deleted' : 'Site permanently deleted');
       } catch (error: any) {
         addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to delete site');
       }
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      await restoreMutation.mutateAsync(id);
+      addNotification('success', 'Site restored');
+    } catch (error: any) {
+      addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to restore site');
     }
   };
 
@@ -187,14 +197,28 @@ export default function SitesList() {
                       </TableCell>
                       <TableCell className="text-right">
                         {isManager() && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive h-8 w-8"
-                            onClick={() => handleDelete(site.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            {recordStatus === 'inactive' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-primary h-8 w-8"
+                                onClick={() => handleRestore(site.id)}
+                                title="Restore Site"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive h-8 w-8"
+                              onClick={() => handleDelete(site.id)}
+                              title={recordStatus === 'active' ? 'Delete Site' : 'Delete Permanently'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>

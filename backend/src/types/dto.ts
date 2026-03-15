@@ -250,6 +250,7 @@ export interface CreateSiteDTO {
     description?: string;
     is_active?: boolean;
     manager_id?: string | null;
+    org_id?: string;
 }
 
 export type UpdateSiteDTO = Partial<CreateSiteDTO>;

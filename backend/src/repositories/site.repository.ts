@@ -1,15 +1,24 @@
 import { Op } from 'sequelize';
-import { Site, User, sequelize } from '../models';
+import { Site, User, sequelize, Organization } from '../models';
 
 class SiteRepository {
-    async findAll(orgId: string, skip: number, limit: number, filters: any): Promise<{ rows: any[]; count: number }> {
+    async findAll(orgId: string | null, skip: number, limit: number, filters: any, paranoid: boolean = true): Promise<{ rows: any[]; count: number }> {
+        const where: any = { ...filters };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
         return Site.findAndCountAll({
-            where: { org_id: orgId, ...filters },
+            where,
+            paranoid,
             include: [
                 {
                     model: User,
                     as: 'manager',
                     attributes: ['id', 'first_name', 'last_name', 'email']
+                },
+                {
+                    model: Organization,
+                    attributes: ['id', 'name']
                 }
             ],
             offset: skip,
@@ -18,9 +27,14 @@ class SiteRepository {
         });
     }
 
-    async findById(siteId: string, orgId: string): Promise<any | null> {
+    async findById(siteId: string, orgId: string | null, paranoid: boolean = true): Promise<any | null> {
+        const where: any = { id: siteId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
         return Site.findOne({
-            where: { id: siteId, org_id: orgId },
+            where,
+            paranoid,
             include: [
                 {
                     model: User,
@@ -31,52 +45,65 @@ class SiteRepository {
                     model: User,
                     as: 'technicians',
                     attributes: ['id', 'first_name', 'last_name', 'email']
+                },
+                {
+                    model: Organization,
+                    attributes: ['id', 'name']
                 }
             ]
         });
     }
 
-    async findByName(name: string, orgId: string): Promise<any | null> {
-        return Site.findOne({
-            where: { name, org_id: orgId }
-        });
+    async findByName(name: string, orgId: string | null): Promise<any | null> {
+        const where: any = { name };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return Site.findOne({ where });
     }
 
-    async findByManagerId(managerId: string, orgId: string): Promise<any | null> {
-        return Site.findOne({
-            where: { manager_id: managerId, org_id: orgId }
-        });
+    async findByManagerId(managerId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { manager_id: managerId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return Site.findOne({ where });
     }
 
     async create(data: Record<string, any>): Promise<any> {
         return Site.create(data);
     }
 
-    async update(siteId: string, data: Record<string, any>, orgId: string): Promise<[number]> {
-        return Site.update(data, {
-            where: { id: siteId, org_id: orgId }
-        });
+    async update(siteId: string, data: Record<string, any>, orgId: string | null): Promise<[number]> {
+        const where: any = { id: siteId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return Site.update(data, { where });
     }
 
-    async delete(siteId: string, orgId: string, force: boolean = false): Promise<number> {
-        return Site.destroy({
-            where: { id: siteId, org_id: orgId },
-            force
-        });
+    async delete(siteId: string, orgId: string | null, force: boolean = false): Promise<number> {
+        const where: any = { id: siteId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return Site.destroy({ where, force });
     }
 
-    async assignTechnician(siteId: string, userId: string, orgId: string): Promise<[number]> {
-        return User.update(
-            { site_id: siteId },
-            { where: { id: userId, org_id: orgId } }
-        );
+    async assignTechnician(siteId: string, userId: string, orgId: string | null): Promise<[number]> {
+        const where: any = { id: userId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return User.update({ site_id: siteId }, { where });
     }
 
-    async removeTechnician(userId: string, orgId: string): Promise<[number]> {
-        return User.update(
-            { site_id: null },
-            { where: { id: userId, org_id: orgId } }
-        );
+    async removeTechnician(userId: string, orgId: string | null): Promise<[number]> {
+        const where: any = { id: userId };
+        if (orgId !== null) {
+            where.org_id = orgId;
+        }
+        return User.update({ site_id: null }, { where });
     }
 }
 

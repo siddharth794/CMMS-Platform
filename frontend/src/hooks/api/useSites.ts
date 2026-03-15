@@ -54,8 +54,21 @@ export const useUpdateSite = () => {
 export const useDeleteSite = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationFn: async ({ id, force }: { id: string; force?: boolean }) => {
+      const { data } = await sitesApi.delete(id, force);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+    },
+  });
+};
+
+export const useRestoreSite = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await sitesApi.delete(id);
+      const { data } = await sitesApi.restore(id);
       return data;
     },
     onSuccess: () => {

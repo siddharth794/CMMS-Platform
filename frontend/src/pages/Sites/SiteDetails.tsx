@@ -13,6 +13,8 @@ import { useNotification } from '../../context/NotificationContext';
 import { Loader2, ArrowLeft, Save, Building2, Users, MapPin, UserPlus, Trash2 } from 'lucide-react';
 import { useSite, useCreateSite, useUpdateSite, useAssignSiteManager, useAssignSiteTechnician, useRemoveSiteTechnician } from '../../hooks/api/useSites';
 import { useUsers } from '../../hooks/api/useUsers';
+import { useOrganizations } from '../../hooks/api/useOrganizations';
+import { useAuth } from '../../context/AuthContext';
 import { Site, User } from '../../types/models';
 
 export default function SiteDetails() {
@@ -20,6 +22,9 @@ export default function SiteDetails() {
   const isNew = id === 'new';
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { hasRole } = useAuth();
+  
+  const isSuperAdmin = hasRole(['super_admin']);
   
   const { data: site, isLoading, isError } = useSite(id as string);
   const createMutation = useCreateSite();
@@ -27,12 +32,6 @@ export default function SiteDetails() {
   const assignManagerMutation = useAssignSiteManager();
   const assignTechnicianMutation = useAssignSiteTechnician();
   const removeTechnicianMutation = useRemoveSiteTechnician();
-
-  // For selecting users
-  const { data: usersData } = useUsers({ limit: 100 });
-
-  // Handle potential paginated wrapper or array structure for users
-  const allUsers = Array.isArray(usersData) ? usersData : (usersData?.data || []);
 
   const [formData, setFormData] = useState<Partial<Site>>({
     name: '',
@@ -44,7 +43,17 @@ export default function SiteDetails() {
     phone: '',
     description: '',
     is_active: true,
+    org_id: '',
   });
+
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const orgs = orgsData?.data || [];
+
+  // For selecting users
+  const { data: usersData } = useUsers({ limit: 1000, org_id: isSuperAdmin && formData.org_id ? formData.org_id : undefined });
+
+  // Handle potential paginated wrapper or array structure for users
+  const allUsers = Array.isArray(usersData) ? usersData : (usersData?.data || []);
 
   const [selectedManager, setSelectedManager] = useState<string>('none');
   const [selectedTechnician, setSelectedTechnician] = useState<string>('');
@@ -61,6 +70,7 @@ export default function SiteDetails() {
         phone: site.phone || '',
         description: site.description || '',
         is_active: site.is_active ?? true,
+        org_id: site.org_id || '',
       });
       setSelectedManager(site.manager_id || 'none');
     }
@@ -80,6 +90,10 @@ export default function SiteDetails() {
         if (selectedManager !== 'none') {
           payload.manager_id = selectedManager;
         }
+        if (isSuperAdmin && !formData.org_id) {
+          return addNotification('error', 'Organization is required for Super Admins');
+        }
+        
         await createMutation.mutateAsync(payload);
         addNotification('success', 'Site created successfully');
         navigate('/sites');
@@ -204,6 +218,27 @@ export default function SiteDetails() {
                   <Label htmlFor="name">Site Name <span className="text-red-500">*</span></Label>
                   <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required />
                 </div>
+
+                {isSuperAdmin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="org_id">Organization <span className="text-red-500">*</span></Label>
+                    <Select 
+                      value={formData.org_id || "none"} 
+                      onValueChange={(v) => setFormData((prev) => ({ ...prev, org_id: v === 'none' ? '' : v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an organization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select an organization</SelectItem>
+                        {orgs.map((o: any) => (
+                          <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} rows={3} />
