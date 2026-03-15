@@ -99,7 +99,8 @@ export default function SiteDetails() {
         navigate('/sites');
       } else {
         // Update Site Info
-        await updateMutation.mutateAsync({ id: id as string, data: formData });
+        const { org_id, ...updateData } = formData;
+        await updateMutation.mutateAsync({ id: id as string, data: updateData });
         
         // Update Manager separately if changed
         if (selectedManager !== (site?.manager_id || 'none')) {
@@ -225,6 +226,7 @@ export default function SiteDetails() {
                     <Select 
                       value={formData.org_id || "none"} 
                       onValueChange={(v) => setFormData((prev) => ({ ...prev, org_id: v === 'none' ? '' : v }))}
+                      disabled={!isNew}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select an organization" />
