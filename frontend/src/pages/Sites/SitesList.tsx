@@ -229,9 +229,9 @@ export default function SitesList() {
             
             <div className="p-4 border-t">
               <Pagination
-                page={page}
-                total={sitesData?.total || 0}
-                limit={10}
+                currentPage={page}
+                totalItems={sitesData?.total || 0}
+                itemsPerPage={10}
                 onPageChange={setPage}
               />
             </div>
