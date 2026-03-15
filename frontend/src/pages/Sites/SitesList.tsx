@@ -12,20 +12,28 @@ import { Plus, Search, Trash, Trash2, Loader2, MapPin, RefreshCw } from 'lucide-
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useSites, useDeleteSite, useBulkDeleteSites, useRestoreSite } from '../../hooks/api/useSites';
+import { useOrganizations } from '../../hooks/api/useOrganizations';
 
 export default function SitesList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [orgId, setOrgId] = useState('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const { addNotification } = useNotification();
-  const { isManager } = useAuth();
+  const { isManager, hasRole } = useAuth();
   const navigate = useNavigate();
+
+  const isSuperAdmin = hasRole(['super_admin']);
+
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const orgs = orgsData?.data || [];
 
   const { data: sitesData, isLoading: loading, isError } = useSites({
     search,
     record_status: recordStatus,
+    org_id: orgId !== 'all' ? orgId : undefined,
     skip: (page - 1) * 10,
     limit: 10
   });
@@ -117,6 +125,21 @@ export default function SitesList() {
                   Delete
                 </Button>
               )}
+              {isSuperAdmin && (
+                <div className="w-[200px]">
+                  <Select value={orgId} onValueChange={(v) => { setOrgId(v); setPage(1); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Organizations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Organizations</SelectItem>
+                      {orgs.map((o: any) => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="w-[180px]">
                 <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger>
@@ -150,16 +173,16 @@ export default function SitesList() {
                     </TableHead>
                   )}
                   <TableHead>Name</TableHead>
+                  {isSuperAdmin && <TableHead>Organization</TableHead>}
                   <TableHead>Location</TableHead>
                   <TableHead>Facility Manager</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isError || !sitesData?.data || sitesData.data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isManager() ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={isManager() ? (isSuperAdmin ? 6 : 5) : (isSuperAdmin ? 5 : 4)} className="text-center py-8 text-muted-foreground">
                       {isError ? 'Failed to load sites. Please try again.' : 'No sites found'}
                     </TableCell>
                   </TableRow>
@@ -174,26 +197,28 @@ export default function SitesList() {
                           />
                         </TableCell>
                       )}
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <Link to={`/sites/${site.id}`} className="hover:underline">
-                            {site.name}
-                          </Link>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            <Link to={`/sites/${site.id}`} className="hover:underline flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              {site.name}
+                            </Link>
+                          </span>
                         </div>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            {site.Organization?.name || '-'}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell>
                         {[site.city, site.state].filter(Boolean).join(', ') || site.address || 'N/A'}
                       </TableCell>
                       <TableCell>
                         {site.manager ? `${site.manager.first_name} ${site.manager.last_name}` : 'Unassigned'}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          site.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {site.is_active ? 'Active' : 'Inactive'}
-                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         {isManager() && (
