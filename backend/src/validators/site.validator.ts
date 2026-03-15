@@ -11,9 +11,10 @@ export const CreateSiteSchema = z.object({
     description: z.string().optional(),
     is_active: z.boolean().optional().default(true),
     manager_id: z.string().uuid().nullable().optional(),
+    org_id: z.string().uuid().optional(),
 }).strict();
 
-export const UpdateSiteSchema = CreateSiteSchema.partial();
+export const UpdateSiteSchema = CreateSiteSchema.omit({ org_id: true }).partial();
 
 export const AssignManagerSchema = z.object({
     manager_id: z.string().uuid().nullable(),
