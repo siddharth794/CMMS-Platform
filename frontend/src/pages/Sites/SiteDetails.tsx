@@ -50,10 +50,14 @@ export default function SiteDetails() {
   const orgs = orgsData?.data || [];
 
   // For selecting users
-  const { data: usersData } = useUsers({ limit: 1000, org_id: isSuperAdmin && formData.org_id ? formData.org_id : undefined });
+  const shouldFetchUsers = !isSuperAdmin || (isSuperAdmin && !!formData.org_id && formData.org_id !== 'none');
+  const { data: usersData } = useUsers(shouldFetchUsers ? { 
+    limit: 1000, 
+    ...(isSuperAdmin && formData.org_id ? { org_id: formData.org_id } : {}) 
+  } : { limit: 0, org_id: 'skip' });
 
   // Handle potential paginated wrapper or array structure for users
-  const allUsers = Array.isArray(usersData) ? usersData : (usersData?.data || []);
+  const allUsers = shouldFetchUsers ? (Array.isArray(usersData) ? usersData : (usersData?.data || [])) : [];
 
   const [selectedManager, setSelectedManager] = useState<string>('none');
   const [selectedTechnician, setSelectedTechnician] = useState<string>('');
@@ -90,8 +94,12 @@ export default function SiteDetails() {
         if (selectedManager !== 'none') {
           payload.manager_id = selectedManager;
         }
-        if (isSuperAdmin && !formData.org_id) {
+        if (isSuperAdmin && (!formData.org_id || formData.org_id === 'none')) {
           return addNotification('error', 'Organization is required for Super Admins');
+        }
+        // Remove empty org_id to prevent UUID validation error
+        if (!payload.org_id || payload.org_id === 'none') {
+          delete payload.org_id;
         }
         
         await createMutation.mutateAsync(payload);
