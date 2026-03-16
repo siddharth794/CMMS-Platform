@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAsset, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../hooks/api/useAssets';
 import { useSites } from '../hooks/api/useSharedQueries';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -26,7 +28,11 @@ const AssetDetailPage = () => {
   const createMutation = useCreateAsset();
   const updateMutation = useUpdateAsset();
   const deleteMutation = useDeleteAsset();
-  const { data: sites = [] } = useSites();
+  
+  const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole(['super_admin']);
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const organizations = orgsData?.data || [];
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,7 +47,10 @@ const AssetDetailPage = () => {
     purchase_date: '',
     purchase_cost: '',
     site_id: '',
+    org_id: '',
   });
+
+  const { data: sites = [] } = useSites(isSuperAdmin ? { limit: 1000, org_id: formData.org_id || 'none' } : { limit: 1000 });
 
   useEffect(() => {
     if (asset && !isNew) {
@@ -58,12 +67,22 @@ const AssetDetailPage = () => {
         purchase_date: asset.purchase_date ? asset.purchase_date.split('T')[0] : '',
         purchase_cost: asset.purchase_cost || '',
         site_id: asset.site_id || '',
+        org_id: asset.org_id || '',
       });
     }
   }, [asset, isNew]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSuperAdmin && isNew && !formData.org_id) {
+      addNotification('error', 'Organization is required');
+      return;
+    }
+    if (isSuperAdmin && isNew && (!formData.site_id || formData.site_id === 'none')) {
+      addNotification('error', 'Site is required');
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
@@ -72,6 +91,15 @@ const AssetDetailPage = () => {
         asset_tag: formData.asset_tag.trim() === '' ? null : formData.asset_tag,
         site_id: formData.site_id === '' || formData.site_id === 'none' ? null : formData.site_id,
       };
+
+      if (!isNew) {
+        delete payload.org_id;
+        delete payload.site_id;
+      } else {
+        if (!isSuperAdmin || !payload.org_id || payload.org_id === 'none') {
+          delete payload.org_id;
+        }
+      }
 
       if (isNew) {
         await createMutation.mutateAsync(payload);
@@ -227,15 +255,42 @@ const AssetDetailPage = () => {
                 />
               </div>
 
+              {isSuperAdmin && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Organization {isNew && '*'}</Label>
+                    <Select 
+                      disabled={!isNew}
+                      value={formData.org_id || "none"} 
+                      onValueChange={(v) => {
+                        const newOrg = v === 'none' ? '' : v;
+                        setFormData({ ...formData, org_id: newOrg, site_id: '' });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select organization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {organizations.map(o => (
+                          <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Site</Label>
+                  <Label>Site {isSuperAdmin && isNew ? '*' : ''}</Label>
                   <Select 
+                    disabled={!isNew || (isSuperAdmin && !formData.org_id)}
                     value={formData.site_id || "none"} 
                     onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select site (optional)" />
+                      <SelectValue placeholder={isSuperAdmin && !formData.org_id ? "Select organization first" : "Select site (optional)"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>

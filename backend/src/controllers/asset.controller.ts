@@ -33,7 +33,14 @@ class AssetController {
     }
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const asset = await assetService.create(req.user!.org_id, req.body as CreateAssetDTO, this.getAuditContext(req));
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        let targetOrgId = req.user!.org_id;
+        
+        if (userRole === 'super_admin' && req.body.org_id) {
+            targetOrgId = req.body.org_id;
+        }
+
+        const asset = await assetService.create(targetOrgId, req.body as CreateAssetDTO, this.getAuditContext(req));
         res.status(201).json(asset);
     }
 

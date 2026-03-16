@@ -194,7 +194,6 @@ const AssetsPage = () => {
                 <TableHead>Site</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Purchase Date</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -245,11 +244,6 @@ const AssetsPage = () => {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {asset.purchase_date ? format(new Date(asset.purchase_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`status-badge ${asset.status === 'active' ? 'status-completed' : asset.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
-                        {asset.status}
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
