@@ -2,9 +2,13 @@ import { Op } from 'sequelize';
 import { Asset, Site, sequelize } from '../models';
 
 class AssetRepository {
-    async findAndCountAll(orgId: string, where: any, paranoid: boolean, skip: number, limit: number): Promise<{ rows: any[]; count: number }> {
+    async findAndCountAll(orgId: string | null, where: any, paranoid: boolean, skip: number, limit: number): Promise<{ rows: any[]; count: number }> {
+        const queryWhere: any = { ...where };
+        if (orgId) {
+            queryWhere.org_id = orgId;
+        }
         return Asset.findAndCountAll({
-            where: { org_id: orgId, ...where },
+            where: queryWhere,
             paranoid,
             include: [{ model: Site, as: 'site', required: false }],
             offset: skip,
@@ -66,12 +70,20 @@ class AssetRepository {
         await asset.destroy({ force: true });
     }
 
-    async bulkSoftDelete(ids: string[], orgId: string): Promise<void> {
-        await Asset.update({ is_active: false }, { where: { id: { [Op.in]: ids }, org_id: orgId } });
+    async bulkSoftDelete(ids: string[], orgId: string | null): Promise<void> {
+        const where: any = { id: { [Op.in]: ids } };
+        if (orgId) {
+            where.org_id = orgId;
+        }
+        await Asset.update({ is_active: false }, { where });
     }
 
-    async bulkDelete(ids: string[], orgId: string, force: boolean): Promise<number> {
-        return Asset.destroy({ where: { id: { [Op.in]: ids }, org_id: orgId }, force });
+    async bulkDelete(ids: string[], orgId: string | null, force: boolean): Promise<number> {
+        const where: any = { id: { [Op.in]: ids } };
+        if (orgId) {
+            where.org_id = orgId;
+        }
+        return Asset.destroy({ where, force });
     }
 }
 

@@ -10,7 +10,16 @@ class AssetController {
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = (userRole === 'super_admin' && req.query.org_id) ? String(req.query.org_id) : req.user!.org_id;
+        let targetOrgId: string | null = req.user!.org_id;
+        
+        // If super admin and they explicitly select "all" (which might come as empty string from frontend)
+        if (userRole === 'super_admin') {
+            if (req.query.org_id && String(req.query.org_id).trim() !== '') {
+                targetOrgId = String(req.query.org_id);
+            } else if (req.query.org_id === '' || req.query.org_id === undefined) {
+                targetOrgId = null; // null means no org_id filter, so it shows all assets
+            }
+        }
         
         const result = await assetService.getAll(targetOrgId, req.query as unknown as AssetListQuery);
         res.json(result);
@@ -55,7 +64,9 @@ class AssetController {
     }
 
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await assetService.bulkDelete(req.user!.org_id, req.body as BulkDeleteDTO, this.getAuditContext(req));
+        const userRole = req.user!.Role?.name?.toLowerCase() || '';
+        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const result = await assetService.bulkDelete(targetOrgId, req.body as BulkDeleteDTO, this.getAuditContext(req));
         res.json(result);
     }
 }

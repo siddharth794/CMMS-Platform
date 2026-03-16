@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { assetsApi } from '../lib/api';
-import { useSites } from '../hooks/api/useSharedQueries';
+import { useOrganizations } from '../hooks/api/useOrganizations';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -26,23 +26,24 @@ const AssetsPage = () => {
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
-  const { data: sites = [] } = useSites();
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const organizations = orgsData?.data || [];
 
   
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
-  const [siteId, setSiteId] = useState('');
+  const [orgId, setOrgId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     fetchAssets();
-  }, [search, page, recordStatus, siteId]);
+  }, [search, page, recordStatus, orgId]);
 
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const response = await assetsApi.list({ search, record_status: recordStatus, site_id: siteId, skip: (page - 1) * 10, limit: 10 });
+      const response = await assetsApi.list({ search, record_status: recordStatus, org_id: orgId, skip: (page - 1) * 10, limit: 10 });
       setAssets(response.data.data || response.data || []);
       setTotal(response.data.total || (response.data.data || response.data || []).length);
       setSelectedIds([]);
@@ -149,14 +150,14 @@ const AssetsPage = () => {
               </Button>
             )}
             <div className="w-[180px]">
-              <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
+              <Select value={orgId || "all"} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setPage(1); }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Sites" />
+                  <SelectValue placeholder="All Organizations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {sites.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  <SelectItem value="all">All Organizations</SelectItem>
+                  {organizations.map(o => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
