@@ -1,11 +1,12 @@
 import { Op } from 'sequelize';
-import { Asset, sequelize } from '../models';
+import { Asset, Site, sequelize } from '../models';
 
 class AssetRepository {
     async findAndCountAll(orgId: string, where: any, paranoid: boolean, skip: number, limit: number): Promise<{ rows: any[]; count: number }> {
         return Asset.findAndCountAll({
             where: { org_id: orgId, ...where },
             paranoid,
+            include: [{ model: Site, as: 'site', required: false }],
             offset: skip,
             limit
         });
@@ -16,7 +17,10 @@ class AssetRepository {
         if (orgId !== null) {
             where.org_id = orgId;
         }
-        return Asset.findOne({ where });
+        return Asset.findOne({ 
+            where,
+            include: [{ model: Site, as: 'site', required: false }]
+        });
     }
 
     async findByIdParanoid(assetId: string, orgId: string | null): Promise<any | null> {
@@ -47,6 +51,14 @@ class AssetRepository {
             asset.is_active = false;
             await asset.save({ transaction: t });
             await asset.destroy({ transaction: t });
+        });
+    }
+
+    async restoreWithTransaction(asset: any): Promise<void> {
+        await sequelize.transaction(async (t) => {
+            await asset.restore({ transaction: t });
+            asset.is_active = true;
+            await asset.save({ transaction: t });
         });
     }
 

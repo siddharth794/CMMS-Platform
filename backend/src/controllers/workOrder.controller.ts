@@ -3,6 +3,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { workOrderService } from '../services/workOrder.service';
+import { siteRepository } from '../repositories/site.repository';
+import { BadRequestError, ForbiddenError } from '../errors/AppError';
 import {
     CreateWorkOrderDTO, UpdateWorkOrderDTO, WorkOrderListQuery,
     StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
@@ -39,7 +41,36 @@ class WorkOrderController {
     }
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const wo = await workOrderService.create(req.user!.org_id, req.user!.id, req.body as CreateWorkOrderDTO, this.getAuditContext(req));
+        const body = req.body as CreateWorkOrderDTO;
+        const roleName = req.user!.effectiveRoles?.[0]?.name?.toLowerCase() || req.user!.Role?.name?.toLowerCase() || '';
+
+        let targetOrgId = req.user!.org_id;
+        let targetSiteId = body.site_id;
+
+        if (roleName === 'super_admin') {
+            if (!body.org_id) throw new BadRequestError('Super Admins must provide org_id');
+            if (!body.site_id) throw new BadRequestError('Super Admins must provide site_id');
+            targetOrgId = body.org_id;
+            targetSiteId = body.site_id;
+            
+            const site = await siteRepository.findById(targetSiteId, targetOrgId);
+            if (!site) throw new BadRequestError('The provided site_id does not belong to the provided org_id');
+        } else if (roleName === 'org_admin') {
+            if (!body.site_id) throw new BadRequestError('Org Admins must provide site_id');
+            targetSiteId = body.site_id;
+        } else if (roleName === 'facility_manager') {
+            const assignedSiteId = req.user!.site_id;
+            if (!assignedSiteId) throw new ForbiddenError('Facility Manager does not have an assigned site');
+            targetSiteId = assignedSiteId;
+        } else {
+            if (!body.site_id) throw new BadRequestError('site_id is required');
+            targetSiteId = body.site_id;
+        }
+
+        body.site_id = targetSiteId;
+        body.org_id = targetOrgId;
+
+        const wo = await workOrderService.create(targetOrgId, req.user!.id, body, this.getAuditContext(req));
         res.status(201).json(wo);
     }
 
@@ -60,6 +91,11 @@ class WorkOrderController {
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const result = await workOrderService.delete(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
+        res.json(result);
+    }
+
+    restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const result = await workOrderService.restore(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
         res.json(result);
     }
 

@@ -68,6 +68,14 @@ class InventoryRepository {
         });
     }
 
+    async restoreWithTransaction(item: any): Promise<void> {
+        await sequelize.transaction(async (t) => {
+            await item.restore({ transaction: t });
+            item.is_active = true;
+            await item.save({ transaction: t });
+        });
+    }
+
     async hardDelete(item: any): Promise<void> {
         await item.destroy({ force: true });
     }

@@ -89,6 +89,19 @@ class InventoryService {
         }
     }
 
+    async restore(itemId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+        const item = await inventoryRepository.findByIdParanoid(itemId, orgId);
+        if (!item) throw new NotFoundError('Inventory item');
+
+        if (item.deleted_at !== null || item.is_active === false) {
+            await inventoryRepository.restoreWithTransaction(item);
+            auditService.log({ ...audit, entityType: 'InventoryItem', entityId: item.id, action: 'restore' });
+            return { message: 'Inventory item restored successfully' };
+        }
+        
+        return { message: 'Inventory item is already active' };
+    }
+
     async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
         if (!dto.force) await inventoryRepository.bulkSoftDelete(dto.ids, orgId);
         const count = await inventoryRepository.bulkDelete(dto.ids, orgId, !!dto.force);

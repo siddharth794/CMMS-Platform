@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Switch } from '../components/ui/switch';
 import { Checkbox } from '../components/ui/checkbox';
 import InventoryBulkUploadDialog from '../components/InventoryBulkUploadDialog';
-import { Plus, Search, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign } from 'lucide-react';
+import { Plus, Search, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign, RefreshCw } from 'lucide-react';
 import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
@@ -66,6 +66,16 @@ const InventoryPage = () => {
       fetchData();
     } catch (error) {
       addNotification('error', 'Failed to delete item');
+    }
+  };
+
+  const handleRestore = async (itemId) => {
+    try {
+      await inventoryApi.restore(itemId);
+      addNotification('success', 'Item restored');
+      fetchData();
+    } catch (error) {
+      addNotification('error', 'Failed to restore item');
     }
   };
 
@@ -295,15 +305,29 @@ const InventoryPage = () => {
                     <TableCell className="text-right">₹{parseFloat(item.unit_cost || 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive h-8 w-8"
-                          onClick={() => handleDelete(item.id)}
-                          data-testid={`delete-inv-btn-${item.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {recordStatus === 'inactive' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary h-8 w-8"
+                              onClick={() => handleRestore(item.id)}
+                              title="Restore Inventory Item"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive h-8 w-8"
+                            onClick={() => handleDelete(item.id)}
+                            data-testid={`delete-inv-btn-${item.id}`}
+                            title={recordStatus === 'active' ? 'Delete Item' : 'Delete Permanently'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

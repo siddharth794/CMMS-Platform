@@ -11,7 +11,7 @@ function generateAssetTag(): string {
 
 class AssetService {
     async getAll(orgId: string, query: AssetListQuery): Promise<PaginatedResponse<any>> {
-        const { skip = 0, limit = 100, search, asset_type, status, record_status } = query;
+        const { skip = 0, limit = 100, search, asset_type, status, record_status, site_id } = query;
         let where: any = {};
         let paranoid = true;
 
@@ -34,6 +34,7 @@ class AssetService {
         }
         if (asset_type) where.asset_type = asset_type;
         if (status) where.status = status;
+        if (site_id) where.site_id = site_id;
 
         const result = await assetRepository.findAndCountAll(orgId, where, paranoid, Number(skip), Number(limit));
         return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
@@ -88,6 +89,19 @@ class AssetService {
             auditService.log({ ...audit, entityType: 'Asset', entityId: asset.id, action: 'hard_delete' });
             return { message: 'Asset permanently deleted' };
         }
+    }
+
+    async restore(assetId: string, orgId: string | null, audit: AuditContext): Promise<{ message: string }> {
+        const asset = await assetRepository.findByIdParanoid(assetId, orgId);
+        if (!asset) throw new NotFoundError('Asset');
+
+        if (asset.deleted_at !== null || asset.is_active === false) {
+            await assetRepository.restoreWithTransaction(asset);
+            auditService.log({ ...audit, entityType: 'Asset', entityId: asset.id, action: 'restore' });
+            return { message: 'Asset restored successfully' };
+        }
+        
+        return { message: 'Asset is already active' };
     }
 
     async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {

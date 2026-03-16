@@ -4,6 +4,7 @@ import logger from '../config/logger';
 export type AuditAction =
     | 'create' | 'update' | 'delete' | 'hard_delete'
     | 'bulk_delete' | 'bulk_hard_delete'
+    | 'restore' | 'bulk_restore'
     | 'status_change' | 'assign';
 
 interface AuditParams {

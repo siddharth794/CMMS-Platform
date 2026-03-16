@@ -1,11 +1,11 @@
 import { Op } from 'sequelize';
-import { User, Role, sequelize } from '../models';
+import { User, Role, sequelize, Site } from '../models';
 
 class UserRepository {
     async findByEmail(email: string): Promise<any | null> {
         return User.findOne({
             where: { email },
-            include: [{ model: Role }]
+            include: [{ model: Role }, { model: Site, as: 'site' }]
         });
     }
 
@@ -13,7 +13,7 @@ class UserRepository {
         const { Organization } = require('../models');
         return User.findOne({
             where: { email },
-            include: [{ model: Role }, { model: Organization }]
+            include: [{ model: Role }, { model: Organization }, { model: Site, as: 'site' }]
         });
     }
 
@@ -24,12 +24,12 @@ class UserRepository {
         }
         return User.findOne({
             where,
-            include: [{ model: Role }]
+            include: [{ model: Role }, { model: Site, as: 'site' }]
         });
     }
 
     async findByPk(userId: string): Promise<any | null> {
-        return User.findByPk(userId, { include: [{ model: Role }] });
+        return User.findByPk(userId, { include: [{ model: Role }, { model: Site, as: 'site' }] });
     }
 
     async findAndCountAll(orgId: string | null, skip: number, limit: number, paranoid: boolean, where: any): Promise<{ rows: any[]; count: number }> {
@@ -41,7 +41,7 @@ class UserRepository {
         return User.findAndCountAll({
             where: queryWhere,
             paranoid,
-            include: [{ model: Role }],
+            include: [{ model: Role }, { model: Site, as: 'site' }],
             offset: skip,
             limit,
             distinct: true
@@ -52,7 +52,7 @@ class UserRepository {
         return User.findAll({
             where: { org_id: orgId, ...where },
             paranoid,
-            include: [{ model: Role }],
+            include: [{ model: Role }, { model: Site, as: 'site' }],
             offset: skip,
             limit
         });
@@ -83,6 +83,14 @@ class UserRepository {
             user.is_active = false;
             await user.save({ transaction: t });
             await user.destroy({ transaction: t });
+        });
+    }
+
+    async restoreWithTransaction(user: any): Promise<void> {
+        await sequelize.transaction(async (t) => {
+            await user.restore({ transaction: t });
+            user.is_active = true;
+            await user.save({ transaction: t });
         });
     }
 

@@ -12,30 +12,62 @@ import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useCreateWorkOrder } from '../hooks/api/useWorkOrders';
 import { useAssetsData } from '../hooks/api/useAssets';
+import { useSites } from '../hooks/api/useSharedQueries';
+import { useOrganizations } from '../hooks/api/useOrganizations';
 
 const CreateWorkOrderPage = () => {
   const navigate = useNavigate();
-  const { isRequester } = useAuth();
+  const { isRequester, hasRole, user } = useAuth();
   const { addNotification } = useNotification();
   const createMutation = useCreateWorkOrder();
-  const { data: assetsData } = useAssetsData();
-  const assets = assetsData?.data || [];
+  
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'medium',
     asset_id: '',
+    site_id: '',
+    org_id: '',
     location: '',
   });
+
+  const { data: assetsData } = useAssetsData(isSuperAdmin && formData.org_id ? { org_id: formData.org_id } : undefined);
+  const assets = assetsData?.data || [];
+  
+  const { data: sites = [] } = useSites(isSuperAdmin && formData.org_id ? { org_id: formData.org_id } : undefined);
+  
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const orgs = orgsData?.data || [];
+
+  const handleAssetChange = (assetId: string) => {
+    const selectedAsset = assets.find(a => a.id === assetId);
+    setFormData(prev => ({
+      ...prev,
+      asset_id: assetId === 'none' ? '' : assetId,
+      site_id: selectedAsset?.site_id || prev.site_id,
+      location: selectedAsset?.location || prev.location
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const payload = { ...formData };
-      if (payload.asset_id === 'none') {
-        delete payload.asset_id;
+      if (payload.asset_id === 'none' || !payload.asset_id) delete payload.asset_id;
+      if (payload.site_id === 'none' || !payload.site_id) delete payload.site_id;
+      if (payload.org_id === 'none' || !payload.org_id) delete payload.org_id;
+      
+      // Validation based on roles
+      if (isSuperAdmin) {
+        if (!payload.org_id) return addNotification('error', 'Organization is required for Super Admin');
+        if (!payload.site_id) return addNotification('error', 'Site is required for Super Admin');
+      } else if (!isFacilityManager) {
+        if (!payload.site_id) return addNotification('error', 'Site is required');
       }
+
       const wo = await createMutation.mutateAsync(payload);
       addNotification('success', 'Work order created successfully');
       navigate('/work-orders');
@@ -116,9 +148,9 @@ const CreateWorkOrderPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="asset_id">Related Asset</Label>
-                <Select value={formData.asset_id} onValueChange={(v) => setFormData({ ...formData, asset_id: v })}>
+                <Select value={formData.asset_id || "none"} onValueChange={handleAssetChange} disabled={isSuperAdmin && !formData.org_id}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an asset (optional)" />
+                    <SelectValue placeholder={isSuperAdmin && !formData.org_id ? "Select an organization first" : "Select an asset (optional)"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
@@ -128,6 +160,40 @@ const CreateWorkOrderPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label htmlFor="org_id">Organization *</Label>
+                  <Select value={formData.org_id || "none"} onValueChange={(v) => setFormData({ ...formData, org_id: v === 'none' ? '' : v, site_id: '', asset_id: '' })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select an organization</SelectItem>
+                      {orgs.map(o => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {!isFacilityManager && (
+                <div className="space-y-2">
+                  <Label htmlFor="site_id">Site *</Label>
+                  <Select value={formData.site_id || "none"} onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })} disabled={isSuperAdmin && !formData.org_id}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isSuperAdmin && !formData.org_id ? "Select an organization first" : "Select a site"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select a site</SelectItem>
+                      {sites.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="location">Location</Label>

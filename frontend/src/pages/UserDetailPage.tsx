@@ -41,7 +41,20 @@ const UserDetailPage = () => {
     username: '',
     phone: '',
     role_id: '',
+    site_id: 'none',
   });
+
+  const selectedOrgId = isSuperAdmin ? user?.org_id : currentUser?.org_id;
+  const { data: sitesData, isLoading: isLoadingSites } = useQuery({
+    queryKey: ['sites', { org_id: selectedOrgId, limit: 100 }],
+    queryFn: async () => {
+      const { sitesApi } = await import('../lib/api');
+      const { data } = await sitesApi.list({ org_id: selectedOrgId, limit: 100 });
+      return data;
+    },
+    enabled: !!selectedOrgId
+  });
+  const sites = sitesData?.data || [];
 
   useEffect(() => {
     if (user && roles.length > 0) {
@@ -56,6 +69,7 @@ const UserDetailPage = () => {
         username: user.username || '',
         phone: user.phone || '',
         role_id: assignedRoleId,
+        site_id: user.site_id || 'none',
       });
     } else if (user) {
       // Fallback if roles aren't loaded yet
@@ -66,6 +80,7 @@ const UserDetailPage = () => {
         email: user.email || '',
         username: user.username || '',
         phone: user.phone || '',
+        site_id: user.site_id || 'none',
       }));
     }
   }, [user, roles]);
@@ -84,12 +99,18 @@ const UserDetailPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        role_id: parseInt(formData.role_id)
+      };
+      
+      if (payload.site_id === 'none') {
+        payload.site_id = null;
+      }
+      
       await updateMutation.mutateAsync({
         id,
-        data: {
-          ...formData,
-          role_id: parseInt(formData.role_id)
-        }
+        data: payload
       });
       addNotification('success', 'User updated successfully');
       navigate('/users');
@@ -223,6 +244,44 @@ const UserDetailPage = () => {
                   </p>
                 </div>
               </div>
+
+              {formData.role_id && (() => {
+                const selectedRole = roles.find(r => r.id.toString() === formData.role_id);
+                const roleName = selectedRole?.name?.toLowerCase() || '';
+                // Include check if the user is already an org admin, since the name might not be in the roles list if they are not super admin
+                const isOrgAdmin = formData.role_id === '2';
+                
+                if (!isOrgAdmin && (roleName === 'technician' || roleName === 'facility manager')) {
+                  return (
+                    <div className="space-y-2">
+                      <Label>Assigned Site</Label>
+                      {isLoadingSites ? (
+                        <div className="flex items-center h-10 px-3 py-2 border rounded-md opacity-50">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading sites...
+                        </div>
+                      ) : (
+                        <Select value={formData.site_id} onValueChange={(v) => setFormData({ ...formData, site_id: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a site" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">-- Unassigned --</SelectItem>
+                            {sites.map((site) => (
+                              <SelectItem key={site.id} value={site.id}>
+                                {site.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Optional. Links this user directly to a specific site.
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </form>
           </CardContent>
         </Card>

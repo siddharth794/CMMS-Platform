@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { assetsApi } from '../lib/api';
+import { useSites } from '../hooks/api/useSharedQueries';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -13,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import AssetsBulkUploadDialog from '../components/AssetsBulkUploadDialog';
 import { Pagination } from '../components/ui/pagination';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Search, Loader2, MapPin, Trash, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, MapPin, Trash, Trash2, RefreshCw } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 
@@ -25,21 +26,23 @@ const AssetsPage = () => {
   const { isManager } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
+  const { data: sites = [] } = useSites();
 
   
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [siteId, setSiteId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     fetchAssets();
-  }, [search, page, recordStatus]);
+  }, [search, page, recordStatus, siteId]);
 
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const response = await assetsApi.list({ search, record_status: recordStatus, skip: (page - 1) * 10, limit: 10 });
+      const response = await assetsApi.list({ search, record_status: recordStatus, site_id: siteId, skip: (page - 1) * 10, limit: 10 });
       setAssets(response.data.data || response.data || []);
       setTotal(response.data.total || (response.data.data || response.data || []).length);
       setSelectedIds([]);
@@ -53,6 +56,16 @@ const AssetsPage = () => {
   
   
   
+  const handleRestore = async (assetId) => {
+    try {
+      await assetsApi.restore(assetId);
+      addNotification('success', 'Asset restored');
+      fetchAssets();
+    } catch (error) {
+      addNotification('error', 'Failed to restore asset');
+    }
+  };
+
   const handleDelete = async (assetId) => {
     if (!window.confirm(recordStatus === 'active' ? 'Delete this asset?' : 'Permanently delete this asset?')) return;
     try {
@@ -136,6 +149,19 @@ const AssetsPage = () => {
               </Button>
             )}
             <div className="w-[180px]">
+              <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Sites" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  {sites.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger data-testid="filter-record-status">
                   <SelectValue placeholder="Record Status" />
@@ -164,6 +190,7 @@ const AssetsPage = () => {
                 <TableHead>Asset Tag</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Site</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Purchase Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -208,6 +235,7 @@ const AssetsPage = () => {
                       <span className="capitalize text-muted-foreground">{asset.asset_type}</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{asset.category || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{asset.site?.name || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <MapPin className="h-3 w-3" />
@@ -224,15 +252,29 @@ const AssetsPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive h-8 w-8"
-                          onClick={() => handleDelete(asset.id)}
-                          data-testid={`delete-asset-btn-${asset.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {recordStatus === 'inactive' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary h-8 w-8"
+                              onClick={() => handleRestore(asset.id)}
+                              title="Restore asset"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive h-8 w-8"
+                            onClick={() => handleDelete(asset.id)}
+                            data-testid={`delete-asset-btn-${asset.id}`}
+                            title={recordStatus === 'inactive' ? 'Permanently delete' : 'Delete asset'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

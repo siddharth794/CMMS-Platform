@@ -1,0 +1,273 @@
+# Implementation Plan: Site Entity for CMMS Platform
+
+## Problem
+
+The CMMS platform currently has no **Site** entity. In a real-world CMMS system:
+- Every **Organization** has multiple **Sites** (physical locations/facilities).
+- A **Facility Manager** is assigned to manage a site (1 FM → 1 Site).
+- Each site has many **Technicians** working at it (one-to-many relationship: a technician belongs to exactly one site).
+- Work orders, assets, and other entities should eventually be scoped to a site.
+
+This plan adds the `Site` entity end-to-end following the existing architecture:  
+**Route → Controller → Service → Repository → Model**
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Site Schema**: I'm assuming the following columns for `sites`. Please confirm or adjust:
+> - `name` (required, unique per org), `address`, `city`, `state`, `zip_code`, `country`, `phone`, `description`, `is_active`
+> - `manager_id` — FK to `users` (one FM per site, nullable)
+> - `org_id` — FK to `organizations`
+
+> [!IMPORTANT]
+> **Technician Assignment**: Per recent requirements, there is a **One-to-Many** relationship between Sites and Technicians. A `site_id` foreign key will be added directly to the `users` table, ensuring a technician belongs to exactly one site.
+
+> [!WARNING]
+> **No cascading scope changes yet**: This plan adds the Site entity and CRUD. It does **not** re-scope existing entities (assets, work orders, inventory) to sites. That would be a larger follow-up change. Please confirm if you want those in scope now or later.
+
+---
+
+## Proposed Changes
+
+### Database Layer — Model & Migration
+
+#### [MODIFY] backend/src/models/index.ts
+
+Add `Site` model:
+
+```typescript
+class Site extends Model {
+  public id!: string;
+  public name!: string;
+  public org_id!: string;
+  public manager_id!: string | null;
+}
+Site.init({
+  id:          { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  org_id:      { type: DataTypes.UUID, allowNull: false },
+  name:        { type: DataTypes.STRING, allowNull: false },
+  address:     { type: DataTypes.TEXT },
+  city:        { type: DataTypes.STRING(100) },
+  state:       { type: DataTypes.STRING(100) },
+  zip_code:    { type: DataTypes.STRING(20) },
+  country:     { type: DataTypes.STRING(100) },
+  phone:       { type: DataTypes.STRING(20) },
+  description: { type: DataTypes.TEXT },
+  is_active:   { type: DataTypes.BOOLEAN, defaultValue: true },
+  manager_id:  { type: DataTypes.UUID, allowNull: true },
+}, { sequelize, tableName: 'sites', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+```
+
+Update `User` model to include `site_id`:
+```typescript
+class User extends Model {
+  // ... existing fields
+  public site_id?: string | null;
+}
+User.init({
+  // ... existing fields
+  site_id: { type: DataTypes.UUID, allowNull: true },
+  // ...
+});
+```
+
+Add associations:
+```typescript
+// Organization → Sites
+Organization.hasMany(Site, { foreignKey: 'org_id' });
+Site.belongsTo(Organization, { foreignKey: 'org_id' });
+
+// Site → Facility Manager (1:1)
+Site.belongsTo(User, { as: 'manager', foreignKey: 'manager_id' });
+User.hasOne(Site, { as: 'managed_site', foreignKey: 'manager_id' });
+
+// Site → Technicians (1:N)
+Site.hasMany(User, { as: 'technicians', foreignKey: 'site_id' });
+User.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+```
+
+Export `Site` from the module.
+
+---
+
+#### [NEW] backend/src/migrations/20260311070000-add-sites-table.js
+
+Sequelize migration to create:
+1. `sites` table with all columns + timestamps + soft delete
+2. Add `site_id` column as a foreign key to the existing `users` table
+3. Unique constraint on `name` and `org_id` to prevent duplicate site names in same org
+4. Unique constraint on `manager_id` to enforce 1 FM → 1 Site
+
+---
+
+### Repository Layer
+
+#### [NEW] backend/src/repositories/site.repository.ts
+
+`SiteRepository` class with methods:
+
+| Method | Description |
+|--------|-------------|
+| `findAll(orgId, skip, limit, filters)` | Paginated list with filters, includes manager + technician count |
+| `findById(siteId, orgId)` | Single site with manager & technicians eager-loaded |
+| `findByName(name, orgId)` | Check name uniqueness within org |
+| `findByManagerId(managerId, orgId)` | Check if FM is already assigned to another site |
+| `create(data)` | Create site record |
+| `update(siteId, data, orgId)` | Update site fields |
+| `delete(siteId, orgId, force)` | Soft/hard delete |
+| `assignTechnician(siteId, userId)` | Update a user's `site_id` to assign them to the site |
+| `removeTechnician(userId)` | Nullify a user's `site_id` to remove them from the site |
+
+---
+
+### Service Layer
+
+#### [NEW] backend/src/services/site.service.ts
+
+`SiteService` class with business logic:
+
+| Method | Key Business Rules |
+|--------|-------------------|
+| `create()` | Validate unique name per org; validate `manager_id` is a facility_manager role; check FM not already assigned to another site |
+| `getAll()` | Paginated list, supports `search`, `is_active` filters |
+| `getById()` | Get with manager + technicians |
+| `update()` | Re-validate name uniqueness if changed; re-validate FM assignment if changed |
+| `delete()` | Soft-delete first, then hard-delete on second call |
+| `assignManager()` | Assign/unassign a Facility Manager; enforce 1:1 constraint |
+| `assignTechnician()` | Validate user ID exists, has technician role, and update their `site_id` |
+| `removeTechnician()` | Remove technician from site by clearing `site_id` |
+
+---
+
+### Validation Layer
+
+#### [NEW] backend/src/validators/site.validator.ts
+
+Zod schemas:
+
+```typescript
+CreateSiteSchema    — name (required), address, city, state, zip_code, country, phone, description, manager_id
+UpdateSiteSchema    — all fields optional (partial of Create)
+AssignManagerSchema — manager_id (uuid, nullable)
+AssignTechnicianSchema — user_id (uuid)
+BulkDeleteSchema    — reuse existing pattern
+```
+
+---
+
+### Types Layer
+
+#### [MODIFY] backend/src/types/dto.ts
+
+Add:
+```typescript
+// ─── Site DTOs ────────────────────────────────────────────────────
+export interface CreateSiteDTO { name: string; address?: string; city?: string; manager_id?: string; }
+export interface UpdateSiteDTO extends Partial<CreateSiteDTO> {}
+export interface SiteListQuery { skip?: number; limit?: number; search?: string; record_status?: string; }
+```
+
+---
+
+### Controller Layer
+
+#### [NEW] backend/src/controllers/site.controller.ts
+
+`SiteController` class with handlers:
+- `getAll`, `getById`, `create`, `update`, `delete`, `bulkDelete`
+- `assignManager` — `PUT /:site_id/manager`
+- `assignTechnician` — `PUT /:site_id/technicians/:user_id`
+- `removeTechnician` — `DELETE /:site_id/technicians/:user_id`
+
+---
+
+### Routes Layer
+
+#### [NEW] backend/src/routes/sites.ts
+
+```
+GET    /                        — getAll          (all authenticated users)
+POST   /                        — create          (ADMIN_ROLES only)
+GET    /:site_id                — getById         (all authenticated users)
+PUT    /:site_id                — update          (ADMIN_ROLES only)
+DELETE /:site_id                — delete          (ADMIN_ROLES only)
+POST   /bulk-delete             — bulkDelete      (ADMIN_ROLES only)
+PUT    /:site_id/manager        — assignManager   (ADMIN_ROLES only)
+PUT    /:site_id/technicians/:user_id — assignTechnician  (MANAGER_ROLES)
+DELETE /:site_id/technicians/:user_id — removeTechnician  (MANAGER_ROLES)
+```
+
+#### [MODIFY] backend/src/routes/index.ts
+
+Register: `router.use('/sites', siteRoutes);`
+
+---
+
+### Sync Script
+
+#### [NEW] backend/src/scripts/sync_sites.ts
+
+Quick sync script to create the new tables without running the full migration (dev convenience), following the pattern of existing `sync_*.ts` scripts.
+
+---
+
+## Entity Relationship Summary
+
+```mermaid
+erDiagram
+    Organization ||--o{ Site : "has many"
+    Site }o--|| User : "managed by (FM)"
+    Site ||--o{ User : "has technicians (site_id on User)"
+    
+    Site {
+        uuid id PK
+        uuid org_id FK
+        string name
+        text address
+        string city
+        string state
+        string zip_code
+        string country
+        string phone
+        text description
+        boolean is_active
+        uuid manager_id FK
+    }
+```
+
+---
+
+## Files Summary
+
+| Action | File | Layer |
+|--------|------|-------|
+| MODIFY | `src/models/index.ts` | Model |
+| NEW | `src/migrations/20260311070000-add-sites-table.js` | Migration |
+| NEW | `src/repositories/site.repository.ts` | Repository |
+| NEW | `src/services/site.service.ts` | Service |
+| NEW | `src/validators/site.validator.ts` | Validator |
+| MODIFY | `src/types/dto.ts` | Types |
+| NEW | `src/controllers/site.controller.ts` | Controller |
+| NEW | `src/routes/sites.ts` | Route |
+| MODIFY | `src/routes/index.ts` | Route Index |
+| NEW | `src/scripts/sync_sites.ts` | Dev Script |
+
+**Total: 7 new files, 3 modified files**
+
+---
+
+## Verification Plan
+
+### Automated
+1. Run `npx tsc --noEmit` — ensure zero TypeScript errors
+2. Run `npm run dev` — ensure server starts without module resolution or runtime errors
+3. Run the sync script to create tables: `npx ts-node src/scripts/sync_sites.ts`
+
+### Manual (via API)
+1. **Create site** → verify 201 response with correct fields
+2. **Assign FM** → verify FM constraint (same FM can't manage two sites)
+3. **Assign technician** → verify role validation (only users with `technician` role)
+4. **List sites** → verify pagination + manager/technician data included
+5. **Delete site** → verify soft delete, then hard delete

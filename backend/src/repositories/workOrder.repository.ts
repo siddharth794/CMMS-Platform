@@ -1,8 +1,9 @@
 import { Op } from 'sequelize';
-import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, sequelize } from '../models';
+import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, Site, sequelize } from '../models';
 
 const WO_INCLUDES = [
     { model: Asset, as: 'asset', paranoid: false },
+    { model: Site, as: 'site', required: false },
     { model: User, as: 'assignee', required: false, paranoid: false, include: [{ model: Role, required: false }] },
     { model: User, as: 'requester', required: false, paranoid: false, include: [{ model: Role, required: false }] },
     { model: WorkOrderInventoryItem, as: 'used_parts', required: false, include: [{ model: InventoryItem, as: 'item', required: false }] },
@@ -11,6 +12,7 @@ const WO_INCLUDES = [
 
 const WO_INCLUDES_STRICT = [
     { model: Asset, as: 'asset' },
+    { model: Site, as: 'site' },
     { model: User, as: 'assignee', include: [{ model: Role }] },
     { model: User, as: 'requester', include: [{ model: Role }] },
     { model: WorkOrderInventoryItem, as: 'used_parts', include: [{ model: InventoryItem, as: 'item' }] },
@@ -55,6 +57,10 @@ class WorkOrderRepository {
 
     async softDelete(wo: any): Promise<void> {
         await wo.destroy();
+    }
+
+    async restore(wo: any): Promise<void> {
+        await wo.restore();
     }
 
     async hardDelete(wo: any): Promise<void> {

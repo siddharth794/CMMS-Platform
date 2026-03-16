@@ -1,0 +1,27 @@
+---
+description: Guidelines for error handling and application logging.
+globs: backend/src/**/*
+---
+# Error Handling & Application Logging Rules
+
+When writing code that interacts with the user, database, or external services, strictly follow these error handling rules to prevent app crashes and provide meaningful API responses.
+
+1. **Custom `AppError` Classes**: 
+   - **Never throw generic `Error` objects.** 
+   - Always import and throw custom errors from `src/errors/AppError.ts`. 
+   - Use `new BadRequestError('Invalid input')` (400)
+   - Use `new UnauthorizedError('Please login')` (401)
+   - Use `new ForbiddenError('Access denied')` (403)
+   - Use `new NotFoundError('Work Order not found')` (404)
+
+2. **Controller Try/Catch Flow**: 
+   - Wrap controller logic in a `try/catch` block. 
+   - Pass caught errors to the `next(error)` function. 
+   - The global error handler (`src/middleware/errorHandler.ts`) will format the error into a JSON response. 
+   - Avoid creating custom `res.status(500).send()` logic directly inside controllers.
+
+3. **Structured Logging (Pino)**: 
+   - Do not use `console.log`. 
+   - Import the configured Pino logger (`import logger from '../config/logger'`). 
+   - Use `logger.info()`, `logger.warn()`, or `logger.error()`. 
+   - Include contextual data (like `userId` or `workOrderId`) as the first argument in log objects, e.g., `logger.info({ userId: req.user.id }, 'User updated profile')`.

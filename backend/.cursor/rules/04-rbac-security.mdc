@@ -1,0 +1,23 @@
+---
+description: Security standards, RBAC, and Authentication rules.
+globs: backend/src/routes/*, backend/src/controllers/*
+---
+# Security, RBAC & Authentication Rules
+
+This CMMS platform relies heavily on **Role-Based Access Control (RBAC)** and multi-tenancy. When adding a new API endpoint, ensure these rules are strictly followed.
+
+1. **Authentication Middleware (`authenticate`)**: 
+   - All protected routes must use the `authenticate` middleware from `src/middleware/auth.ts`.
+   - Ensure the user's JWT token is validated and their context (`org_id`, `id`, `roles`) is attached to the `req` object.
+
+2. **Authorization (RBAC) (`requirePermission` / `requireRole`)**: 
+   - Use `requireRole(['Admin', 'Manager'])` or `requirePermission('action_name')` middleware to protect sensitive endpoints from unauthorized access. 
+   - Never assume a logged-in user has permission to perform an action.
+
+3. **User Context vs Request Body**: 
+   - Always extract `org_id` and `id` (user ID) from `req.user`. 
+   - **CRITICAL**: Never trust `org_id` or `user_id` passed in the `req.body` by the client for authorization purposes. The client could spoof another tenant's `org_id`.
+
+4. **Input Validation (Zod)**: 
+   - Never trust user input. Validate all incoming data (body, query, params) against a strictly defined Zod schema before processing it in a controller. 
+   - Use `.strip()` or strict parsing to drop unexpected/malicious properties from the request body.

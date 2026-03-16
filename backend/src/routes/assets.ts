@@ -14,6 +14,7 @@ router.post('/bulk', requireRole(MANAGER_ROLES), assetController.bulkCreate);
 router.get('/:asset_id', assetController.getById);
 router.put('/:asset_id', requireRole(MANAGER_ROLES), validate(UpdateAssetSchema), assetController.update);
 router.delete('/:asset_id', assetController.delete);
+router.post('/:asset_id/restore', requireRole(MANAGER_ROLES), assetController.restore);
 router.post('/bulk-delete', requireRole(MANAGER_ROLES), validate(BulkDeleteSchema), assetController.bulkDelete);
 
 export default router;

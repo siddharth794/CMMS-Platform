@@ -152,6 +152,16 @@ const PMSchedulesPage = () => {
     }
   };
 
+  const handleRestore = async (pmId) => {
+    try {
+      await pmSchedulesApi.restore(pmId);
+      addNotification('success', 'PM Schedule restored');
+      fetchData();
+    } catch (error) {
+      addNotification('error', 'Failed to restore schedule');
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} schedules?`)) return;
     
@@ -426,15 +436,29 @@ const PMSchedulesPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive h-8 w-8"
-                          onClick={() => handleDelete(pm.id)}
-                          data-testid={`delete-pm-btn-${pm.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {recordStatus === 'inactive' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary h-8 w-8"
+                              onClick={() => handleRestore(pm.id)}
+                              title="Restore PM Schedule"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive h-8 w-8"
+                            onClick={() => handleDelete(pm.id)}
+                            data-testid={`delete-pm-btn-${pm.id}`}
+                            title={recordStatus === 'active' ? 'Delete PM Schedule' : 'Delete Permanently'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

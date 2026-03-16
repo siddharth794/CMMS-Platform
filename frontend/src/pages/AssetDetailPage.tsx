@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAsset, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../hooks/api/useAssets';
+import { useSites } from '../hooks/api/useSharedQueries';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -25,6 +26,7 @@ const AssetDetailPage = () => {
   const createMutation = useCreateAsset();
   const updateMutation = useUpdateAsset();
   const deleteMutation = useDeleteAsset();
+  const { data: sites = [] } = useSites();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +40,7 @@ const AssetDetailPage = () => {
     manufacturer: '',
     purchase_date: '',
     purchase_cost: '',
+    site_id: '',
   });
 
   useEffect(() => {
@@ -54,6 +57,7 @@ const AssetDetailPage = () => {
         manufacturer: asset.manufacturer || '',
         purchase_date: asset.purchase_date ? asset.purchase_date.split('T')[0] : '',
         purchase_cost: asset.purchase_cost || '',
+        site_id: asset.site_id || '',
       });
     }
   }, [asset, isNew]);
@@ -66,6 +70,7 @@ const AssetDetailPage = () => {
         purchase_date: formData.purchase_date.trim() === '' ? null : formData.purchase_date,
         purchase_cost: formData.purchase_cost.trim() === '' ? null : formData.purchase_cost,
         asset_tag: formData.asset_tag.trim() === '' ? null : formData.asset_tag,
+        site_id: formData.site_id === '' || formData.site_id === 'none' ? null : formData.site_id,
       };
 
       if (isNew) {
@@ -222,13 +227,32 @@ const AssetDetailPage = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Site</Label>
+                  <Select 
+                    value={formData.site_id || "none"} 
+                    onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {sites.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

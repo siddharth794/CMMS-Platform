@@ -14,5 +14,6 @@ router.post('/bulk-delete', requireRole(MANAGER_ROLES), pmScheduleController.bul
 router.get('/:pm_id', pmScheduleController.getById);
 router.put('/:pm_id', requireRole(MANAGER_ROLES), validate(UpdatePMScheduleSchema), pmScheduleController.update);
 router.delete('/:pm_id', requireRole(MANAGER_ROLES), pmScheduleController.delete);
+router.post('/:pm_id/restore', requireRole(MANAGER_ROLES), pmScheduleController.restore);
 
 export default router;

@@ -20,7 +20,7 @@ function generateWoNumber(): string {
 
 class WorkOrderService {
     async getAll(orgId: string, userId: string, roleName: string, query: WorkOrderListQuery): Promise<PaginatedResponse<any>> {
-        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search, record_status } = query;
+        const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search, record_status, site_id } = query;
         let where: any = { org_id: orgId };
         let paranoid = true;
 
@@ -36,6 +36,7 @@ class WorkOrderService {
         if (priority) where.priority = priority;
         if (assignee_id) where.assignee_id = assignee_id;
         if (asset_id) where.asset_id = asset_id;
+        if (site_id) where.site_id = site_id;
 
         if (search) {
             where[Op.or] = [
@@ -174,6 +175,19 @@ class WorkOrderService {
             auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'hard_delete' });
             return { message: 'Work order permanently deleted' };
         }
+    }
+
+    async restore(woId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+        const wo = await workOrderRepository.findByIdParanoid(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        if (wo.deleted_at !== null) {
+            await workOrderRepository.restore(wo);
+            auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'restore' });
+            return { message: 'Work order restored successfully' };
+        }
+        
+        return { message: 'Work order is already active' };
     }
 
     async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {

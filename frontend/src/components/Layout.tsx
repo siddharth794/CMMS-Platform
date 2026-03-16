@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
 import {
   LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings,
-  LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package, Shield, Lock, Users
+  LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package, Shield, Lock, Users, MapPin
 } from 'lucide-react';
 
 const Sidebar = ({ className = '' }) => {
@@ -29,6 +29,7 @@ const Sidebar = ({ className = '' }) => {
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     
     { name: 'Organizations', href: '/organizations', icon: Building2, superAdminOnly: true },
+    { name: 'Sites', href: '/sites', icon: MapPin, adminOnly: true },
     { name: 'Roles', href: '/roles', icon: Shield, adminOnly: true },
     { name: 'Groups', href: '/groups', icon: Users, adminOnly: true },
     { name: 'Accesses', href: '/accesses', icon: Lock, superAdminOnly: true },
@@ -51,7 +52,7 @@ const Sidebar = ({ className = '' }) => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Spartans FMS</span>
+          <span className="text-xl font-bold tracking-tight">{user?.Organization?.name || user?.organization?.name || 'FMS'}</span>
         </Link>
       </div>
 
@@ -65,9 +66,9 @@ const Sidebar = ({ className = '' }) => {
                 key={item.name}
                 to={item.href}
                 data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className={`sidebar-link ${isActive ? 'active' : ''}`}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${isActive ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'text-muted-foreground'}`}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-4 w-4" />
                 {item.name}
               </Link>
             );
@@ -97,6 +98,13 @@ const Layout = () => {
   const { theme, toggleTheme } = useTheme();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotification();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  React.useEffect(() => {
+    const orgName = user?.Organization?.name || user?.organization?.name;
+    if (orgName) {
+      document.title = `${orgName} | FMS`;
+    }
+  }, [user]);
 
   return (
     <div className="flex h-screen overflow-hidden">

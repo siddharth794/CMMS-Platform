@@ -626,6 +626,16 @@ const WorkOrderDetailPage = () => {
               <div className="flex items-center gap-3">
                 <Box className="h-5 w-5 text-muted-foreground" />
                 <div>
+                  <p className="text-sm text-muted-foreground">Site</p>
+                  <p className="font-medium">{workOrder.site?.name || 'No site linked'}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center gap-3">
+                <Box className="h-5 w-5 text-muted-foreground" />
+                <div>
                   <p className="text-sm text-muted-foreground">Asset</p>
                   <p className="font-medium">{workOrder.asset?.name || 'No asset linked'}</p>
                   {workOrder.asset && (

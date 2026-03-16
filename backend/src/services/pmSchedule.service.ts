@@ -31,17 +31,32 @@ class PMScheduleService {
         return pmScheduleRepository.findByPkWithAsset(pm.id);
     }
 
-    async delete(pmId: string, orgId: string): Promise<{ message: string }> {
+    async delete(pmId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
         const pm = await pmScheduleRepository.findByIdParanoid(pmId, orgId);
         if (!pm) throw new NotFoundError('PM schedule');
 
         if (pm.deleted_at === null && pm.is_active !== false) {
             await pmScheduleRepository.softDeleteWithTransaction(pm);
+            auditService.log({ ...audit, entityType: 'PMSchedule', entityId: pmId, action: 'delete' });
             return { message: 'PM schedule deactivated' };
         } else {
             await pmScheduleRepository.hardDelete(pm);
+            auditService.log({ ...audit, entityType: 'PMSchedule', entityId: pmId, action: 'hard_delete' });
             return { message: 'PM schedule permanently deleted' };
         }
+    }
+
+    async restore(pmId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+        const pm = await pmScheduleRepository.findByIdParanoid(pmId, orgId);
+        if (!pm) throw new NotFoundError('PM schedule');
+
+        if (pm.deleted_at !== null || pm.is_active === false) {
+            await pmScheduleRepository.restoreWithTransaction(pm);
+            auditService.log({ ...audit, entityType: 'PMSchedule', entityId: pmId, action: 'restore' });
+            return { message: 'PM schedule restored successfully' };
+        }
+        
+        return { message: 'PM schedule is already active' };
     }
 
     async bulkDelete(orgId: string, dto: any, audit: AuditContext): Promise<{ message: string }> {

@@ -8,7 +8,30 @@ export interface User {
   Role?: Role; // sometimes capitalized in the current code
   department?: string;
   is_active: boolean;
+  site_id?: string | null;
+  site?: Site | null;
+  org_id?: string;
+  Organization?: Organization;
+  organization?: Organization;
   created_at?: string;
+}
+
+export interface Site {
+  id: string;
+  name: string;
+  org_id: string;
+  manager_id?: string | null;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+  phone?: string;
+  description?: string;
+  is_active: boolean;
+  created_at?: string;
+  manager?: User;
+  technicians?: User[];
 }
 
 export interface Role {
@@ -33,6 +56,8 @@ export interface Asset {
   asset_tag?: string;
   is_active: boolean;
   parent_asset_id?: string;
+  site_id?: string | null;
+  site?: Site | null;
   created_at?: string;
 }
 
@@ -56,6 +81,8 @@ export interface WorkOrder {
   actual_hours?: number;
   is_active: boolean;
   resolution_notes?: string;
+  site_id?: string | null;
+  site?: Site | null;
   created_at?: string;
   updated_at?: string;
 }
