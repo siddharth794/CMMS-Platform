@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { assetService } from '../services/asset.service';
 import { CreateAssetDTO, UpdateAssetDTO, AssetListQuery } from '../types/dto';
 import { AuditContext, BulkDeleteDTO } from '../types/common.dto';
+import logger from '../config/logger';
 
 class AssetController {
     private getAuditContext = (req: Request): AuditContext => {
@@ -33,14 +34,37 @@ class AssetController {
     }
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        let targetOrgId = req.user!.org_id;
+        const user = req.user!;
+        const roles = (user.effectiveRoles || (user.Role ? [user.Role] : [])).map((r: any) => r.name.toLowerCase().replace('_', ' '));
+        const isSuperAdmin = roles.includes('super admin');
+        const isOrgAdmin = roles.includes('org admin');
+        const isFacilityManager = roles.includes('facility manager');
+
+        logger.info({ email: user.email, roles, isFacilityManager }, 'Asset creation debug: User info');
+
+        let targetOrgId = user.org_id;
         
-        if (userRole === 'super_admin' && req.body.org_id) {
+        if (isSuperAdmin && req.body.org_id) {
             targetOrgId = req.body.org_id;
         }
 
-        const asset = await assetService.create(targetOrgId, req.body as CreateAssetDTO, this.getAuditContext(req));
+        const dto: CreateAssetDTO = { ...req.body };
+
+        // Force org_id and site_id based on role
+        if (isFacilityManager) {
+            // Priority: managed_site.id then site_id
+            const forcedSiteId = user.managed_site?.id || user.site_id;
+            logger.info({ managed_site_id: user.managed_site?.id, user_site_id: user.site_id, dto_site_id: dto.site_id }, 'Asset creation debug: Site assignment');
+            
+            dto.site_id = forcedSiteId || dto.site_id;
+            dto.org_id = user.org_id;
+        } else if (isOrgAdmin) {
+            dto.org_id = user.org_id;
+        }
+
+        logger.info({ final_site_id: dto.site_id, final_org_id: dto.org_id || targetOrgId }, 'Asset creation debug: Final payload');
+
+        const asset = await assetService.create(dto.org_id || targetOrgId, dto, this.getAuditContext(req));
         res.status(201).json(asset);
     }
 

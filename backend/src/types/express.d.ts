@@ -22,6 +22,8 @@ export interface AuthenticatedUser {
     };
     effectiveRoles?: any[];
     effectiveAccesses?: any[];
+    site?: any;
+    managed_site?: any;
 }
 
 declare global {

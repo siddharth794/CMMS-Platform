@@ -44,7 +44,7 @@ const CreateAssetPage = () => {
     manufacturer: '',
     purchase_date: '',
     purchase_cost: '',
-    site_id: isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : '',
+    site_id: (isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : ''),
     org_id: (isOrgAdmin || isFacilityManager) ? (user?.org_id || '') : '',
   });
 
@@ -76,7 +76,7 @@ const CreateAssetPage = () => {
 
       if (isFacilityManager) {
         payload.org_id = user?.org_id || null;
-        payload.site_id = user?.managed_site?.id || user?.site_id || null;
+        payload.site_id = user?.managed_site?.id || user?.site_id || payload.site_id;
       }
 
       if (!isSuperAdmin && !isOrgAdmin && !isFacilityManager) {
