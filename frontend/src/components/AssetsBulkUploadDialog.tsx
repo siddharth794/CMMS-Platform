@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { UploadCloud, Loader2, AlertCircle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { assetsApi } from '../lib/api';
 
 const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
@@ -13,6 +14,7 @@ const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
     const [uploading, setUploading] = useState(false);
     const [assetsToUpload, setAssetsToUpload] = useState([]);
     const { addNotification } = useNotification();
+    const { hasRole, user } = useAuth();
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -72,7 +74,15 @@ const AssetsBulkUploadDialog = ({ onUploadSuccess }) => {
 
         setUploading(true);
         try {
-            await assetsApi.bulkCreate({ assets: assetsToUpload });
+            const isFacilityManager = hasRole(['facility_manager']);
+            const payloadAssets = assetsToUpload.map(asset => {
+                const siteId = user?.managed_site?.id || user?.site_id;
+                if (isFacilityManager && siteId) {
+                    return { ...asset, site_id: siteId };
+                }
+                return asset;
+            });
+            await assetsApi.bulkCreate({ assets: payloadAssets });
             addNotification('success', `Successfully imported ${assetsToUpload.length} assets`);
             setOpen(false);
             setFile(null);

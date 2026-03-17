@@ -25,6 +25,7 @@ const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const TechnicianAnalyticsPage = React.lazy(() => import('./pages/TechnicianAnalyticsPage'));
 const OrganizationsPage = React.lazy(() => import('./pages/OrganizationsPage'));
 const OrganizationDetailPage = React.lazy(() => import('./pages/OrganizationDetailPage'));
+const CreateAssetPage = React.lazy(() => import('./pages/CreateAssetPage'));
 const AssetDetailPage = React.lazy(() => import('./pages/AssetDetailPage'));
 const InventoryDetailPage = React.lazy(() => import('./pages/InventoryDetailPage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
@@ -160,6 +161,7 @@ const AppRoutes = () => {
           <Route path="work-orders/new" element={<HideFromTechnicianRoute><CreateWorkOrderPage /></HideFromTechnicianRoute>} />
           <Route path="work-orders/:id" element={<HideFromRequesterRoute><WorkOrderDetailPage /></HideFromRequesterRoute>} />
           <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
+          <Route path="assets/new" element={<ManagerRoute><CreateAssetPage /></ManagerRoute>} />
           <Route path="assets/:id" element={<ManagerRoute><AssetDetailPage /></ManagerRoute>} />
           <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
           <Route path="inventory/:id" element={<ManagerRoute><InventoryDetailPage /></ManagerRoute>} />
