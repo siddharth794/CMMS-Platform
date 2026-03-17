@@ -29,8 +29,9 @@ const AssetDetailPage = () => {
   const updateMutation = useUpdateAsset();
   const deleteMutation = useDeleteAsset();
   
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
   const { data: orgsData } = useOrganizations({ limit: 1000 });
   const organizations = orgsData?.data || [];
 
@@ -47,10 +48,14 @@ const AssetDetailPage = () => {
     purchase_date: '',
     purchase_cost: '',
     site_id: '',
-    org_id: '',
+    org_id: isOrgAdmin ? user?.org_id : '',
   });
 
-  const { data: sites = [] } = useSites(isSuperAdmin ? { limit: 1000, org_id: formData.org_id || 'none' } : { limit: 1000 });
+  const { data: sites = [] } = useSites(
+    (isSuperAdmin || isOrgAdmin) 
+      ? { limit: 1000, org_id: formData.org_id || (asset?.org_id) || 'none' } 
+      : { limit: 1000 }
+  );
 
   useEffect(() => {
     if (asset && !isNew) {
@@ -66,7 +71,7 @@ const AssetDetailPage = () => {
         manufacturer: asset.manufacturer || '',
         purchase_date: asset.purchase_date ? asset.purchase_date.split('T')[0] : '',
         purchase_cost: asset.purchase_cost || '',
-        site_id: asset.site_id || '',
+        site_id: asset.site_id || asset.site?.id || '',
         org_id: asset.org_id || '',
       });
     }
@@ -78,7 +83,7 @@ const AssetDetailPage = () => {
       addNotification('error', 'Organization is required');
       return;
     }
-    if (isSuperAdmin && isNew && (!formData.site_id || formData.site_id === 'none')) {
+    if ((isSuperAdmin || isOrgAdmin) && isNew && (!formData.site_id || formData.site_id === 'none')) {
       addNotification('error', 'Site is required');
       return;
     }
@@ -283,8 +288,9 @@ const AssetDetailPage = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Site {isSuperAdmin && isNew ? '*' : ''}</Label>
+                  <Label>Site {(isSuperAdmin || isOrgAdmin) && isNew ? '*' : ''}</Label>
                   <Select 
+                    key={`site-select-${formData.site_id}-${sites.length}`}
                     disabled={!isNew || (isSuperAdmin && !formData.org_id)}
                     value={formData.site_id || "none"} 
                     onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
