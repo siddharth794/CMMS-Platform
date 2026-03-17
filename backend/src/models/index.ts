@@ -209,10 +209,19 @@ AuditLog.init({
     ip_address: { type: DataTypes.STRING(50) },
 }, { sequelize, tableName: 'audit_logs', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
-class InventoryItem extends Model { public id!: string; }
+class InventoryItem extends Model { 
+    public id!: string; 
+    public org_id!: string; 
+    public site_id?: string | null; 
+    public name!: string;
+    public quantity!: number;
+    public is_active!: boolean;
+    public readonly deleted_at!: Date | null;
+}
 InventoryItem.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
+    site_id: { type: DataTypes.UUID, allowNull: true },
     name: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT },
     sku: { type: DataTypes.STRING(100) },
@@ -296,7 +305,7 @@ Organization.hasMany(PMSchedule, { foreignKey: 'org_id' });
 PMSchedule.belongsTo(Organization, { foreignKey: 'org_id' });
 
 Organization.hasMany(InventoryItem, { foreignKey: 'org_id' });
-InventoryItem.belongsTo(Organization, { foreignKey: 'org_id' });
+InventoryItem.belongsTo(Organization, { foreignKey: 'org_id', as: 'org' });
 
 Asset.hasMany(WorkOrder, { foreignKey: 'asset_id', as: 'work_orders' });
 WorkOrder.belongsTo(Asset, { foreignKey: 'asset_id', as: 'asset' });
@@ -366,6 +375,10 @@ Asset.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 // Site -> WorkOrders (1:N)
 Site.hasMany(WorkOrder, { as: 'work_orders', foreignKey: 'site_id' });
 WorkOrder.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+
+// Site -> InventoryItems (1:N)
+Site.hasMany(InventoryItem, { as: 'inventory_items', foreignKey: 'site_id' });
+InventoryItem.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 
 
 export {

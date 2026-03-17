@@ -27,6 +27,7 @@ const OrganizationsPage = React.lazy(() => import('./pages/OrganizationsPage'));
 const OrganizationDetailPage = React.lazy(() => import('./pages/OrganizationDetailPage'));
 const AssetDetailPage = React.lazy(() => import('./pages/AssetDetailPage'));
 const InventoryDetailPage = React.lazy(() => import('./pages/InventoryDetailPage'));
+const InventoryCreatePage = React.lazy(() => import('./pages/InventoryCreatePage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 const CreateUserPage = React.lazy(() => import('./pages/CreateUserPage'));
 const UserDetailPage = React.lazy(() => import('./pages/UserDetailPage'));
@@ -162,6 +163,7 @@ const AppRoutes = () => {
           <Route path="assets" element={<HideFromRequesterRoute><AssetsPage /></HideFromRequesterRoute>} />
           <Route path="assets/:id" element={<ManagerRoute><AssetDetailPage /></ManagerRoute>} />
           <Route path="inventory" element={<HideFromRequesterRoute><InventoryPage /></HideFromRequesterRoute>} />
+          <Route path="inventory/create" element={<ManagerRoute><InventoryCreatePage /></ManagerRoute>} />
           <Route path="inventory/:id" element={<ManagerRoute><InventoryDetailPage /></ManagerRoute>} />
           <Route path="pm-schedules" element={<ManagerRoute><PMSchedulesPage /></ManagerRoute>} />
           <Route path="pm-schedules/new" element={<ManagerRoute><CreatePMSchedulePage /></ManagerRoute>} />
