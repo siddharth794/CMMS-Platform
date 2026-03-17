@@ -11,7 +11,7 @@ function generateAssetTag(): string {
 
 class AssetService {
     async getAll(orgId: string | null, query: AssetListQuery): Promise<PaginatedResponse<any>> {
-        const { skip = 0, limit = 100, search, asset_type, status, record_status, org_id } = query;
+        const { skip = 0, limit = 100, search, asset_type, status, record_status, org_id, site_id } = query;
         let where: any = {};
         let paranoid = true;
 
@@ -34,6 +34,7 @@ class AssetService {
         }
         if (asset_type) where.asset_type = asset_type;
         if (status) where.status = status;
+        if (site_id) where.site_id = site_id;
 
         // If org_id is explicitly passed in query, it overrides the base orgId (useful for super admins specifying an org)
         const targetOrgId = (org_id && org_id.trim() !== '') ? org_id : orgId;

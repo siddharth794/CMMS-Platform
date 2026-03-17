@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { assetsApi } from '../lib/api';
 import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -23,27 +24,33 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
-  const { isManager } = useAuth();
+  const { isManager, hasRole } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
   const { data: orgsData } = useOrganizations({ limit: 1000 });
   const organizations = orgsData?.data || [];
+  const { data: sitesData } = useSites({ limit: 1000 });
+  const sites = sitesData?.data || [];
+  
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
 
   
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
   const [orgId, setOrgId] = useState('');
+  const [siteId, setSiteId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     fetchAssets();
-  }, [search, page, recordStatus, orgId]);
+  }, [search, page, recordStatus, orgId, siteId]);
 
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const response = await assetsApi.list({ search, record_status: recordStatus, org_id: orgId, skip: (page - 1) * 10, limit: 10 });
+      const response = await assetsApi.list({ search, record_status: recordStatus, org_id: orgId, site_id: siteId, skip: (page - 1) * 10, limit: 10 });
       setAssets(response.data.data || response.data || []);
       setTotal(response.data.total || (response.data.data || response.data || []).length);
       setSelectedIds([]);
@@ -149,19 +156,36 @@ const AssetsPage = () => {
                 Delete
               </Button>
             )}
-            <div className="w-[180px]">
-              <Select value={orgId || "all"} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setPage(1); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {organizations.map(o => (
-                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isOrgAdmin && (
+              <div className="w-[180px]">
+                <Select value={orgId || "all"} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {organizations.map(o => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {isOrgAdmin && (
+              <div className="w-[180px]">
+                <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {sites.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger data-testid="filter-record-status">

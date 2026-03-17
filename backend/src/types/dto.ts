@@ -108,6 +108,7 @@ export interface AssetListQuery {
     status?: string;
     record_status?: string;
     org_id?: string;
+    site_id?: string;
 }
 
 // ─── Inventory DTOs ───────────────────────────────────────────────
