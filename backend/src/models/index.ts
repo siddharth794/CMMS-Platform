@@ -71,7 +71,7 @@ class User extends Model {
     public site_id?: string | null;
     
     toJSON() {
-        const values = Object.assign({}, this.get());
+        const values = this.get({ plain: true });
         if (values.Roles && Array.isArray(values.Roles)) {
             values.Role = values.Roles[0] || null;
             values.role_id = values.Role?.id || null;

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateAsset } from '../hooks/api/useAssets';
 import { useSites } from '../hooks/api/useSharedQueries';
@@ -25,9 +25,9 @@ const CreateAssetPage = () => {
   const createMutation = useCreateAsset();
   
   const { hasRole, user } = useAuth();
-  const isSuperAdmin = hasRole(['super_admin']);
-  const isOrgAdmin = hasRole(['org_admin']);
-  const isFacilityManager = hasRole(['facility_manager']);
+  const isSuperAdmin = hasRole(['super_admin', 'super admin', 'Super_Admin']);
+  const isOrgAdmin = hasRole(['org_admin', 'org admin', 'Org_Admin']);
+  const isFacilityManager = hasRole(['facility_manager', 'facility manager', 'Facility_Manager']);
   
   const { data: orgsData } = useOrganizations({ limit: 1000 });
   const organizations = orgsData?.data || [];
@@ -47,6 +47,17 @@ const CreateAssetPage = () => {
     site_id: (isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : ''),
     org_id: (isOrgAdmin || isFacilityManager) ? (user?.org_id || '') : '',
   });
+
+  // Sync formData when user loads
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        site_id: prev.site_id || (isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : ''),
+        org_id: prev.org_id || ((isOrgAdmin || isFacilityManager) ? (user?.org_id || '') : ''),
+      }));
+    }
+  }, [user, isFacilityManager, isOrgAdmin]);
 
   const { data: sites = [] } = useSites(
     (isSuperAdmin || isOrgAdmin) 
@@ -235,7 +246,7 @@ const CreateAssetPage = () => {
                     <Label>Site *</Label>
                     <Select 
                       key={`site-select-${formData.site_id}-${sites.length}`}
-                      disabled={isSuperAdmin && !formData.org_id}
+                      disabled={(isSuperAdmin && !formData.org_id)}
                       value={formData.site_id || "none"} 
                       onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
                     >
@@ -260,8 +271,17 @@ const CreateAssetPage = () => {
                   </div>
                 </div>
               )}
+
               {isFacilityManager && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Assigned Site</Label>
+                    <Input
+                      value={user?.managed_site?.name || user?.site?.name || 'Loading site information...'}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     <Input
@@ -272,6 +292,7 @@ const CreateAssetPage = () => {
                   </div>
                 </div>
               )}
+
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">

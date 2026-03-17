@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { assetService } from '../services/asset.service';
 import { CreateAssetDTO, UpdateAssetDTO, AssetListQuery } from '../types/dto';
 import { AuditContext, BulkDeleteDTO } from '../types/common.dto';
+import { BadRequestError } from '../errors/AppError';
 import logger from '../config/logger';
 
 class AssetController {
@@ -35,12 +36,12 @@ class AssetController {
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const user = req.user!;
-        const roles = (user.effectiveRoles || (user.Role ? [user.Role] : [])).map((r: any) => r.name.toLowerCase().replace('_', ' '));
-        const isSuperAdmin = roles.includes('super admin');
-        const isOrgAdmin = roles.includes('org admin');
-        const isFacilityManager = roles.includes('facility manager');
-
-        logger.info({ email: user.email, roles, isFacilityManager }, 'Asset creation debug: User info');
+        const effectiveRoles = user.effectiveRoles || (user.Role ? [user.Role] : []);
+        const roles = effectiveRoles.map((r: any) => r.name.toLowerCase());
+        
+        const isSuperAdmin = roles.includes('super_admin') || roles.includes('super admin');
+        const isOrgAdmin = roles.includes('org_admin') || roles.includes('org admin');
+        const isFacilityManager = roles.includes('facility_manager') || roles.includes('facility manager');
 
         let targetOrgId = user.org_id;
         
@@ -54,15 +55,29 @@ class AssetController {
         if (isFacilityManager) {
             // Priority: managed_site.id then site_id
             const forcedSiteId = user.managed_site?.id || user.site_id;
-            logger.info({ managed_site_id: user.managed_site?.id, user_site_id: user.site_id, dto_site_id: dto.site_id }, 'Asset creation debug: Site assignment');
             
+            logger.info({ 
+                forcedSiteId, 
+                current_dto_site_id: dto.site_id 
+            }, 'Asset creation debug: Facility Manager site assignment');
+            
+            if (!forcedSiteId && !dto.site_id) {
+                logger.warn({ 
+                    email: user.email, 
+                    roles, 
+                    site_id: user.site_id, 
+                    has_managed_site: !!user.managed_site 
+                }, 'Asset creation failed: Facility Manager has no associated site');
+                throw new BadRequestError('Your account is not associated with any site. Please contact your administrator to assign a site before creating assets.');
+            }
+
             dto.site_id = forcedSiteId || dto.site_id;
             dto.org_id = user.org_id;
         } else if (isOrgAdmin) {
             dto.org_id = user.org_id;
         }
 
-        logger.info({ final_site_id: dto.site_id, final_org_id: dto.org_id || targetOrgId }, 'Asset creation debug: Final payload');
+        logger.info({ final_site_id: dto.site_id, final_org_id: dto.org_id || targetOrgId }, 'Asset creation debug: Final payload before service');
 
         const asset = await assetService.create(dto.org_id || targetOrgId, dto, this.getAuditContext(req));
         res.status(201).json(asset);
