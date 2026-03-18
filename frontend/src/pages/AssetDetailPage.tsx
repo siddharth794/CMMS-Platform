@@ -93,6 +93,10 @@ const AssetDetailPage = () => {
         payload.site_id = user?.managed_site?.id || user?.site_id || null;
       }
 
+      // Ensure org and site are not updated on this page as per requirement
+      delete payload.org_id;
+      delete payload.site_id;
+
       await updateMutation.mutateAsync({
         id,
         data: payload
@@ -247,7 +251,7 @@ const AssetDetailPage = () => {
                     <Label>Organization</Label>
                     <Select 
                       key={`org-select-${formData.org_id || 'none'}-${organizations.length}`}
-                      disabled={false}
+                      disabled={true}
                       value={formData.org_id || "none"} 
                       onValueChange={(v) => {
                         const newOrg = v === 'none' ? '' : v;
@@ -274,7 +278,7 @@ const AssetDetailPage = () => {
                     <Label>Site</Label>
                     <Select 
                       key={`site-select-${formData.site_id || 'none'}-${sites.length}`}
-                      disabled={false}
+                      disabled={true}
                       value={formData.site_id || "none"} 
                       onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
                     >
