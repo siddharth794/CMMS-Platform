@@ -84,7 +84,30 @@ class AssetController {
     }
 
     bulkCreate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const assets = await assetService.bulkCreate(req.user!.org_id, req.body.assets || []);
+        const user = req.user!;
+        const effectiveRoles = user.effectiveRoles || (user.Role ? [user.Role] : []);
+        const roles = effectiveRoles.map((r: any) => r.name.toLowerCase());
+        
+        const isSuperAdmin = roles.includes('super_admin') || roles.includes('super admin');
+        const isOrgAdmin = roles.includes('org_admin') || roles.includes('org admin');
+        const isFacilityManager = roles.includes('facility_manager') || roles.includes('facility manager');
+
+        let targetOrgId = user.org_id;
+        let targetSiteId = req.body.site_id;
+
+        if (isSuperAdmin) {
+            // Super Admin can specify both
+            if (req.body.org_id) targetOrgId = req.body.org_id;
+        } else if (isOrgAdmin) {
+            // Org Admin is locked to their org, but can specify site
+            targetOrgId = user.org_id;
+        } else if (isFacilityManager) {
+            // Facility Manager is locked to both
+            targetOrgId = user.org_id;
+            targetSiteId = user.managed_site?.id || user.site_id;
+        }
+
+        const assets = await assetService.bulkCreate(targetOrgId, req.body.assets || [], targetSiteId);
         res.status(201).json(assets);
     }
 
