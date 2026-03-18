@@ -52,7 +52,7 @@ const AssetDetailPage = () => {
 
   const { data: sites = [] } = useSites(
     (isSuperAdmin || isOrgAdmin) 
-      ? { limit: 1000, org_id: formData.org_id || (asset?.org_id) || 'none' } 
+      ? { limit: 1000, org_id: formData.org_id || asset?.org_id } 
       : { limit: 1000 }
   );
 
@@ -92,9 +92,6 @@ const AssetDetailPage = () => {
         payload.org_id = user?.org_id || null;
         payload.site_id = user?.managed_site?.id || user?.site_id || null;
       }
-
-      delete payload.org_id;
-      delete payload.site_id;
 
       await updateMutation.mutateAsync({
         id,
@@ -249,7 +246,8 @@ const AssetDetailPage = () => {
                   <div className="space-y-2">
                     <Label>Organization</Label>
                     <Select 
-                      disabled={true}
+                      key={`org-select-${formData.org_id || 'none'}-${organizations.length}`}
+                      disabled={false}
                       value={formData.org_id || "none"} 
                       onValueChange={(v) => {
                         const newOrg = v === 'none' ? '' : v;
@@ -275,8 +273,8 @@ const AssetDetailPage = () => {
                   <div className="space-y-2">
                     <Label>Site</Label>
                     <Select 
-                      key={`site-select-${formData.site_id}-${sites.length}`}
-                      disabled={true}
+                      key={`site-select-${formData.site_id || 'none'}-${sites.length}`}
+                      disabled={false}
                       value={formData.site_id || "none"} 
                       onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
                     >
