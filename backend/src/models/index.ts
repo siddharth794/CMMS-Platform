@@ -99,7 +99,7 @@ Asset.init({
     org_id: { type: DataTypes.UUID, allowNull: false },
     site_id: { type: DataTypes.UUID, allowNull: true },
     name: { type: DataTypes.STRING, allowNull: false },
-    asset_tag: { type: DataTypes.STRING(100), unique: true },
+    asset_tag: { type: DataTypes.STRING(100) },
     asset_type: { type: DataTypes.ENUM('movable', 'immovable'), defaultValue: 'movable' },
     category: { type: DataTypes.STRING(100) },
     description: { type: DataTypes.TEXT },
@@ -112,7 +112,22 @@ Asset.init({
     warranty_expiry: { type: DataTypes.DATE },
     status: { type: DataTypes.STRING(50), defaultValue: 'active' },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-}, { sequelize, tableName: 'assets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+}, { 
+    sequelize, 
+    tableName: 'assets', 
+    timestamps: true, 
+    createdAt: 'created_at', 
+    updatedAt: 'updated_at', 
+    paranoid: true, 
+    deletedAt: 'deleted_at',
+    indexes: [
+        {
+            unique: true,
+            fields: ['org_id', 'asset_tag'],
+            name: 'org_asset_tag_unique'
+        }
+    ]
+});
 
 class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; public site_id?: string | null; }
 WorkOrder.init({
