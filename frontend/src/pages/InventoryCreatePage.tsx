@@ -84,11 +84,11 @@ const InventoryCreatePage = () => {
     }
 
     // Validation
-    if (isSuperAdmin && !formData.org_id) {
+    if (isSuperAdmin && (!formData.org_id || formData.org_id === 'none')) {
       addNotification('error', 'Organization is mandatory');
       return;
     }
-    if (!finalSiteId) {
+    if (!finalSiteId || finalSiteId === 'none') {
       addNotification('error', isManager ? 'Your assigned site information is missing. Please contact administrator.' : 'Site is mandatory');
       return;
     }
@@ -139,6 +139,7 @@ const InventoryCreatePage = () => {
                       <SelectValue placeholder="Select Organization" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
                       {organizations.map(o => (
                         <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                       ))}
@@ -159,6 +160,7 @@ const InventoryCreatePage = () => {
                       <SelectValue placeholder="Select Site" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
                       {sites.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
