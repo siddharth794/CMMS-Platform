@@ -242,7 +242,11 @@ const InventoryPage = () => {
               )}
               {isSuperAdmin && (
                 <div className="w-[180px]">
-                  <Select value={orgId || "all"} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setPage(1); }}>
+                  <Select value={orgId || "all"} onValueChange={(v) => { 
+                    setOrgId(v === 'all' ? '' : v); 
+                    setSiteId(''); // Reset site when org changes
+                    setPage(1); 
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Organizations" />
                     </SelectTrigger>
@@ -255,11 +259,11 @@ const InventoryPage = () => {
                   </Select>
                 </div>
               )}
-              {isOrgAdmin && (
+              {(isSuperAdmin || isOrgAdmin) && (
                 <div className="w-[180px]">
                   <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All Sites" />
+                      <SelectValue placeholder={isSuperAdmin && !orgId ? "Select organization" : "All Sites"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Sites</SelectItem>
