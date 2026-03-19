@@ -59,9 +59,10 @@ class AssetService {
         return asset;
     }
 
-    async bulkCreate(orgId: string, assets: Record<string, any>[]): Promise<any[]> {
+    async bulkCreate(orgId: string, assets: Record<string, any>[], siteId?: string): Promise<any[]> {
         const prepared = assets.map((a: any) => {
             const data: any = { ...a, org_id: orgId };
+            if (siteId) data.site_id = siteId;
             if (!data.asset_tag) data.asset_tag = generateAssetTag();
             return data;
         });

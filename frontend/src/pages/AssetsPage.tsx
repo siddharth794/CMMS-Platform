@@ -24,7 +24,7 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
-  const { isManager, hasRole } = useAuth();
+  const { isManager, hasRole, user } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
   const { data: orgsData } = useOrganizations({ limit: 1000 });
@@ -34,6 +34,7 @@ const AssetsPage = () => {
   
   const isSuperAdmin = hasRole(['super_admin']);
   const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
 
   
   const [page, setPage] = useState(1);
@@ -50,7 +51,29 @@ const AssetsPage = () => {
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const response = await assetsApi.list({ search, record_status: recordStatus, org_id: orgId, site_id: siteId, skip: (page - 1) * 10, limit: 10 });
+      
+      const payload = {
+        search,
+        record_status: recordStatus,
+        skip: (page - 1) * 10,
+        limit: 10
+      };
+
+      if (isSuperAdmin) {
+        payload.org_id = orgId;
+        payload.site_id = siteId;
+      } else if (isOrgAdmin) {
+        payload.org_id = user?.org_id;
+        payload.site_id = siteId;
+      } else if (isFacilityManager) {
+        payload.org_id = user?.org_id;
+        payload.site_id = user?.managed_site?.id || user?.site_id;
+      } else {
+        payload.org_id = orgId;
+        payload.site_id = siteId;
+      }
+
+      const response = await assetsApi.list(payload);
       setAssets(response.data.data || response.data || []);
       setTotal(response.data.total || (response.data.data || response.data || []).length);
       setSelectedIds([]);
@@ -156,7 +179,7 @@ const AssetsPage = () => {
                 Delete
               </Button>
             )}
-            {!isOrgAdmin && (
+            {isSuperAdmin && (
               <div className="w-[180px]">
                 <Select value={orgId || "all"} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setPage(1); }}>
                   <SelectTrigger>
@@ -171,7 +194,7 @@ const AssetsPage = () => {
                 </Select>
               </div>
             )}
-            {isOrgAdmin && (
+            {(isSuperAdmin || isOrgAdmin) && (
               <div className="w-[180px]">
                 <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
                   <SelectTrigger>
@@ -215,7 +238,7 @@ const AssetsPage = () => {
                 <TableHead>Asset Tag</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Site</TableHead>
+                {!isFacilityManager && <TableHead>Site</TableHead>}
                 <TableHead>Location</TableHead>
                 <TableHead>Purchase Date</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -259,7 +282,7 @@ const AssetsPage = () => {
                       <span className="capitalize text-muted-foreground">{asset.asset_type}</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{asset.category || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{asset.site?.name || '-'}</TableCell>
+                    {!isFacilityManager && <TableCell className="text-muted-foreground">{asset.site?.name || '-'}</TableCell>}
                     <TableCell>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <MapPin className="h-3 w-3" />
