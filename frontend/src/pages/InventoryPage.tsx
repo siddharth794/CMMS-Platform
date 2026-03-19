@@ -389,7 +389,7 @@ const InventoryPage = () => {
                     <TableCell className="text-right">
                       {isManager() && (
                         <div className="flex justify-end gap-2">
-                          {recordStatus === 'inactive' && (isFacilityManager || isOrgAdmin) && (
+                          {recordStatus === 'inactive' && (
                             <Button
                               variant="ghost"
                               size="icon"
