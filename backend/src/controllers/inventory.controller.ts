@@ -91,18 +91,27 @@ class InventoryController {
     }
 
     bulkCreate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = (userRole === 'super_admin' && req.body.org_id) ? req.body.org_id : req.user!.org_id;
+        const user = req.user!;
+        const effectiveRoles = user.effectiveRoles || (user.Role ? [user.Role] : []);
+        const roles = effectiveRoles.map((r: any) => r.name.toLowerCase());
         
-        // Auto-assign site for Facility Managers in bulk create
-        if (userRole === 'facility_manager') {
-            req.body.items = (req.body.items || []).map((item: any) => ({
-                ...item,
-                site_id: item.site_id || req.user!.site_id
-            }));
+        const isSuperAdmin = roles.includes('super_admin') || roles.includes('super admin');
+        const isOrgAdmin = roles.includes('org_admin') || roles.includes('org admin');
+        const isFacilityManager = roles.includes('facility_manager') || roles.includes('facility manager');
+
+        let targetOrgId = user.org_id;
+        let targetSiteId = req.body.site_id;
+
+        if (isSuperAdmin) {
+            if (req.body.org_id) targetOrgId = req.body.org_id;
+        } else if (isOrgAdmin) {
+            targetOrgId = user.org_id;
+        } else if (isFacilityManager) {
+            targetOrgId = user.org_id;
+            targetSiteId = user.managed_site?.id || user.site_id;
         }
 
-        const result = await inventoryService.bulkCreate(targetOrgId, req.body.items, this.getAuditContext(req));
+        const result = await inventoryService.bulkCreate(targetOrgId, req.body.items || [], this.getAuditContext(req), targetSiteId);
         res.status(201).json(result);
     }
 

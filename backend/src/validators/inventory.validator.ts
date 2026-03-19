@@ -9,7 +9,7 @@ export const CreateInventoryItemSchema = z.object({
     min_quantity: z.number().min(0).default(0),
     unit: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('pcs'),
     unit_cost: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('0'),
-    storage_location: z.string().min(1, 'Storage location is required').max(255),
+    storage_location: z.string().max(255).optional().nullable().default(''),
     site_id: z.string().uuid('Invalid Site ID').nullable().optional(),
     org_id: z.string().uuid('Invalid Organization ID').nullable().optional(),
 }).strict();
@@ -31,8 +31,9 @@ export const BulkCreateInventorySchema = z.object({
         min_quantity: z.number().min(0).default(0),
         unit: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('pcs'),
         unit_cost: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('0'),
-        storage_location: z.string().min(1, 'Storage location is required').max(255),
+        storage_location: z.string().max(255).optional().nullable().default(''),
         site_id: z.string().uuid('Invalid Site ID').nullable().optional(),
     })).min(1, 'At least one item is required'),
     org_id: z.string().uuid('Invalid Organization ID').nullable().optional(),
+    site_id: z.string().uuid('Invalid Site ID').nullable().optional(),
 }).strict();

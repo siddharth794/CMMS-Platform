@@ -119,7 +119,7 @@ class InventoryService {
         auditService.log({ ...audit, entityType: 'InventoryItem', entityId: ids[0], action: 'bulk_restore', newValues: { restored_ids: ids, count } });
         return { message: `${count} Inventory Items successfully restored.` };
     }
-    async bulkCreate(orgId: string | null, items: any[], audit: AuditContext): Promise<{ count: number }> {
+    async bulkCreate(orgId: string | null, items: any[], audit: AuditContext, siteId?: string): Promise<{ count: number }> {
         let processedCount = 0;
         
         for (const dto of items) {
@@ -138,7 +138,11 @@ class InventoryService {
                 });
             } else {
                 // If it doesn't exist, create it
-                const newItem = await inventoryRepository.create({ ...dto, org_id: orgId });
+                const newItem = await inventoryRepository.create({ 
+                    ...dto, 
+                    org_id: orgId,
+                    site_id: dto.site_id || siteId
+                });
                 auditService.log({ 
                     ...audit, 
                     entityType: 'InventoryItem', 
