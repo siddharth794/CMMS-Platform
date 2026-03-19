@@ -148,7 +148,7 @@ const InventoryCreatePage = () => {
                 </div>
               )}
               
-              {!hasRole(['facility_manager']) && (
+              {!hasRole(['facility_manager']) ? (
                 <div className="space-y-2">
                   <Label htmlFor="site_id">Site *</Label>
                   <Select 
@@ -166,6 +166,15 @@ const InventoryCreatePage = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Assigned Site</Label>
+                  <Input
+                    value={user?.managed_site?.name || user?.site?.name || 'Loading site information...'}
+                    disabled
+                    className="bg-muted"
+                  />
                 </div>
               )}
             </div>
