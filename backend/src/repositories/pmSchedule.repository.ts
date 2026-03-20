@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { PMSchedule, Asset, PMTrigger, PMTemplate, PMTask, PMPart, InventoryItem, sequelize } from '../models';
+import { PMSchedule, Asset, Site, Organization, PMTrigger, PMTemplate, PMTask, PMPart, InventoryItem, sequelize } from '../models';
 
 class PMScheduleRepository {
     async findAll(orgId: string | null, options: { asset_id?: string, site_id?: string, skip: number, limit: number, search?: string, record_status?: string }): Promise<any> {
@@ -48,11 +48,13 @@ class PMScheduleRepository {
             where,
             include: [
                 { model: Asset, as: 'asset' },
+                { model: Site, as: 'site' },
+                { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
                 { model: PMTask, as: 'tasks' },
                 { model: PMPart, as: 'parts', include: [{ model: InventoryItem, as: 'item' }] }
-            ]
+            ],
         });
     }
 
@@ -60,6 +62,8 @@ class PMScheduleRepository {
         return PMSchedule.findByPk(pmId, { 
             include: [
                 { model: Asset, as: 'asset' },
+                { model: Site, as: 'site' },
+                { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
                 { model: PMTask, as: 'tasks' },
@@ -144,6 +148,7 @@ class PMScheduleRepository {
         if (orgId) where.org_id = orgId;
         return PMSchedule.findOne({
             where,
+            include: [{ model: Organization, as: 'organization' }, { model: Site, as: 'site' }],
             paranoid: false
         });
     }

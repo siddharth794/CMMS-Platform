@@ -406,6 +406,10 @@ InventoryItem.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 Site.hasMany(PMSchedule, { as: 'pm_schedules', foreignKey: 'site_id' });
 PMSchedule.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 
+// Organization -> PMSchedules (1:N)
+Organization.hasMany(PMSchedule, { foreignKey: 'org_id' });
+PMSchedule.belongsTo(Organization, { as: 'organization', foreignKey: 'org_id' });
+
 
 export {
     Organization,

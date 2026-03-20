@@ -100,7 +100,7 @@ const PMSchedulesPage = () => {
         payload.site_id = siteId;
       } else if (isFacilityManager) {
         payload.org_id = user?.org_id;
-        payload.site_id = user?.site_id;
+        payload.site_id = user?.managed_site?.id || user?.site_id;
       }
 
       const res = await pmSchedulesApi.list(payload);
@@ -361,21 +361,21 @@ const PMSchedulesPage = () => {
 
       {/* Filters, Search & Table */}
       <Card>
-        <div className="p-6 border-b flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-muted/20">
-          <div className="flex flex-col md:flex-row items-center gap-4 flex-1">
-            <div className="relative w-full md:w-72">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+          <div className="flex flex-wrap gap-4 items-center w-full">
+            <div className="flex-1 min-w-[250px] flex items-center gap-2 rounded-lg border px-3 py-2 bg-background focus-within:ring-1 focus-within:ring-primary">
+              <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search schedules..."
-                className="pl-8"
+                className="border-0 p-0 h-auto focus-visible:ring-0 bg-transparent flex-1"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
 
             {isSuperAdmin && (
-              <div className="w-full md:w-56">
-                <Select value={orgId} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setSiteId(''); setPage(1); }}>
+              <div className="w-[180px]">
+                <Select value={orgId || 'all'} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setSiteId(''); setPage(1); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Organizations" />
                   </SelectTrigger>
@@ -390,10 +390,10 @@ const PMSchedulesPage = () => {
             )}
             
             {(isSuperAdmin || isOrgAdmin) && (
-              <div className="w-full md:w-56">
-                <Select value={siteId} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }} disabled={isSuperAdmin && !orgId}>
+              <div className="w-[180px]">
+                <Select value={siteId || 'all'} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Sites" />
+                    <SelectValue placeholder={isSuperAdmin && !orgId ? "Select organization" : "All Sites"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sites</SelectItem>
@@ -412,7 +412,7 @@ const PMSchedulesPage = () => {
                 Delete ({selectedIds.length})
               </Button>
             )}
-            <div className="w-40">
+            <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />

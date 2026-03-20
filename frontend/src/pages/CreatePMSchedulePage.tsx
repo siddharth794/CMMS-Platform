@@ -203,10 +203,10 @@ const CreatePMSchedulePage = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label>Site *</Label>
-                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      {user?.site_name || 'Assigned Site'}
+                  <Label>Site</Label>
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{user?.managed_site?.name || user?.site?.name || 'Assigned Site'}</span>
                   </div>
                 </div>
               )}

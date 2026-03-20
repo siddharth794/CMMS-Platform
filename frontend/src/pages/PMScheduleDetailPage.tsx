@@ -211,19 +211,19 @@ const PMScheduleDetailPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {isSuperAdmin && (
                 <div className="space-y-2">
-                  <Label>Organization (Read-only)</Label>
-                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
-                      {organizations.find(o => o.id === formData.org_id)?.name || 'Assigned Organization'}
+                  <Label>Organization</Label>
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                    <span className="text-sm font-medium">{pm.organization?.name || 'Assigned Organization'}</span>
                   </div>
                 </div>
               )}
 
               {isSuperAdmin || isOrgAdmin ? (
                 <div className="space-y-2">
-                  <Label>Site (Read-only)</Label>
-                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      {sites.find(s => s.id === formData.site_id)?.name || 'Assigned Site'}
+                  <Label>Site</Label>
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{pm.site?.name || 'Assigned Site'}</span>
                   </div>
                 </div>
               ) : (
