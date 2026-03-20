@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAsset, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../hooks/api/useAssets';
+import { useNavigate } from 'react-router-dom';
+import { useCreateAsset } from '../hooks/api/useAssets';
 import { useSites } from '../hooks/api/useSharedQueries';
 import { useOrganizations } from '../hooks/api/useOrganizations';
 import { useAuth } from '../context/AuthContext';
@@ -16,21 +16,19 @@ import { Calendar } from '../components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNotification } from '../context/NotificationContext';
-import { Loader2, ArrowLeft, Save, Trash2, Package } from 'lucide-react';
+import { Loader2, ArrowLeft, Save } from 'lucide-react';
 import { format } from 'date-fns';
 
-const AssetDetailPage = () => {
-  const { id } = useParams();
+const CreateAssetPage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
-  const { data: asset, isLoading, isError } = useAsset(id);
-  const updateMutation = useUpdateAsset();
-  const deleteMutation = useDeleteAsset();
+  const createMutation = useCreateAsset();
   
   const { hasRole, user } = useAuth();
-  const isSuperAdmin = hasRole(['super_admin']);
-  const isOrgAdmin = hasRole(['org_admin']);
-  const isFacilityManager = hasRole(['facility_manager']);
+  const isSuperAdmin = hasRole(['super_admin', 'super admin', 'Super_Admin']);
+  const isOrgAdmin = hasRole(['org_admin', 'org admin', 'Org_Admin']);
+  const isFacilityManager = hasRole(['facility_manager', 'facility manager', 'Facility_Manager']);
+  
   const { data: orgsData } = useOrganizations({ limit: 1000 });
   const organizations = orgsData?.data || [];
 
@@ -46,38 +44,37 @@ const AssetDetailPage = () => {
     manufacturer: '',
     purchase_date: '',
     purchase_cost: '',
-    site_id: isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : '',
+    site_id: (isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : ''),
     org_id: (isOrgAdmin || isFacilityManager) ? (user?.org_id || '') : '',
   });
 
+  // Sync formData when user loads
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        site_id: prev.site_id || (isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : ''),
+        org_id: prev.org_id || ((isOrgAdmin || isFacilityManager) ? (user?.org_id || '') : ''),
+      }));
+    }
+  }, [user, isFacilityManager, isOrgAdmin]);
+
   const { data: sites = [] } = useSites(
     (isSuperAdmin || isOrgAdmin) 
-      ? { limit: 1000, org_id: formData.org_id || asset?.org_id } 
+      ? { limit: 1000, org_id: formData.org_id || 'none' } 
       : { limit: 1000 }
   );
 
-  useEffect(() => {
-    if (asset) {
-      setFormData({
-        name: asset.name || '',
-        asset_tag: asset.asset_tag || '',
-        asset_type: asset.asset_type || 'movable',
-        description: asset.description || '',
-        location: asset.location || '',
-        category: asset.category || '',
-        serial_number: asset.serial_number || '',
-        model: asset.model || '',
-        manufacturer: asset.manufacturer || '',
-        purchase_date: asset.purchase_date ? asset.purchase_date.split('T')[0] : '',
-        purchase_cost: asset.purchase_cost || '',
-        site_id: asset.site_id || asset.site?.id || '',
-        org_id: asset.org_id || '',
-      });
-    }
-  }, [asset]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSuperAdmin && !formData.org_id) {
+      addNotification('error', 'Organization is required');
+      return;
+    }
+    if ((isSuperAdmin || isOrgAdmin) && (!formData.site_id || formData.site_id === 'none')) {
+      addNotification('error', 'Site is required');
+      return;
+    }
 
     try {
       const payload = {
@@ -90,18 +87,20 @@ const AssetDetailPage = () => {
 
       if (isFacilityManager) {
         payload.org_id = user?.org_id || null;
-        payload.site_id = user?.managed_site?.id || user?.site_id || null;
+        payload.site_id = user?.managed_site?.id || user?.site_id || payload.site_id;
       }
 
-      // Ensure org and site are not updated on this page as per requirement
-      delete payload.org_id;
-      delete payload.site_id;
+      if (!isSuperAdmin && !isOrgAdmin && !isFacilityManager) {
+        delete payload.org_id;
+        delete payload.site_id;
+      }
+      if (!payload.org_id || payload.org_id === 'none') {
+        delete payload.org_id;
+      }
 
-      await updateMutation.mutateAsync({
-        id,
-        data: payload
-      });
-      addNotification('success', 'Asset updated successfully');
+      await createMutation.mutateAsync(payload);
+      addNotification('success', 'Asset created successfully');
+      navigate('/assets');
     } catch (error) {
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
@@ -109,40 +108,12 @@ const AssetDetailPage = () => {
         const firstError = errors[firstField][0];
         addNotification('error', `${firstField}: ${firstError}`);
       } else {
-        addNotification('error', error.response?.data?.detail || 'Failed to save asset');
+        addNotification('error', error.response?.data?.detail || 'Failed to create asset');
       }
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this asset?')) return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      addNotification('success', 'Asset deleted successfully');
-      navigate('/assets');
-    } catch (error) {
-      addNotification('error', 'Failed to delete asset');
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (isError || !asset) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold">Asset not found</h2>
-        <Button variant="link" onClick={() => navigate('/assets')}>Back to Assets</Button>
-      </div>
-    );
-  }
-
-  const isSaving = updateMutation.isPending;
+  const isSaving = createMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -152,26 +123,25 @@ const AssetDetailPage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{asset.name}</h1>
-            <p className="text-muted-foreground">Tag: {asset.asset_tag}</p>
+            <h1 className="text-3xl font-bold tracking-tight">Create New Asset</h1>
           </div>
         </div>
         <div className="flex gap-2">
           <Button type="submit" form="asset-form" disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Changes
+            Create Asset
           </Button>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className={cn("space-y-6", "md:col-span-3")}>
+        <Card className="md:col-span-4 space-y-6">
           <CardHeader>
             <CardTitle>Asset Information</CardTitle>
-            <CardDescription>Update asset details and specifications</CardDescription>
+            <CardDescription>Enter details for the new asset</CardDescription>
           </CardHeader>
           <CardContent>
-            <form id="asset-form" key={asset?.id} onSubmit={handleSubmit} className="space-y-6">
+            <form id="asset-form" onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="name">Asset Name *</Label>
@@ -248,10 +218,8 @@ const AssetDetailPage = () => {
               {isSuperAdmin && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Organization</Label>
+                    <Label>Organization *</Label>
                     <Select 
-                      key={`org-select-${formData.org_id || 'none'}-${organizations.length}`}
-                      disabled={true}
                       value={formData.org_id || "none"} 
                       onValueChange={(v) => {
                         const newOrg = v === 'none' ? '' : v;
@@ -275,15 +243,15 @@ const AssetDetailPage = () => {
               {(isSuperAdmin || isOrgAdmin) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Site</Label>
+                    <Label>Site *</Label>
                     <Select 
-                      key={`site-select-${formData.site_id || 'none'}-${sites.length}`}
-                      disabled={true}
+                      key={`site-select-${formData.site_id}-${sites.length}`}
+                      disabled={(isSuperAdmin && !formData.org_id)}
                       value={formData.site_id || "none"} 
                       onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={"Select site (optional)"} />
+                        <SelectValue placeholder={isSuperAdmin && !formData.org_id ? "Select organization first" : "Select site (optional)"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
@@ -303,8 +271,17 @@ const AssetDetailPage = () => {
                   </div>
                 </div>
               )}
+
               {isFacilityManager && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Assigned Site</Label>
+                    <Input
+                      value={user?.managed_site?.name || user?.site?.name || 'Loading site information...'}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     <Input
@@ -315,6 +292,7 @@ const AssetDetailPage = () => {
                   </div>
                 </div>
               )}
+
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
@@ -385,34 +363,9 @@ const AssetDetailPage = () => {
             </form>
           </CardContent>
         </Card>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Asset Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-primary/10 rounded-full">
-                    <Package className="h-8 w-8 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium capitalize">{asset.status || 'Active'}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Added {format(new Date(asset.created_at), 'PP')}
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-1">Last Maintenance</p>
-                  <p className="font-medium">-</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
       </div>
     </div>
   );
 };
 
-export default AssetDetailPage;
+export default CreateAssetPage;

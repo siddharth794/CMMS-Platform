@@ -10,8 +10,8 @@ function generateAssetTag(): string {
 }
 
 class AssetService {
-    async getAll(orgId: string, query: AssetListQuery): Promise<PaginatedResponse<any>> {
-        const { skip = 0, limit = 100, search, asset_type, status, record_status, site_id } = query;
+    async getAll(orgId: string | null, query: AssetListQuery): Promise<PaginatedResponse<any>> {
+        const { skip = 0, limit = 100, search, asset_type, status, record_status, org_id, site_id } = query;
         let where: any = {};
         let paranoid = true;
 
@@ -36,7 +36,10 @@ class AssetService {
         if (status) where.status = status;
         if (site_id) where.site_id = site_id;
 
-        const result = await assetRepository.findAndCountAll(orgId, where, paranoid, Number(skip), Number(limit));
+        // If org_id is explicitly passed in query, it overrides the base orgId (useful for super admins specifying an org)
+        const targetOrgId = (org_id && org_id.trim() !== '') ? org_id : orgId;
+
+        const result = await assetRepository.findAndCountAll(targetOrgId, where, paranoid, Number(skip), Number(limit));
         return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
     }
 
@@ -56,9 +59,10 @@ class AssetService {
         return asset;
     }
 
-    async bulkCreate(orgId: string, assets: Record<string, any>[]): Promise<any[]> {
+    async bulkCreate(orgId: string, assets: Record<string, any>[], siteId?: string): Promise<any[]> {
         const prepared = assets.map((a: any) => {
             const data: any = { ...a, org_id: orgId };
+            if (siteId) data.site_id = siteId;
             if (!data.asset_tag) data.asset_tag = generateAssetTag();
             return data;
         });
@@ -104,7 +108,7 @@ class AssetService {
         return { message: 'Asset is already active' };
     }
 
-    async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
+    async bulkDelete(orgId: string | null, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
         if (!dto.force) await assetRepository.bulkSoftDelete(dto.ids, orgId);
         const count = await assetRepository.bulkDelete(dto.ids, orgId, !!dto.force);
 

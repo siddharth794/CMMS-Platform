@@ -79,6 +79,7 @@ export interface CreateAssetDTO {
     warranty_expiry?: string;
     status?: string;
     site_id?: string;
+    org_id?: string;
 }
 
 export interface UpdateAssetDTO {
@@ -96,6 +97,7 @@ export interface UpdateAssetDTO {
     warranty_expiry?: string;
     status?: string;
     site_id?: string | null;
+    org_id?: string;
 }
 
 export interface AssetListQuery {
@@ -105,6 +107,7 @@ export interface AssetListQuery {
     asset_type?: string;
     status?: string;
     record_status?: string;
+    org_id?: string;
     site_id?: string;
 }
 

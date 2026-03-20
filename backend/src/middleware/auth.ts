@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User, Role, Access, Group, Organization } from '../models';
+import { User, Role, Access, Group, Organization, Site } from '../models';
 import logger from '../config/logger';
 
 export interface AuthRequest extends Request {
@@ -32,7 +32,9 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
             include: [
                 { model: Role, include: [{ model: Access }] },
                 { model: Group, include: [{ model: Role, include: [{ model: Access }] }] },
-                { model: Organization }
+                { model: Organization },
+                { model: Site, as: 'site' },
+                { model: Site, as: 'managed_site' }
             ]
         });
 

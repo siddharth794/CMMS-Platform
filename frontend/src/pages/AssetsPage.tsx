@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { assetsApi } from '../lib/api';
-import { useSites } from '../hooks/api/useSharedQueries';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -23,26 +24,56 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
-  const { isManager } = useAuth();
+  const { isManager, hasRole, user } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
-  const { data: sites = [] } = useSites();
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const organizations = orgsData?.data || [];
+  const { data: sitesData } = useSites({ limit: 1000 });
+  const sites = sitesData?.data || [];
+  
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
 
   
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [orgId, setOrgId] = useState('');
   const [siteId, setSiteId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     fetchAssets();
-  }, [search, page, recordStatus, siteId]);
+  }, [search, page, recordStatus, orgId, siteId]);
 
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const response = await assetsApi.list({ search, record_status: recordStatus, site_id: siteId, skip: (page - 1) * 10, limit: 10 });
+      
+      const payload = {
+        search,
+        record_status: recordStatus,
+        skip: (page - 1) * 10,
+        limit: 10
+      };
+
+      if (isSuperAdmin) {
+        payload.org_id = orgId;
+        payload.site_id = siteId;
+      } else if (isOrgAdmin) {
+        payload.org_id = user?.org_id;
+        payload.site_id = siteId;
+      } else if (isFacilityManager) {
+        payload.org_id = user?.org_id;
+        payload.site_id = user?.managed_site?.id || user?.site_id;
+      } else {
+        payload.org_id = orgId;
+        payload.site_id = siteId;
+      }
+
+      const response = await assetsApi.list(payload);
       setAssets(response.data.data || response.data || []);
       setTotal(response.data.total || (response.data.data || response.data || []).length);
       setSelectedIds([]);
@@ -148,19 +179,36 @@ const AssetsPage = () => {
                 Delete
               </Button>
             )}
-            <div className="w-[180px]">
-              <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Sites" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {sites.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {isSuperAdmin && (
+              <div className="w-[180px]">
+                <Select value={orgId || "all"} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {organizations.map(o => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {(isSuperAdmin || isOrgAdmin) && (
+              <div className="w-[180px]">
+                <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {sites.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger data-testid="filter-record-status">
@@ -190,10 +238,9 @@ const AssetsPage = () => {
                 <TableHead>Asset Tag</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Site</TableHead>
+                {!isFacilityManager && <TableHead>Site</TableHead>}
                 <TableHead>Location</TableHead>
                 <TableHead>Purchase Date</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -235,7 +282,7 @@ const AssetsPage = () => {
                       <span className="capitalize text-muted-foreground">{asset.asset_type}</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{asset.category || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{asset.site?.name || '-'}</TableCell>
+                    {!isFacilityManager && <TableCell className="text-muted-foreground">{asset.site?.name || '-'}</TableCell>}
                     <TableCell>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <MapPin className="h-3 w-3" />
@@ -244,11 +291,6 @@ const AssetsPage = () => {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {asset.purchase_date ? format(new Date(asset.purchase_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`status-badge ${asset.status === 'active' ? 'status-completed' : asset.status === 'maintenance' ? 'status-in_progress' : 'status-cancelled'}`}>
-                        {asset.status}
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       {isManager() && (
