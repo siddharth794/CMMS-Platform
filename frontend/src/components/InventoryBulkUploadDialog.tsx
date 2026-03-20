@@ -6,13 +6,39 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { UploadCloud, Loader2, AlertCircle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { inventoryApi } from '../lib/api';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
+import { useAuth } from '../context/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Label } from './ui/label';
 
 const InventoryBulkUploadDialog = ({ onUploadSuccess }) => {
     const [open, setOpen] = useState(false);
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [itemsToUpload, setItemsToUpload] = useState([]);
+    const [selectedOrgId, setSelectedOrgId] = useState('');
+    const [selectedSiteId, setSelectedSiteId] = useState('');
     const { addNotification } = useNotification();
+    const { hasRole, user } = useAuth();
+
+    const isSuperAdmin = hasRole(['super_admin']);
+    const isOrgAdmin = hasRole(['org_admin']);
+    const isFacilityManager = hasRole(['facility_manager']);
+
+    const { data: orgsData } = useOrganizations({ limit: 1000 });
+    const organizations = orgsData?.data || [];
+    
+    // Filter sites based on selected org if super admin, or user's org if org admin
+    const sitesParams = { limit: 1000 };
+    if (isSuperAdmin && selectedOrgId) {
+        sitesParams.org_id = selectedOrgId;
+    } else if (isOrgAdmin) {
+        sitesParams.org_id = user?.org_id;
+    }
+    
+    const { data: sitesData } = useSites(sitesParams);
+    const sites = sitesData?.data || [];
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -67,7 +93,13 @@ const InventoryBulkUploadDialog = ({ onUploadSuccess }) => {
 
         setUploading(true);
         try {
-            await inventoryApi.bulkCreate({ items: itemsToUpload });
+            const payload = { 
+                items: itemsToUpload,
+                org_id: isSuperAdmin ? selectedOrgId : (isOrgAdmin || isFacilityManager ? user?.org_id : undefined),
+                site_id: isFacilityManager ? (user?.managed_site?.id || user?.site_id) : selectedSiteId
+            };
+            
+            await inventoryApi.bulkCreate(payload);
             addNotification('success', `Successfully processed ${itemsToUpload.length} inventory items`);
             setOpen(false);
             setFile(null);
@@ -118,6 +150,8 @@ const InventoryBulkUploadDialog = ({ onUploadSuccess }) => {
     const resetState = () => {
         setFile(null);
         setItemsToUpload([]);
+        setSelectedOrgId('');
+        setSelectedSiteId('');
     };
 
     return (
@@ -140,6 +174,47 @@ const InventoryBulkUploadDialog = ({ onUploadSuccess }) => {
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
+                    {/* Role-based Org/Site Selection */}
+                    <div className="space-y-4 border-b pb-4">
+                        {isSuperAdmin && (
+                            <div className="space-y-2">
+                                <Label>Organization</Label>
+                                <Select value={selectedOrgId} onValueChange={(v) => { setSelectedOrgId(v); setSelectedSiteId(''); }}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Organization" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {organizations.map(o => (
+                                            <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {(isSuperAdmin || isOrgAdmin) && (
+                            <div className="space-y-2">
+                                <Label>Site</Label>
+                                <Select value={selectedSiteId} onValueChange={setSelectedSiteId} disabled={isSuperAdmin && !selectedOrgId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={isSuperAdmin && !selectedOrgId ? "Select organization first" : "Select Site"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {sites.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {isFacilityManager && (
+                            <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                                Items will be automatically assigned to <strong>{user?.managed_site?.name || user?.site?.name || 'your assigned site'}</strong>.
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex items-center justify-center w-full">
                         <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 border-muted-foreground/20 hover:bg-muted/50 transition-colors">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -180,7 +255,13 @@ const InventoryBulkUploadDialog = ({ onUploadSuccess }) => {
                     <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                     <Button
                         onClick={handleUpload}
-                        disabled={uploading || !file || itemsToUpload.length === 0}
+                        disabled={
+                            uploading || 
+                            !file || 
+                            itemsToUpload.length === 0 || 
+                            (isSuperAdmin && (!selectedOrgId || !selectedSiteId)) || 
+                            (isOrgAdmin && !selectedSiteId)
+                        }
                     >
                         {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Confirm Upload

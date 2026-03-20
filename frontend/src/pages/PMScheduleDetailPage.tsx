@@ -11,22 +11,35 @@ import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { usePMSchedule, useUpdatePMSchedule, useDeletePMSchedule } from '../hooks/api/usePMSchedules';
 import { useAssetsData } from '../hooks/api/useAssets';
+import { useAuth } from '../context/AuthContext';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
+import { MapPin } from 'lucide-react';
 
 const PMScheduleDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
-  const { data: assetsData } = useAssetsData();
-  const assets = assetsData?.data || [];
-
   const { data: pm, isLoading, isError } = usePMSchedule(id);
   const updateMutation = useUpdatePMSchedule();
+  
+  const { hasRole, user: currentUser } = useAuth();
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
+
+  const { data: orgsData } = useOrganizations({ limit: 1000, enabled: isSuperAdmin });
+  const organizations = orgsData?.data || [];
+  
+
 
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     asset_id: '',
+    org_id: '',
+    site_id: '',
     schedule_logic: 'FIXED',
     frequency: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
@@ -34,6 +47,8 @@ const PMScheduleDetailPage = () => {
     estimated_hours: '',
     tasks: ['']
   });
+
+
 
   const getInitialDateFromCron = (cron, freq) => {
     // Reverse engineer a safe date string for the picker
@@ -83,17 +98,20 @@ const PMScheduleDetailPage = () => {
 
   useEffect(() => {
     if (pm) {
-      const freq = pm.triggers?.[0]?.cron_expression ? getFrequencyFromCron(pm.triggers[0].cron_expression) : 'monthly';
+      const triggers = pm.triggers || pm.Triggers;
+      const freq = triggers?.[0]?.cron_expression ? getFrequencyFromCron(triggers[0].cron_expression) : 'monthly';
       setFormData({
         name: pm.name || '',
         description: pm.description || '',
+        org_id: pm.org_id || '',
+        site_id: pm.site_id || '',
         asset_id: pm.asset_id || '',
         schedule_logic: pm.schedule_logic || 'FIXED',
         frequency: freq,
-        startDate: pm.triggers?.[0]?.cron_expression ? getInitialDateFromCron(pm.triggers[0].cron_expression, freq) : new Date().toISOString().split('T')[0],
-        priority: pm.template?.priority || 'medium',
-        estimated_hours: pm.template?.estimated_hours?.toString() || '',
-        tasks: pm.tasks && pm.tasks.length > 0 ? pm.tasks.map(t => t.description) : ['']
+        startDate: triggers?.[0]?.cron_expression ? getInitialDateFromCron(triggers[0].cron_expression, freq) : new Date().toISOString().split('T')[0],
+        priority: (pm.template?.priority || pm.Template?.priority || (Array.isArray(pm.template) ? pm.template[0]?.priority : null) || (Array.isArray(pm.Template) ? pm.Template[0]?.priority : null) || 'medium'),
+        estimated_hours: (pm.template?.estimated_hours || pm.Template?.estimated_hours || (Array.isArray(pm.template) ? pm.template[0]?.estimated_hours : null) || (Array.isArray(pm.Template) ? pm.Template[0]?.estimated_hours : null))?.toString() || '',
+        tasks: (pm.tasks || pm.Tasks) && (pm.tasks || pm.Tasks).length > 0 ? (pm.tasks || pm.Tasks).map(t => t.description) : ['']
       });
     }
   }, [pm]);
@@ -108,6 +126,8 @@ const PMScheduleDetailPage = () => {
       const payload = {
         name: formData.name,
         description: formData.description,
+        org_id: formData.org_id,
+        site_id: formData.site_id,
         asset_id: formData.asset_id,
         schedule_logic: formData.schedule_logic,
         triggers: [
@@ -183,7 +203,24 @@ const PMScheduleDetailPage = () => {
             <CardDescription>Enter the primary details and recurrence logic.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Organization</Label>
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                    <span className="text-sm font-medium">{pm.organization?.name || 'Assigned Organization'}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Site</Label>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{pm?.site?.name || pm?.Site?.name || 'Assigned Site'}</span>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="name">Title *</Label>
                 <Input
@@ -196,18 +233,13 @@ const PMScheduleDetailPage = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="asset_id">Target Asset *</Label>
-                <Select value={formData.asset_id} onValueChange={(v) => setFormData({ ...formData, asset_id: v })} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an asset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" disabled>Select an asset</SelectItem>
-                    {assets.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.asset_tag})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="asset_id">Target Asset</Label>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                  <span className="text-sm font-medium">
+                    {(pm?.asset || pm?.Asset)?.name || 'Assigned Asset'} 
+                    {((pm?.asset || pm?.Asset)?.asset_tag) ? ` (${(pm?.asset || pm?.Asset).asset_tag})` : ''}
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -225,7 +257,7 @@ const PMScheduleDetailPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
               <div className="space-y-2">
                 <Label>Schedule Logic</Label>
-                <Select value={formData.schedule_logic} onValueChange={(v) => setFormData({ ...formData, schedule_logic: v })}>
+                <Select key={formData.schedule_logic} value={formData.schedule_logic} onValueChange={(v) => setFormData({ ...formData, schedule_logic: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -241,7 +273,7 @@ const PMScheduleDetailPage = () => {
               
               <div className="space-y-2">
                 <Label>Time Frequency *</Label>
-                <Select value={formData.frequency} onValueChange={(v) => setFormData({ ...formData, frequency: v })} required>
+                <Select key={formData.frequency} value={formData.frequency} onValueChange={(v) => setFormData({ ...formData, frequency: v })} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
@@ -279,7 +311,7 @@ const PMScheduleDetailPage = () => {
 
               <div className="space-y-2">
                 <Label>Work Order Priority</Label>
-                <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
+                <Select key={formData.priority} value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>

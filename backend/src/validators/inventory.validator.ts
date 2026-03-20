@@ -2,14 +2,16 @@ import { z } from 'zod';
 
 export const CreateInventoryItemSchema = z.object({
     name: z.string().min(1, 'Name is required').max(255),
-    description: z.string().optional(),
-    sku: z.string().max(100).optional(),
+    description: z.string().optional().nullable(),
+    sku: z.string().max(100).optional().nullable(),
     category: z.string().min(1, 'Category is required').max(100),
-    quantity: z.number().int().min(0).default(0),
-    min_quantity: z.number().int().min(0).default(0),
-    unit: z.string().max(50).default('pcs'),
-    unit_cost: z.string().max(50).default('0'),
-    storage_location: z.string().min(1, 'Storage location is required').max(255),
+    quantity: z.number().min(0).default(0),
+    min_quantity: z.number().min(0).default(0),
+    unit: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('pcs'),
+    unit_cost: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('0'),
+    storage_location: z.string().max(255).optional().nullable().default(''),
+    site_id: z.string().uuid('Invalid Site ID').nullable().optional(),
+    org_id: z.string().uuid('Invalid Organization ID').nullable().optional(),
 }).strict();
 
 export const UpdateInventoryItemSchema = CreateInventoryItemSchema.partial();
@@ -27,8 +29,11 @@ export const BulkCreateInventorySchema = z.object({
         category: z.string().min(1, 'Category is required').max(100),
         quantity: z.number().min(0).default(0),
         min_quantity: z.number().min(0).default(0),
-        unit: z.string().max(50).default('pcs'),
-        unit_cost: z.number().min(0).default(0),
-        storage_location: z.string().min(1, 'Storage location is required').max(255),
-    })).min(1, 'At least one item is required')
+        unit: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('pcs'),
+        unit_cost: z.union([z.string(), z.number()]).transform(v => v.toString()).pipe(z.string().max(50)).default('0'),
+        storage_location: z.string().max(255).optional().nullable().default(''),
+        site_id: z.string().uuid('Invalid Site ID').nullable().optional(),
+    })).min(1, 'At least one item is required'),
+    org_id: z.string().uuid('Invalid Organization ID').nullable().optional(),
+    site_id: z.string().uuid('Invalid Site ID').nullable().optional(),
 }).strict();

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { inventoryApi } from '../lib/api';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Switch } from '../components/ui/switch';
 import { Checkbox } from '../components/ui/checkbox';
 import InventoryBulkUploadDialog from '../components/InventoryBulkUploadDialog';
-import { Plus, Search, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign, RefreshCw } from 'lucide-react';
+import { Plus, Search, Trash2, Trash, Loader2, Package, AlertTriangle, DollarSign, RefreshCw, MapPin } from 'lucide-react';
 import { Pagination } from '../components/ui/pagination';
 import { useNotification } from '../context/NotificationContext';
 
@@ -30,24 +32,50 @@ const InventoryPage = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [orgId, setOrgId] = useState('');
+  const [siteId, setSiteId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
-  const { isManager } = useAuth();
+  const { isManager, hasRole } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
+
+  const { data: orgsData } = useOrganizations({ limit: 1000, enabled: isSuperAdmin });
+  const organizations = orgsData?.data || [];
+
+  const { data: sitesData } = useSites({ 
+    org_id: orgId || undefined, 
+    limit: 1000, 
+    enabled: isSuperAdmin || isOrgAdmin 
+  });
+  const sites = sitesData?.data || [];
+
   useEffect(() => {
     fetchData();
-  }, [search, categoryFilter, lowStockOnly, page, recordStatus]);
+  }, [search, categoryFilter, lowStockOnly, page, recordStatus, orgId, siteId]);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [itemsRes, statsRes, categoriesRes] = await Promise.all([
-        inventoryApi.list({ search, category: categoryFilter, low_stock_only: lowStockOnly, record_status: recordStatus, skip: (page - 1) * 10, limit: 10 }),
-        inventoryApi.getStats(),
-        inventoryApi.getCategories(),
+        inventoryApi.list({ 
+            search, 
+            category: categoryFilter, 
+            low_stock_only: lowStockOnly, 
+            record_status: recordStatus, 
+            org_id: orgId,
+            site_id: siteId,
+            skip: (page - 1) * 10, 
+            limit: 10 
+        }),
+        inventoryApi.getStats({ org_id: orgId, site_id: siteId }),
+        inventoryApi.getCategories({ org_id: orgId, site_id: siteId }),
       ]);
-      setItems(itemsRes.data.data);
-      setTotal(itemsRes.data.total);
+      setItems(itemsRes.data.data || []);
+      setTotal(itemsRes.data.total || 0);
       setSelectedIds([]);
       setStats(statsRes.data);
       setCategories([...new Set([...DEFAULT_CATEGORIES, ...(categoriesRes.data.categories || [])])]);
@@ -96,7 +124,7 @@ const InventoryPage = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === items.length && items.length > 0) {
+    if (items.length > 0 && selectedIds.length === items.length) {
       setSelectedIds([]);
     } else {
       setSelectedIds(items.map((a) => a.id));
@@ -107,6 +135,22 @@ const InventoryPage = () => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
     );
+  };
+
+  const handleBulkRestore = async () => {
+    if (!window.confirm(`Restore ${selectedIds.length} items?`)) return;
+
+    setSubmitting(true);
+    try {
+      await inventoryApi.bulkRestore({ ids: selectedIds });
+      addNotification('success', `${selectedIds.length} items restored`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      addNotification('error', 'Failed to bulk restore items');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const isLowStock = (item) => item.min_quantity > 0 && item.quantity <= item.min_quantity;
@@ -120,10 +164,10 @@ const InventoryPage = () => {
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
           <p className="text-muted-foreground">Manage spare parts and supplies</p>
         </div>
-        {isManager() && (
+        {hasRole(['org_admin', 'facility_manager', 'super_admin']) && (
           <div className="flex items-center gap-2">
             <InventoryBulkUploadDialog onUploadSuccess={fetchData} />
-            <Button data-testid="add-item-btn" onClick={() => navigate('/inventory/new')}>
+            <Button data-testid="add-item-btn" onClick={() => navigate('/inventory/create')}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Item
                 </Button>
@@ -188,11 +232,47 @@ const InventoryPage = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {isManager() && selectedIds.length > 0 && (
-                <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
+              {hasRole(['org_admin', 'facility_manager', 'super_admin']) && selectedIds.length > 0 && (
+                <>
+                  <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </>
+              )}
+              {isSuperAdmin && (
+                <div className="w-[180px]">
+                  <Select value={orgId || "all"} onValueChange={(v) => { 
+                    setOrgId(v === 'all' ? '' : v); 
+                    setSiteId(''); // Reset site when org changes
+                    setPage(1); 
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Organizations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Organizations</SelectItem>
+                      {organizations.map(o => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {(isSuperAdmin || isOrgAdmin) && (
+                <div className="w-[180px]">
+                  <Select value={siteId || "all"} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isSuperAdmin && !orgId ? "Select organization" : "All Sites"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sites</SelectItem>
+                      {sites.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
               <Switch
                 id="low-stock"
@@ -245,7 +325,8 @@ const InventoryPage = () => {
                     </SelectContent>
                   </Select>
                 </TableHead>
-                <TableHead className="min-w-[200px]">Location</TableHead>
+                <TableHead className="min-w-[150px]">Site</TableHead>
+                <TableHead className="min-w-[150px]">Location</TableHead>
                 <TableHead className="min-w-[120px] text-right whitespace-nowrap">Quantity</TableHead>
                 <TableHead className="min-w-[120px] text-right whitespace-nowrap">Unit Cost</TableHead>
                 <TableHead className="w-[60px] min-w-[60px] text-right"></TableHead>
@@ -293,6 +374,12 @@ const InventoryPage = () => {
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono text-sm">{item.sku || '-'}</TableCell>
                     <TableCell>{item.category}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        {item.site?.name || '-'}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{item.storage_location}</TableCell>
                     <TableCell className="text-right">
                       <span className={isLowStock(item) ? 'text-amber-600 font-medium' : ''}>

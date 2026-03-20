@@ -2,13 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useInventoryItem, useCreateInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '../hooks/api/useInventory';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useNotification } from '../context/NotificationContext';
-import { Loader2, ArrowLeft, Save, Trash2, Box } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Trash2, Box, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 
@@ -17,10 +21,15 @@ const InventoryDetailPage = () => {
   const isNew = id === 'new';
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { user, hasRole } = useAuth();
   const { data: item, isLoading, isError } = useInventoryItem(id);
   const createMutation = useCreateInventoryItem();
   const updateMutation = useUpdateInventoryItem();
   const deleteMutation = useDeleteInventoryItem();
+
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isManager = hasRole(['facility_manager']);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,7 +40,19 @@ const InventoryDetailPage = () => {
     quantity: 0,
     min_quantity: 0,
     unit_cost: '0',
+    org_id: '',
+    site_id: '',
   });
+
+  const { data: orgsData } = useOrganizations({ limit: 1000, enabled: isSuperAdmin && isNew });
+  const organizations = orgsData?.data || [];
+
+  const { data: sitesData } = useSites({ 
+    org_id: formData.org_id, 
+    limit: 1000, 
+    enabled: (isSuperAdmin || isOrgAdmin) && isNew 
+  });
+  const sites = sitesData?.data || [];
 
   useEffect(() => {
     if (item && !isNew) {
@@ -44,6 +65,8 @@ const InventoryDetailPage = () => {
         quantity: item.quantity || 0,
         min_quantity: item.min_quantity || 0,
         unit_cost: item.unit_cost || 0,
+        org_id: item.org_id || '',
+        site_id: item.site_id || '',
       });
     }
   }, [item, isNew]);
@@ -121,6 +144,58 @@ const InventoryDetailPage = () => {
           </CardHeader>
           <CardContent>
             <form id="inventory-form" onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {isSuperAdmin && (
+                  <div className="space-y-2">
+                    <Label>Organization</Label>
+                    {isNew ? (
+                      <Select 
+                          value={formData.org_id} 
+                          onValueChange={(v) => setFormData({ ...formData, org_id: v, site_id: '' })}
+                      >
+                          <SelectTrigger>
+                          <SelectValue placeholder="Select Organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                          {organizations.map(o => (
+                              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                          ))}
+                          </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={item?.org?.name || user?.org_name || '...'} readOnly className="bg-muted" />
+                    )}
+                  </div>
+                )}
+                
+                {!isManager && (
+                  <div className="space-y-2">
+                    <Label>Site</Label>
+                    {isNew && (isSuperAdmin || isOrgAdmin) ? (
+                      <Select 
+                          value={formData.site_id} 
+                          onValueChange={(v) => setFormData({ ...formData, site_id: v })}
+                          disabled={!formData.org_id}
+                      >
+                          <SelectTrigger>
+                          <SelectValue placeholder="Select Site" />
+                          </SelectTrigger>
+                          <SelectContent>
+                          {sites.map(s => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                          </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          {item?.site?.name || 'Assigned Site'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="name">Item Name</Label>

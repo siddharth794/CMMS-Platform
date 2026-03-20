@@ -1,9 +1,10 @@
 import { Op } from 'sequelize';
-import { PMSchedule, Asset, PMTrigger, PMTemplate, PMTask, PMPart, InventoryItem, sequelize } from '../models';
+import { PMSchedule, Asset, Site, Organization, PMTrigger, PMTemplate, PMTask, PMPart, InventoryItem, sequelize } from '../models';
 
 class PMScheduleRepository {
-    async findAll(orgId: string, options: { asset_id?: string, skip: number, limit: number, search?: string, record_status?: string }): Promise<any> {
-        let where: any = { org_id: orgId };
+    async findAll(orgId: string | null, options: { asset_id?: string, site_id?: string, skip: number, limit: number, search?: string, record_status?: string }): Promise<any> {
+        let where: any = {};
+        if (orgId) where.org_id = orgId;
         let paranoid = true;
 
         if (options.record_status === 'inactive') {
@@ -17,6 +18,7 @@ class PMScheduleRepository {
         }
 
         if (options.asset_id) where.asset_id = options.asset_id;
+        if (options.site_id) where.site_id = options.site_id;
         
         if (options.search) {
             where.name = { [Op.like]: `%${options.search}%` };
@@ -27,6 +29,8 @@ class PMScheduleRepository {
             paranoid,
             include: [
                 { model: Asset, as: 'asset' },
+                { model: Site, as: 'site' },
+                { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' }
             ],
@@ -38,16 +42,22 @@ class PMScheduleRepository {
         return { data: result.rows, total: result.count, skip: options.skip, limit: options.limit };
     }
 
-    async findById(pmId: string, orgId: string): Promise<any | null> {
+    async findById(pmId: string, orgId: string | null, siteId?: string): Promise<any | null> {
+        const where: any = { id: pmId, is_active: true };
+        if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
+        
         return PMSchedule.findOne({
-            where: { id: pmId, org_id: orgId, is_active: true },
+            where,
             include: [
                 { model: Asset, as: 'asset' },
+                { model: Site, as: 'site' },
+                { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
                 { model: PMTask, as: 'tasks' },
                 { model: PMPart, as: 'parts', include: [{ model: InventoryItem, as: 'item' }] }
-            ]
+            ],
         });
     }
 
@@ -55,6 +65,8 @@ class PMScheduleRepository {
         return PMSchedule.findByPk(pmId, { 
             include: [
                 { model: Asset, as: 'asset' },
+                { model: Site, as: 'site' },
+                { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
                 { model: PMTask, as: 'tasks' },
@@ -92,9 +104,12 @@ class PMScheduleRepository {
         });
     }
 
-    async updateWithAssociations(pmId: string, orgId: string, data: Record<string, any>): Promise<any> {
+    async updateWithAssociations(pmId: string, orgId: string | null, data: Record<string, any>, siteId?: string): Promise<any> {
         return sequelize.transaction(async (t) => {
-            const pm = await PMSchedule.findOne({ where: { id: pmId, org_id: orgId } });
+            const where: any = { id: pmId };
+            if (orgId) where.org_id = orgId;
+            if (siteId) where.site_id = siteId;
+            const pm = await PMSchedule.findOne({ where });
             if (!pm) return null;
 
             const { triggers, template, tasks, parts, ...pmData } = data;
@@ -132,9 +147,13 @@ class PMScheduleRepository {
         });
     }
 
-    async findByIdParanoid(pmId: string, orgId: string): Promise<any | null> {
+    async findByIdParanoid(pmId: string, orgId: string | null, siteId?: string): Promise<any | null> {
+        const where: any = { id: pmId };
+        if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
         return PMSchedule.findOne({
-            where: { id: pmId, org_id: orgId },
+            where,
+            include: [{ model: Organization, as: 'organization' }, { model: Site, as: 'site' }],
             paranoid: false
         });
     }
@@ -159,12 +178,18 @@ class PMScheduleRepository {
         await pm.destroy({ force: true });
     }
 
-    async bulkSoftDelete(ids: string[], orgId: string): Promise<void> {
-        await PMSchedule.update({ is_active: false }, { where: { id: { [Op.in]: ids }, org_id: orgId } });
+    async bulkSoftDelete(ids: string[], orgId: string | null, siteId?: string): Promise<void> {
+        const where: any = { id: { [Op.in]: ids } };
+        if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
+        await PMSchedule.update({ is_active: false }, { where });
     }
 
-    async bulkDelete(ids: string[], orgId: string, force: boolean): Promise<number> {
-        return PMSchedule.destroy({ where: { id: { [Op.in]: ids }, org_id: orgId }, force });
+    async bulkDelete(ids: string[], orgId: string | null, isHard: boolean, siteId?: string): Promise<number> {
+        const where: any = { id: { [Op.in]: ids } };
+        if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
+        return PMSchedule.destroy({ where, force: isHard });
     }
 }
 

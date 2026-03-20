@@ -122,6 +122,8 @@ export interface CreateInventoryItemDTO {
     unit?: string;
     unit_cost?: string;
     storage_location: string;
+    site_id?: string;
+    org_id?: string;
 }
 
 export interface UpdateInventoryItemDTO {
@@ -134,6 +136,8 @@ export interface UpdateInventoryItemDTO {
     unit?: string;
     unit_cost?: string;
     storage_location?: string;
+    site_id?: string | null;
+    org_id?: string;
 }
 
 export interface InventoryListQuery {
@@ -143,6 +147,8 @@ export interface InventoryListQuery {
     category?: string;
     low_stock_only?: string;
     record_status?: string;
+    org_id?: string;
+    site_id?: string;
 }
 
 // ─── Work Order DTOs ──────────────────────────────────────────────
