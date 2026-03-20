@@ -14,11 +14,14 @@ import { Pagination } from '../components/ui/pagination';
 import { Checkbox } from '../components/ui/checkbox';
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Trash, Loader2, AlertTriangle, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { addDays, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Calendar } from '../components/ui/calendar';
+import { MapPin, RefreshCw } from 'lucide-react';
 
 const PMSchedulesPage = () => {
   const [schedules, setSchedules] = useState([]);
@@ -28,11 +31,26 @@ const PMSchedulesPage = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [recordStatus, setRecordStatus] = useState('active');
+  const [orgId, setOrgId] = useState('');
+  const [siteId, setSiteId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   
   const navigate = useNavigate();
-  const { isManager } = useAuth();
+  const { isManager, hasRole, user } = useAuth();
   const { addNotification } = useNotification();
+
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
+
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const organizations = orgsData?.data || [];
+  const { data: sitesData } = useSites({ 
+    org_id: isSuperAdmin ? (orgId || '') : user?.org_id, 
+    limit: 1000,
+    enabled: !!(isSuperAdmin ? orgId : user?.org_id)
+  });
+  const sites = sitesData?.data || [];
   
   const [assets, setAssets] = useState([]);
   const [formData, setFormData] = useState({
@@ -52,7 +70,7 @@ const PMSchedulesPage = () => {
   useEffect(() => {
     fetchData();
     fetchAssets();
-  }, [search, page, recordStatus]);
+  }, [search, page, recordStatus, orgId, siteId]);
 
   const fetchAssets = async () => {
     try {
@@ -66,12 +84,26 @@ const PMSchedulesPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await pmSchedulesApi.list({ 
-        search, 
-        record_status: recordStatus, 
-        skip: (page - 1) * 10, 
-        limit: 10 
-      });
+      
+      const payload = {
+        search,
+        record_status: recordStatus,
+        skip: (page - 1) * 10,
+        limit: 10
+      };
+
+      if (isSuperAdmin) {
+        payload.org_id = orgId;
+        payload.site_id = siteId;
+      } else if (isOrgAdmin) {
+        payload.org_id = user?.org_id;
+        payload.site_id = siteId;
+      } else if (isFacilityManager) {
+        payload.org_id = user?.org_id;
+        payload.site_id = user?.site_id;
+      }
+
+      const res = await pmSchedulesApi.list(payload);
       setSchedules(res.data.data || res.data || []);
       setTotal(res.data.total || (res.data.data || res.data || []).length);
       setSelectedIds([]);
@@ -321,35 +353,69 @@ const PMSchedulesPage = () => {
         </div>
         {isManager() && (
           <Button data-testid="create-pm-btn" onClick={() => navigate('/pm-schedules/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Schedule
-              </Button>
+            <Plus className="mr-2 h-4 w-4" />
+            New Schedule
+          </Button>
         )}
       </div>
 
       {/* Filters, Search & Table */}
       <Card>
-        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
-          <div className="flex items-center gap-2 max-w-md w-full">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search schedules by name..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              data-testid="pm-search-input"
-            />
+        <div className="p-6 border-b flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-muted/20">
+          <div className="flex flex-col md:flex-row items-center gap-4 flex-1">
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search schedules..."
+                className="pl-8"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              />
+            </div>
+
+            {isSuperAdmin && (
+              <div className="w-full md:w-56">
+                <Select value={orgId} onValueChange={(v) => { setOrgId(v === 'all' ? '' : v); setSiteId(''); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {organizations.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {(isSuperAdmin || isOrgAdmin) && (
+              <div className="w-full md:w-56">
+                <Select value={siteId} onValueChange={(v) => { setSiteId(v === 'all' ? '' : v); setPage(1); }} disabled={isSuperAdmin && !orgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {sites.map(site => (
+                      <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {isManager() && selectedIds.length > 0 && (
-              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+              <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={submitting}>
                 <Trash className="mr-2 h-4 w-4" />
-                Delete
+                Delete ({selectedIds.length})
               </Button>
             )}
-            <div className="w-[180px]">
+            <div className="w-40">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
-                <SelectTrigger data-testid="filter-record-status">
-                  <SelectValue placeholder="Record Status" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
@@ -372,6 +438,7 @@ const PMSchedulesPage = () => {
                   </TableHead>
                 )}
                 <TableHead>Name</TableHead>
+                {(isSuperAdmin || isOrgAdmin) && <TableHead>Site</TableHead>}
                 <TableHead>Asset</TableHead>
                 <TableHead>Triggers</TableHead>
                 <TableHead>WO Priority</TableHead>
@@ -409,6 +476,14 @@ const PMSchedulesPage = () => {
                         {pm.name}
                       </Link>
                     </TableCell>
+                    {(isSuperAdmin || isOrgAdmin) && (
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span className="text-xs">{pm.Asset?.Site?.name || pm.Asset?.site?.name || '-'}</span>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Link to={`/assets/${pm.asset_id}`} className="text-primary hover:underline">
                         {pm.Asset?.name || pm.asset?.name || '-'}

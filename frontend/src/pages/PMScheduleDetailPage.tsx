@@ -11,6 +11,10 @@ import { useNotification } from '../context/NotificationContext';
 import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { usePMSchedule, useUpdatePMSchedule, useDeletePMSchedule } from '../hooks/api/usePMSchedules';
 import { useAssetsData } from '../hooks/api/useAssets';
+import { useAuth } from '../context/AuthContext';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
+import { MapPin } from 'lucide-react';
 
 const PMScheduleDetailPage = () => {
   const { id } = useParams();
@@ -21,12 +25,29 @@ const PMScheduleDetailPage = () => {
 
   const { data: pm, isLoading, isError } = usePMSchedule(id);
   const updateMutation = useUpdatePMSchedule();
+  
+  const { hasRole, user: currentUser } = useAuth();
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
+
+  const { data: orgsData } = useOrganizations({ limit: 1000, enabled: isSuperAdmin });
+  const organizations = orgsData?.data || [];
+  
+  const { data: sitesData } = useSites({ 
+    org_id: pm?.org_id, 
+    limit: 1000, 
+    enabled: !!pm?.org_id
+  });
+  const sites = sitesData?.data || [];
 
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     asset_id: '',
+    org_id: '',
+    site_id: '',
     schedule_logic: 'FIXED',
     frequency: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
@@ -87,6 +108,8 @@ const PMScheduleDetailPage = () => {
       setFormData({
         name: pm.name || '',
         description: pm.description || '',
+        org_id: pm.org_id || '',
+        site_id: pm.site_id || '',
         asset_id: pm.asset_id || '',
         schedule_logic: pm.schedule_logic || 'FIXED',
         frequency: freq,
@@ -108,6 +131,8 @@ const PMScheduleDetailPage = () => {
       const payload = {
         name: formData.name,
         description: formData.description,
+        org_id: formData.org_id,
+        site_id: formData.site_id,
         asset_id: formData.asset_id,
         schedule_logic: formData.schedule_logic,
         triggers: [
@@ -183,7 +208,43 @@ const PMScheduleDetailPage = () => {
             <CardDescription>Enter the primary details and recurrence logic.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Organization (Read-only)</Label>
+                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
+                      {organizations.find(o => o.id === formData.org_id)?.name || 'Assigned Organization'}
+                  </div>
+                </div>
+              )}
+
+              {isSuperAdmin || isOrgAdmin ? (
+                <div className="space-y-2">
+                  <Label>Site (Read-only)</Label>
+                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      {sites.find(s => s.id === formData.site_id)?.name || 'Assigned Site'}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Site *</Label>
+                  <Select 
+                      value={formData.site_id} 
+                      onValueChange={(v) => setFormData({ ...formData, site_id: v, asset_id: '' })}
+                  >
+                      <SelectTrigger>
+                      <SelectValue placeholder="Select Site" />
+                      </SelectTrigger>
+                      <SelectContent>
+                      {sites.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                      </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="name">Title *</Label>
                 <Input
@@ -197,9 +258,14 @@ const PMScheduleDetailPage = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="asset_id">Target Asset *</Label>
-                <Select value={formData.asset_id} onValueChange={(v) => setFormData({ ...formData, asset_id: v })} required>
+                <Select 
+                  value={formData.asset_id} 
+                  onValueChange={(v) => setFormData({ ...formData, asset_id: v })} 
+                  required
+                  disabled={!formData.site_id && !isSuperAdmin && !isOrgAdmin}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an asset" />
+                    <SelectValue placeholder={!formData.site_id && isFacilityManager ? "Select site first" : "Select an asset"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none" disabled>Select an asset</SelectItem>

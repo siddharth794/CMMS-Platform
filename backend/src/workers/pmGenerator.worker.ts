@@ -14,7 +14,7 @@ export class PMGeneratorWorker {
           { model: PMTemplate, as: 'template' },
           { model: PMTask, as: 'tasks' },
           { model: PMPart, as: 'parts' },
-          { model: Asset }
+          { model: Asset, as: 'asset' }
         ]
       });
 

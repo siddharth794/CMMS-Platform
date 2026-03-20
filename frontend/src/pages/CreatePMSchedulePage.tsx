@@ -15,18 +15,31 @@ import { pmSchedulesApi } from '../lib/api';
 import { useAssetsData } from '../hooks/api/useAssets';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
+import { useOrganizations } from '../hooks/api/useOrganizations';
+import { useSites } from '../hooks/api/useSites';
+import { useAuth } from '../context/AuthContext';
+import { useEffect } from 'react';
+import { MapPin } from 'lucide-react';
 
 const CreatePMSchedulePage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const [isPending, setIsPending] = useState(false);
-  const { data: assetsData } = useAssetsData();
-  const assets = assetsData?.data || [];
+  const { hasRole, user } = useAuth();
+  
+  const isSuperAdmin = hasRole(['super_admin']);
+  const isOrgAdmin = hasRole(['org_admin']);
+  const isFacilityManager = hasRole(['facility_manager']);
+
+  const { data: orgsData } = useOrganizations({ limit: 1000, enabled: isSuperAdmin });
+  const organizations = orgsData?.data || [];
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     asset_id: '',
+    org_id: isSuperAdmin ? '' : user?.org_id,
+    site_id: isFacilityManager ? user?.site_id : '',
     schedule_logic: 'FIXED',
     frequency: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
@@ -34,6 +47,28 @@ const CreatePMSchedulePage = () => {
     estimated_hours: '',
     tasks: ['']
   });
+
+  const { data: sitesData } = useSites({ 
+    org_id: formData.org_id, 
+    limit: 1000, 
+    enabled: !!formData.org_id && (isSuperAdmin || isOrgAdmin)
+  });
+  const sites = sitesData?.data || [];
+
+  const { data: assetsData } = useAssetsData({
+    org_id: formData.org_id || undefined,
+    site_id: formData.site_id || undefined
+  });
+  const assets = assetsData?.data || [];
+
+  useEffect(() => {
+    if (user && !isSuperAdmin && !formData.org_id) {
+       setFormData(prev => ({ ...prev, org_id: user.org_id }));
+    }
+    if (user && isFacilityManager && !formData.site_id) {
+       setFormData(prev => ({ ...prev, site_id: user.site_id }));
+    }
+  }, [user, isSuperAdmin, isFacilityManager]);
 
   const getCronFromFrequency = (freq, startDateStr) => {
     const date = new Date(startDateStr);
@@ -56,6 +91,12 @@ const CreatePMSchedulePage = () => {
     setIsPending(true);
     
     try {
+      if (isSuperAdmin && !formData.org_id) {
+        throw new Error('Please select an organization');
+      }
+      if ((isSuperAdmin || isOrgAdmin || isFacilityManager) && !formData.site_id) {
+        throw new Error('Site is mandatory');
+      }
       if (!formData.asset_id || formData.asset_id === 'none') {
         throw new Error('Please select an asset for this PM schedule');
       }
@@ -63,6 +104,8 @@ const CreatePMSchedulePage = () => {
       const payload = {
         name: formData.name,
         description: formData.description,
+        org_id: formData.org_id,
+        site_id: formData.site_id,
         asset_id: formData.asset_id,
         schedule_logic: formData.schedule_logic,
         is_paused: false,
@@ -120,7 +163,54 @@ const CreatePMSchedulePage = () => {
             <CardDescription>Enter the primary details and recurrence logic.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Organization *</Label>
+                  <Select 
+                      value={formData.org_id} 
+                      onValueChange={(v) => setFormData({ ...formData, org_id: v, site_id: '', asset_id: '' })}
+                  >
+                      <SelectTrigger>
+                      <SelectValue placeholder="Select Organization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                      {organizations.map(o => (
+                          <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                      </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {isSuperAdmin || isOrgAdmin ? (
+                <div className="space-y-2">
+                  <Label>Site *</Label>
+                  <Select 
+                      value={formData.site_id} 
+                      onValueChange={(v) => setFormData({ ...formData, site_id: v, asset_id: '' })}
+                      disabled={isSuperAdmin && !formData.org_id}
+                  >
+                      <SelectTrigger>
+                      <SelectValue placeholder="Select Site" />
+                      </SelectTrigger>
+                      <SelectContent>
+                      {sites.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                      </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Site *</Label>
+                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      {user?.site_name || 'Assigned Site'}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="name">Title *</Label>
                 <Input
@@ -134,9 +224,14 @@ const CreatePMSchedulePage = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="asset_id">Target Asset *</Label>
-                <Select value={formData.asset_id} onValueChange={(v) => setFormData({ ...formData, asset_id: v })} required>
+                <Select 
+                  value={formData.asset_id} 
+                  onValueChange={(v) => setFormData({ ...formData, asset_id: v })} 
+                  required
+                  disabled={!formData.site_id}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an asset" />
+                    <SelectValue placeholder={!formData.site_id ? "Select site first" : "Select an asset"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none" disabled>Select an asset</SelectItem>

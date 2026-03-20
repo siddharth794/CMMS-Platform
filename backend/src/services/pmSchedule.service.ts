@@ -5,11 +5,11 @@ import { AuditContext } from '../types/common.dto';
 import { NotFoundError } from '../errors/AppError';
 
 class PMScheduleService {
-    async getAll(orgId: string, options: { asset_id?: string, skip: number, limit: number, search?: string, record_status?: string }): Promise<any> {
+    async getAll(orgId: string | null, options: { asset_id?: string, site_id?: string, skip: number, limit: number, search?: string, record_status?: string }): Promise<any> {
         return pmScheduleRepository.findAll(orgId, options);
     }
 
-    async getById(pmId: string, orgId: string): Promise<any> {
+    async getById(pmId: string, orgId: string | null): Promise<any> {
         const pm = await pmScheduleRepository.findById(pmId, orgId);
         if (!pm) throw new NotFoundError('PM schedule');
         return pm;
@@ -23,7 +23,7 @@ class PMScheduleService {
         return fullyLoaded;
     }
 
-    async update(pmId: string, orgId: string, dto: any): Promise<any> {
+    async update(pmId: string, orgId: string | null, dto: any): Promise<any> {
         const pm = await pmScheduleRepository.findById(pmId, orgId);
         if (!pm) throw new NotFoundError('PM schedule');
 
@@ -31,7 +31,7 @@ class PMScheduleService {
         return pmScheduleRepository.findByPkWithAsset(pm.id);
     }
 
-    async delete(pmId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+    async delete(pmId: string, orgId: string | null, audit: AuditContext): Promise<{ message: string }> {
         const pm = await pmScheduleRepository.findByIdParanoid(pmId, orgId);
         if (!pm) throw new NotFoundError('PM schedule');
 
@@ -46,7 +46,7 @@ class PMScheduleService {
         }
     }
 
-    async restore(pmId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+    async restore(pmId: string, orgId: string | null, audit: AuditContext): Promise<{ message: string }> {
         const pm = await pmScheduleRepository.findByIdParanoid(pmId, orgId);
         if (!pm) throw new NotFoundError('PM schedule');
 
@@ -59,7 +59,7 @@ class PMScheduleService {
         return { message: 'PM schedule is already active' };
     }
 
-    async bulkDelete(orgId: string, dto: any, audit: AuditContext): Promise<{ message: string }> {
+    async bulkDelete(orgId: string | null, dto: any, audit: AuditContext): Promise<{ message: string }> {
         if (!dto.force) {
             await pmScheduleRepository.bulkSoftDelete(dto.ids, orgId);
         }

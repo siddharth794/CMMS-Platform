@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 export const CreatePMScheduleSchema = z.object({
+    org_id: z.string().uuid('Invalid organization ID').optional(),
+    site_id: z.string().uuid('Invalid site ID').optional(),
     asset_id: z.string().uuid('Invalid asset ID'),
     name: z.string().min(1, 'Name is required').max(255),
     description: z.string().max(5000).optional(),
