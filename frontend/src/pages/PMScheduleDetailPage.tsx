@@ -20,9 +20,6 @@ const PMScheduleDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
-  const { data: assetsData } = useAssetsData();
-  const assets = assetsData?.data || [];
-
   const { data: pm, isLoading, isError } = usePMSchedule(id);
   const updateMutation = useUpdatePMSchedule();
   
@@ -34,12 +31,7 @@ const PMScheduleDetailPage = () => {
   const { data: orgsData } = useOrganizations({ limit: 1000, enabled: isSuperAdmin });
   const organizations = orgsData?.data || [];
   
-  const { data: sitesData } = useSites({ 
-    org_id: pm?.org_id, 
-    limit: 1000, 
-    enabled: !!pm?.org_id
-  });
-  const sites = sitesData?.data || [];
+
 
 
   const [formData, setFormData] = useState({
@@ -55,6 +47,8 @@ const PMScheduleDetailPage = () => {
     estimated_hours: '',
     tasks: ['']
   });
+
+
 
   const getInitialDateFromCron = (cron, freq) => {
     // Reverse engineer a safe date string for the picker
@@ -219,33 +213,13 @@ const PMScheduleDetailPage = () => {
                 </div>
               )}
 
-              {isSuperAdmin || isOrgAdmin ? (
-                <div className="space-y-2">
-                  <Label>Site</Label>
-                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{pm.site?.name || 'Assigned Site'}</span>
-                  </div>
+              <div className="space-y-2">
+                <Label>Site</Label>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{pm?.site?.name || pm?.Site?.name || 'Assigned Site'}</span>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Site *</Label>
-                  <Select 
-                      key={formData.site_id}
-                      value={formData.site_id} 
-                      onValueChange={(v) => setFormData({ ...formData, site_id: v, asset_id: '' })}
-                  >
-                      <SelectTrigger>
-                      <SelectValue placeholder="Select Site" />
-                      </SelectTrigger>
-                      <SelectContent>
-                      {sites.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                      </SelectContent>
-                  </Select>
-                </div>
-              )}
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="name">Title *</Label>
@@ -259,24 +233,13 @@ const PMScheduleDetailPage = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="asset_id">Target Asset *</Label>
-                <Select 
-                  key={formData.asset_id}
-                  value={formData.asset_id} 
-                  onValueChange={(v) => setFormData({ ...formData, asset_id: v })} 
-                  required
-                  disabled={!formData.site_id && !isSuperAdmin && !isOrgAdmin}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={!formData.site_id && isFacilityManager ? "Select site first" : "Select an asset"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" disabled>Select an asset</SelectItem>
-                    {assets.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.asset_tag})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="asset_id">Target Asset</Label>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                  <span className="text-sm font-medium">
+                    {(pm?.asset || pm?.Asset)?.name || 'Assigned Asset'} 
+                    {((pm?.asset || pm?.Asset)?.asset_tag) ? ` (${(pm?.asset || pm?.Asset).asset_tag})` : ''}
+                  </span>
+                </div>
               </div>
             </div>
             

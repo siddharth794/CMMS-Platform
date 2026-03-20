@@ -21,7 +21,7 @@ class PMScheduleController {
         // Scope by site
         let targetSiteId = site_id as string | undefined;
         if (roleName === 'facility_manager') {
-            targetSiteId = req.user!.site_id || '00000000-0000-0000-0000-000000000000';
+            targetSiteId = req.user!.managed_site?.id || req.user!.site_id || '00000000-0000-0000-0000-000000000000';
         }
 
         const result = await pmScheduleService.getAll(targetOrgId, {
@@ -38,7 +38,7 @@ class PMScheduleController {
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.managed_site?.id || req.user!.site_id || undefined) : undefined;
         const pm = await pmScheduleService.getById(req.params.pm_id as string, targetOrgId, targetSiteId);
         res.json(pm);
     }
@@ -50,7 +50,7 @@ class PMScheduleController {
         // Auto-assign site if missing (using user's site for FM, or inferring from asset for others)
         if (!req.body.site_id) {
             if (roleName === 'facility_manager') {
-                req.body.site_id = req.user!.site_id;
+                req.body.site_id = req.user!.managed_site?.id || req.user!.site_id;
             } else if (req.body.asset_id) {
                 // We'll let the service handle site inference from asset if it's still missing
             }
@@ -63,7 +63,7 @@ class PMScheduleController {
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.managed_site?.id || req.user!.site_id || undefined) : undefined;
         const pm = await pmScheduleService.update(req.params.pm_id as string, targetOrgId, req.body as UpdatePMScheduleDTO, targetSiteId);
         res.json(pm);
     }
@@ -71,7 +71,7 @@ class PMScheduleController {
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.managed_site?.id || req.user!.site_id || undefined) : undefined;
         const result = await pmScheduleService.delete(req.params.pm_id as string, targetOrgId, this.getAuditContext(req), targetSiteId);
         res.json(result);
     }
@@ -79,7 +79,7 @@ class PMScheduleController {
     restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.managed_site?.id || req.user!.site_id || undefined) : undefined;
         const result = await pmScheduleService.restore(req.params.pm_id as string, targetOrgId, this.getAuditContext(req), targetSiteId);
         res.json(result);
     }
@@ -87,7 +87,7 @@ class PMScheduleController {
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.managed_site?.id || req.user!.site_id || undefined) : undefined;
         const result = await pmScheduleService.bulkDelete(targetOrgId, req.body, this.getAuditContext(req), targetSiteId);
         res.json(result);
     }
