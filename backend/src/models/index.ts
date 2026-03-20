@@ -154,10 +154,18 @@ WorkOrder.init({
     is_pm_generated: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { sequelize, tableName: 'work_orders', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
-class PMSchedule extends Model { public id!: string; public schedule_logic!: string; public is_paused!: boolean; public name!: string; }
+class PMSchedule extends Model { 
+    public id!: string; 
+    public org_id!: string;
+    public site_id?: string | null;
+    public schedule_logic!: string; 
+    public is_paused!: boolean; 
+    public name!: string; 
+}
 PMSchedule.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
+    site_id: { type: DataTypes.UUID, allowNull: true },
     asset_id: { type: DataTypes.UUID, allowNull: false },
     name: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT },
@@ -394,6 +402,13 @@ WorkOrder.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 // Site -> InventoryItems (1:N)
 Site.hasMany(InventoryItem, { as: 'inventory_items', foreignKey: 'site_id' });
 InventoryItem.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+// Site -> PMSchedules (1:N)
+Site.hasMany(PMSchedule, { as: 'pm_schedules', foreignKey: 'site_id' });
+PMSchedule.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
+
+// Organization -> PMSchedules (1:N)
+Organization.hasMany(PMSchedule, { foreignKey: 'org_id' });
+PMSchedule.belongsTo(Organization, { as: 'organization', foreignKey: 'org_id' });
 
 
 export {
