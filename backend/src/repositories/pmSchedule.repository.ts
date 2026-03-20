@@ -42,9 +42,10 @@ class PMScheduleRepository {
         return { data: result.rows, total: result.count, skip: options.skip, limit: options.limit };
     }
 
-    async findById(pmId: string, orgId: string | null): Promise<any | null> {
+    async findById(pmId: string, orgId: string | null, siteId?: string): Promise<any | null> {
         const where: any = { id: pmId, is_active: true };
         if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
         
         return PMSchedule.findOne({
             where,
@@ -103,10 +104,11 @@ class PMScheduleRepository {
         });
     }
 
-    async updateWithAssociations(pmId: string, orgId: string | null, data: Record<string, any>): Promise<any> {
+    async updateWithAssociations(pmId: string, orgId: string | null, data: Record<string, any>, siteId?: string): Promise<any> {
         return sequelize.transaction(async (t) => {
             const where: any = { id: pmId };
             if (orgId) where.org_id = orgId;
+            if (siteId) where.site_id = siteId;
             const pm = await PMSchedule.findOne({ where });
             if (!pm) return null;
 
@@ -145,9 +147,10 @@ class PMScheduleRepository {
         });
     }
 
-    async findByIdParanoid(pmId: string, orgId: string | null): Promise<any | null> {
+    async findByIdParanoid(pmId: string, orgId: string | null, siteId?: string): Promise<any | null> {
         const where: any = { id: pmId };
         if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
         return PMSchedule.findOne({
             where,
             include: [{ model: Organization, as: 'organization' }, { model: Site, as: 'site' }],
@@ -175,16 +178,18 @@ class PMScheduleRepository {
         await pm.destroy({ force: true });
     }
 
-    async bulkSoftDelete(ids: string[], orgId: string | null): Promise<void> {
+    async bulkSoftDelete(ids: string[], orgId: string | null, siteId?: string): Promise<void> {
         const where: any = { id: { [Op.in]: ids } };
         if (orgId) where.org_id = orgId;
+        if (siteId) where.site_id = siteId;
         await PMSchedule.update({ is_active: false }, { where });
     }
 
-    async bulkDelete(ids: string[], orgId: string | null, force: boolean): Promise<number> {
+    async bulkDelete(ids: string[], orgId: string | null, isHard: boolean, siteId?: string): Promise<number> {
         const where: any = { id: { [Op.in]: ids } };
         if (orgId) where.org_id = orgId;
-        return PMSchedule.destroy({ where, force });
+        if (siteId) where.site_id = siteId;
+        return PMSchedule.destroy({ where, force: isHard });
     }
 }
 

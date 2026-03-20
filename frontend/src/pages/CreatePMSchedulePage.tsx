@@ -39,7 +39,7 @@ const CreatePMSchedulePage = () => {
     description: '',
     asset_id: '',
     org_id: isSuperAdmin ? '' : user?.org_id,
-    site_id: isFacilityManager ? user?.site_id : '',
+    site_id: isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : '',
     schedule_logic: 'FIXED',
     frequency: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
@@ -66,7 +66,7 @@ const CreatePMSchedulePage = () => {
        setFormData(prev => ({ ...prev, org_id: user.org_id }));
     }
     if (user && isFacilityManager && !formData.site_id) {
-       setFormData(prev => ({ ...prev, site_id: user.site_id }));
+       setFormData(prev => ({ ...prev, site_id: user?.managed_site?.id || user?.site_id }));
     }
   }, [user, isSuperAdmin, isFacilityManager]);
 
