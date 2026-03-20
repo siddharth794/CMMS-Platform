@@ -29,6 +29,8 @@ class PMScheduleRepository {
             paranoid,
             include: [
                 { model: Asset, as: 'asset' },
+                { model: Site, as: 'site' },
+                { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' }
             ],

@@ -361,17 +361,23 @@ const PMSchedulesPage = () => {
 
       {/* Filters, Search & Table */}
       <Card>
-        <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
-          <div className="flex flex-wrap gap-4 items-center w-full">
-            <div className="flex-1 min-w-[250px] flex items-center gap-2 rounded-lg border px-3 py-2 bg-background focus-within:ring-1 focus-within:ring-primary">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search schedules..."
-                className="border-0 p-0 h-auto focus-visible:ring-0 bg-transparent flex-1"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              />
-            </div>
+        <div className="p-6 border-b flex flex-col md:flex-row md:items-center flex-wrap gap-4 bg-muted/20">
+          <div className="flex-1 min-w-[300px] flex items-center gap-2 rounded-lg border px-3 py-2 bg-background focus-within:ring-1 focus-within:ring-primary">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search schedules..."
+              className="border-0 p-0 h-auto focus-visible:ring-0 bg-transparent flex-1"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+
+          {isManager() && selectedIds.length > 0 && (
+              <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={submitting}>
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
 
             {isSuperAdmin && (
               <div className="w-[180px]">
@@ -404,14 +410,7 @@ const PMSchedulesPage = () => {
                 </Select>
               </div>
             )}
-          </div>
-          <div className="flex items-center gap-2">
-            {isManager() && selectedIds.length > 0 && (
-              <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={submitting}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete ({selectedIds.length})
-              </Button>
-            )}
+
             <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
                 <SelectTrigger>
@@ -424,7 +423,6 @@ const PMSchedulesPage = () => {
               </Select>
             </div>
           </div>
-        </div>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
@@ -438,25 +436,25 @@ const PMSchedulesPage = () => {
                   </TableHead>
                 )}
                 <TableHead>Name</TableHead>
+                {isSuperAdmin && <TableHead>Organization</TableHead>}
                 {(isSuperAdmin || isOrgAdmin) && <TableHead>Site</TableHead>}
                 <TableHead>Asset</TableHead>
                 <TableHead>Triggers</TableHead>
                 <TableHead>WO Priority</TableHead>
                 <TableHead>Logic</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : schedules.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No PM schedules found
                   </TableCell>
                 </TableRow>
@@ -476,11 +474,16 @@ const PMSchedulesPage = () => {
                         {pm.name}
                       </Link>
                     </TableCell>
+                    {isSuperAdmin && (
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">{pm.organization?.name || '-'}</span>
+                      </TableCell>
+                    )}
                     {(isSuperAdmin || isOrgAdmin) && (
                       <TableCell>
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5" />
-                          <span className="text-xs">{pm.Asset?.Site?.name || pm.Asset?.site?.name || '-'}</span>
+                          <span className="text-xs">{pm.site?.name || '-'}</span>
                         </div>
                       </TableCell>
                     )}
@@ -503,11 +506,6 @@ const PMSchedulesPage = () => {
                     </TableCell>
                     <TableCell>
                       {pm.schedule_logic === 'FIXED' ? 'Strict Calendar' : 'Floating'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`status-badge ${pm.is_paused ? 'status-cancelled' : 'status-completed'}`}>
-                        {pm.is_paused ? 'Paused' : 'Active'}
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       {isManager() && (

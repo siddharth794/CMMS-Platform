@@ -13,12 +13,15 @@ class PMScheduleController {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         
         // Scope by organization
-        const targetOrgId = (roleName === 'super_admin' && org_id) ? String(org_id) : req.user!.org_id;
+        let targetOrgId: string | null = req.user!.org_id;
+        if (roleName === 'super_admin') {
+            targetOrgId = org_id ? String(org_id) : null;
+        }
         
         // Scope by site
         let targetSiteId = site_id as string | undefined;
         if (roleName === 'facility_manager') {
-            targetSiteId = req.user!.site_id || undefined;
+            targetSiteId = req.user!.site_id || '00000000-0000-0000-0000-000000000000';
         }
 
         const result = await pmScheduleService.getAll(targetOrgId, {
@@ -35,7 +38,8 @@ class PMScheduleController {
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const pm = await pmScheduleService.getById(req.params.pm_id as string, targetOrgId);
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const pm = await pmScheduleService.getById(req.params.pm_id as string, targetOrgId, targetSiteId);
         res.json(pm);
     }
 
@@ -43,9 +47,13 @@ class PMScheduleController {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = (roleName === 'super_admin' && req.body.org_id) ? req.body.org_id : req.user!.org_id;
         
-        // Auto-assign site for Facility Managers
-        if (roleName === 'facility_manager' && !req.body.site_id) {
-            req.body.site_id = req.user!.site_id;
+        // Auto-assign site if missing (using user's site for FM, or inferring from asset for others)
+        if (!req.body.site_id) {
+            if (roleName === 'facility_manager') {
+                req.body.site_id = req.user!.site_id;
+            } else if (req.body.asset_id) {
+                // We'll let the service handle site inference from asset if it's still missing
+            }
         }
 
         const pm = await pmScheduleService.create(targetOrgId, req.body as CreatePMScheduleDTO, this.getAuditContext(req));
@@ -55,28 +63,32 @@ class PMScheduleController {
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const pm = await pmScheduleService.update(req.params.pm_id as string, targetOrgId, req.body as UpdatePMScheduleDTO);
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const pm = await pmScheduleService.update(req.params.pm_id as string, targetOrgId, req.body as UpdatePMScheduleDTO, targetSiteId);
         res.json(pm);
     }
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const result = await pmScheduleService.delete(req.params.pm_id as string, targetOrgId, this.getAuditContext(req));
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const result = await pmScheduleService.delete(req.params.pm_id as string, targetOrgId, this.getAuditContext(req), targetSiteId);
         res.json(result);
     }
 
     restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const result = await pmScheduleService.restore(req.params.pm_id as string, targetOrgId, this.getAuditContext(req));
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const result = await pmScheduleService.restore(req.params.pm_id as string, targetOrgId, this.getAuditContext(req), targetSiteId);
         res.json(result);
     }
 
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
         const targetOrgId = roleName === 'super_admin' ? null : req.user!.org_id;
-        const result = await pmScheduleService.bulkDelete(targetOrgId, req.body, this.getAuditContext(req));
+        const targetSiteId = roleName === 'facility_manager' ? (req.user!.site_id ?? undefined) : undefined;
+        const result = await pmScheduleService.bulkDelete(targetOrgId, req.body, this.getAuditContext(req), targetSiteId);
         res.json(result);
     }
 }

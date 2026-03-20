@@ -91,12 +91,15 @@ const CreatePMSchedulePage = () => {
     setIsPending(true);
     
     try {
-      if (isSuperAdmin && !formData.org_id) {
+      // Basic validation
+      if (isSuperAdmin && (!formData.org_id || formData.org_id === 'none')) {
         throw new Error('Please select an organization');
       }
-      if ((isSuperAdmin || isOrgAdmin || isFacilityManager) && !formData.site_id) {
-        throw new Error('Site is mandatory');
+      
+      if (!formData.site_id || formData.site_id === 'none') {
+        throw new Error('Please select a site');
       }
+
       if (!formData.asset_id || formData.asset_id === 'none') {
         throw new Error('Please select an asset for this PM schedule');
       }
@@ -175,6 +178,7 @@ const CreatePMSchedulePage = () => {
                       <SelectValue placeholder="Select Organization" />
                       </SelectTrigger>
                       <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
                       {organizations.map(o => (
                           <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                       ))}
@@ -195,6 +199,7 @@ const CreatePMSchedulePage = () => {
                       <SelectValue placeholder="Select Site" />
                       </SelectTrigger>
                       <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
                       {sites.map(s => (
                           <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
