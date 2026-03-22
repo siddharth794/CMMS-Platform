@@ -91,7 +91,7 @@ const WorkOrdersPage = () => {
 
   const { data: assets = [] } = useAssets();
   // useUsers from useSharedQueries might return an object with data property if not handled cleanly or an array
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsers(isSuperAdmin ? { org_id: filters.org_id || 'all', limit: 1000 } : { limit: 1000 });
   const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
   const { data: sites = [] } = useSites(filters.org_id ? { org_id: filters.org_id } : undefined);
   const { data: orgsData } = useOrganizations({ limit: 1000 });
@@ -462,8 +462,9 @@ const WorkOrdersPage = () => {
           </DialogHeader>
           <div className="space-y-2">
             {users.filter(u => {
-              const roleName = (u.role?.name || u.Role?.name || u.role_name)?.toLowerCase();
-              return roleName === 'technician' && u.site_id === selectedWO?.site_id;
+              const roleName = (u.role?.name || u.Role?.name || u.role_name || '').toLowerCase();
+              const userSiteId = u.site_id || u.Site?.id || u.site?.id;
+              return roleName === 'technician' && userSiteId === selectedWO?.site_id;
             }).map((user) => {
               const roleName = (user.role?.name || user.Role?.name)?.replace('_', ' ');
               return (

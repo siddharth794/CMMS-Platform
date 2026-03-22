@@ -68,7 +68,8 @@ const PriorityBadge = ({ priority }) => {
 const WorkOrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isManager, isRequester } = useAuth();
+  const { isManager, isRequester, hasRole } = useAuth();
+  const isSuperAdmin = hasRole(['super_admin', 'super admin', 'Super_Admin']);
   const { socket } = useSocket();
   const { addNotification } = useNotification();
   const [workOrder, setWorkOrder] = useState(null);
@@ -125,19 +126,20 @@ const WorkOrderDetailPage = () => {
 
   const fetchData = async () => {
     try {
-      const [woRes, usersRes, invRes, assetsRes] = await Promise.all([
-        workOrdersApi.get(id),
-        usersApi.list(),
+      const woRes = await workOrdersApi.get(id);
+      const wo = woRes.data;
+      setWorkOrder(wo);
+
+      const [usersRes, invRes, assetsRes] = await Promise.all([
+        usersApi.list(isSuperAdmin ? { org_id: wo.org_id, limit: 1000 } : { limit: 1000 }),
         inventoryApi.list(),
         assetsApi.list()
       ]);
-      setWorkOrder(woRes.data);
       setUsers(usersRes.data.data || usersRes.data);
       setInventoryCatalog(invRes.data.data || invRes.data);
       setAssets(assetsRes.data.data || assetsRes.data);
       
       // Initialize edit form data
-      const wo = woRes.data;
       setEditFormData({
         title: wo.title,
         description: wo.description || '',
@@ -848,8 +850,9 @@ const WorkOrderDetailPage = () => {
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {users
               .filter(u => {
-                const roleName = (u.role?.name || u.Role?.name || '').toLowerCase();
-                return roleName === 'technician' && u.site_id === workOrder?.site_id;
+                const roleName = (u.role?.name || u.Role?.name || u.role_name || '').toLowerCase();
+                const userSiteId = u.site_id || u.Site?.id || u.site?.id;
+                return roleName === 'technician' && userSiteId === workOrder?.site_id;
               })
               .map((user) => (
                 <Button
