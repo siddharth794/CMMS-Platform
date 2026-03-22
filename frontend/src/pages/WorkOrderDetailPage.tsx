@@ -784,7 +784,10 @@ const WorkOrderDetailPage = () => {
           </DialogHeader>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {users
-              .filter(u => ['technician', 'facility_manager'].includes((u.role?.name || u.Role?.name || '').toLowerCase()))
+              .filter(u => {
+                const roleName = (u.role?.name || u.Role?.name || '').toLowerCase();
+                return roleName === 'technician' && u.site_id === workOrder?.site_id;
+              })
               .map((user) => (
                 <Button
                   key={user.id}
