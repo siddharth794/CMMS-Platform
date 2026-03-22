@@ -19,6 +19,7 @@ import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 import { useWorkOrders, useCreateWorkOrder, useAssignWorkOrder, useUpdateWorkOrderStatus, useDeleteWorkOrder, useBulkDeleteWorkOrders, useRestoreWorkOrder } from '../hooks/api/useWorkOrders';
 import { useAssets, useUsers, useSites } from '../hooks/api/useSharedQueries';
+import { useOrganizations } from '../hooks/api/useOrganizations';
 import { WO_STATUS, WO_PRIORITY, USER_ROLES } from '../lib/constants';
 import { WorkOrder, PaginatedResponse, User, Site } from '../types/models';
 

@@ -2,7 +2,7 @@ import { Op } from 'sequelize';
 import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, Site, Organization, sequelize } from '../models';
 
 const WO_INCLUDES = [
-    { model: Asset, as: 'asset', paranoid: false },
+    { model: Asset, as: 'asset', paranoid: false, required: false },
     { model: Site, as: 'site', required: false },
     { model: Organization, as: 'organization', required: false },
     { model: User, as: 'assignee', required: false, paranoid: false, include: [{ model: Role, required: false }] },

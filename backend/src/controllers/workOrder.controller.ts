@@ -30,12 +30,16 @@ class WorkOrderController {
     }
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const roleName = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = (roleName === ROLES.SUPER_ADMIN) 
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const isFacilityManager = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.FACILITY_MANAGER);
+        
+        const roleName = isSuperAdmin ? ROLES.SUPER_ADMIN : (effectiveRoles[0]?.name?.toLowerCase() || '');
+        const targetOrgId = isSuperAdmin 
             ? (req.query.org_id ? String(req.query.org_id) : null) 
             : req.user!.org_id;
         
-        const siteIdRestriction = (roleName === ROLES.FACILITY_MANAGER) ? req.user!.site_id : undefined;
+        const siteIdRestriction = isFacilityManager ? req.user!.site_id : undefined;
         
         const result = await workOrderService.getAll(targetOrgId, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery, siteIdRestriction);
         res.json(result);
