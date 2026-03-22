@@ -46,7 +46,11 @@ class WorkOrderController {
     }
 
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const wo = await workOrderService.getById(req.params.wo_id as string, req.user!.org_id);
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const wo = await workOrderService.getById(req.params.wo_id as string, targetOrgId);
         res.json(wo);
     }
 
@@ -94,15 +98,17 @@ class WorkOrderController {
 
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const woId = req.params.wo_id as string;
-        const orgId = req.user!.org_id;
-        const roleName = req.user!.effectiveRoles?.[0]?.name?.toLowerCase() || req.user!.Role?.name?.toLowerCase() || '';
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const orgId = isSuperAdmin ? null : req.user!.org_id;
         const body = req.body as UpdateWorkOrderDTO;
+        const roleName = isSuperAdmin ? ROLES.SUPER_ADMIN : (effectiveRoles?.[0]?.name?.toLowerCase() || req.user!.Role?.name?.toLowerCase() || '');
 
         const existingWO = await workOrderService.getById(woId, orgId);
         if (!existingWO) throw new NotFoundError('Work order');
 
         // Enforce Read-only fields based on role
-        if (roleName === 'super_admin') {
+        if (roleName === ROLES.SUPER_ADMIN) {
             // Super Admin: Org, Site, and Asset are read-only
             if (body.org_id && body.org_id !== existingWO.org_id) throw new BadRequestError('Organization is read-only');
             if (body.site_id && body.site_id !== existingWO.site_id) throw new BadRequestError('Site is read-only');
@@ -111,13 +117,13 @@ class WorkOrderController {
             delete body.org_id;
             delete body.site_id;
             delete body.asset_id;
-        } else if (roleName === 'org_admin') {
+        } else if (roleName === ROLES.ORG_ADMIN) {
             // Org Admin: Site is read-only
             if (body.site_id && body.site_id !== existingWO.site_id) throw new BadRequestError('Site is read-only');
             
-            delete (body as any).org_id; // Org is always fixed for Org Admin
+            delete (body as any).org_id;
             delete body.site_id;
-        } else if (roleName === 'facility_manager') {
+        } else if (roleName === ROLES.FACILITY_MANAGER) {
             // Facility Manager: Org and Site are fixed
             if (body.org_id && body.org_id !== existingWO.org_id) throw new BadRequestError('Organization is fixed');
             if (body.site_id && body.site_id !== existingWO.site_id) throw new BadRequestError('Site is fixed');
@@ -139,27 +145,48 @@ class WorkOrderController {
     }
 
     updateStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const wo = await workOrderService.updateStatus(req.params.wo_id as string, req.user!.org_id, req.body as StatusUpdateDTO, req.user!, this.getAuditContext(req));
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const wo = await workOrderService.updateStatus(req.params.wo_id as string, targetOrgId, req.body as StatusUpdateDTO, req.user!, this.getAuditContext(req));
         res.json(wo);
     }
 
     assign = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const wo = await workOrderService.assign(req.params.wo_id as string, req.user!.org_id, req.body as AssignDTO, this.getAuditContext(req));
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const orgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const wo = await workOrderService.assign(req.params.wo_id as string, orgId, req.body as AssignDTO, this.getAuditContext(req));
         res.json(wo);
     }
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await workOrderService.delete(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const orgId = isSuperAdmin ? null : req.user!.org_id;
+        const force = req.query.force === 'true';
+
+        const result = await workOrderService.delete(req.params.wo_id as string, orgId, this.getAuditContext(req), force);
         res.json(result);
     }
 
     restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await workOrderService.restore(req.params.wo_id as string, req.user!.org_id, this.getAuditContext(req));
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const orgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const result = await workOrderService.restore(req.params.wo_id as string, orgId, this.getAuditContext(req));
         res.json(result);
     }
 
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await workOrderService.bulkDelete(req.user!.org_id, req.body as BulkDeleteDTO, this.getAuditContext(req));
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const orgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const result = await workOrderService.bulkDelete(orgId, req.body as BulkDeleteDTO, this.getAuditContext(req));
         res.json(result);
     }
 

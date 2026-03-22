@@ -37,19 +37,25 @@ class WorkOrderRepository {
         return WorkOrder.findByPk(woId, { include: WO_INCLUDES_STRICT });
     }
 
-    async findByIdAndOrg(woId: string, orgId: string): Promise<any | null> {
-        return WorkOrder.findOne({ where: { id: woId, org_id: orgId } });
+    async findByIdAndOrg(woId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: woId };
+        if (orgId) where.org_id = orgId;
+        return WorkOrder.findOne({ where });
     }
 
-    async findByIdAndOrgFull(woId: string, orgId: string): Promise<any | null> {
+    async findByIdAndOrgFull(woId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: woId };
+        if (orgId) where.org_id = orgId;
         return WorkOrder.findOne({
-            where: { id: woId, org_id: orgId },
+            where,
             include: WO_INCLUDES_STRICT
         });
     }
 
-    async findByIdParanoid(woId: string, orgId: string): Promise<any | null> {
-        return WorkOrder.findOne({ where: { id: woId, org_id: orgId }, paranoid: false });
+    async findByIdParanoid(woId: string, orgId: string | null): Promise<any | null> {
+        const where: any = { id: woId };
+        if (orgId) where.org_id = orgId;
+        return WorkOrder.findOne({ where, paranoid: false });
     }
 
     async create(data: Record<string, any>): Promise<any> {
@@ -75,11 +81,13 @@ class WorkOrderRepository {
         });
     }
 
-    async bulkDelete(ids: string[], orgId: string, force: boolean): Promise<number> {
+    async bulkDelete(ids: string[], orgId: string | null, force: boolean): Promise<number> {
         return sequelize.transaction(async (t) => {
             // Find all records to check their state
+            const where: any = { id: { [Op.in]: ids } };
+            if (orgId) where.org_id = orgId;
             const records = await WorkOrder.findAll({
-                where: { id: { [Op.in]: ids }, org_id: orgId },
+                where,
                 paranoid: false,
                 transaction: t
             });

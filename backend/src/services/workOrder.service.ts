@@ -57,7 +57,7 @@ class WorkOrderService {
         return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
     }
 
-    async getById(woId: string, orgId: string): Promise<any> {
+    async getById(woId: string, orgId: string | null): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrgFull(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
         return wo;
@@ -74,7 +74,7 @@ class WorkOrderService {
         return loaded;
     }
 
-    async update(woId: string, orgId: string, dto: UpdateWorkOrderDTO, audit: AuditContext): Promise<any> {
+    async update(woId: string, orgId: string | null, dto: UpdateWorkOrderDTO, audit: AuditContext): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
@@ -100,7 +100,7 @@ class WorkOrderService {
         return workOrderRepository.findByPkFull(wo.id);
     }
 
-    async updateStatus(woId: string, orgId: string, dto: StatusUpdateDTO, user: AuthenticatedUser, audit: AuditContext): Promise<any> {
+    async updateStatus(woId: string, orgId: string | null, dto: StatusUpdateDTO, user: any, audit: AuditContext): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
@@ -157,7 +157,7 @@ class WorkOrderService {
         return workOrderRepository.findByPkFull(wo.id);
     }
 
-    async assign(woId: string, orgId: string, dto: AssignDTO, audit: AuditContext): Promise<any> {
+    async assign(woId: string, orgId: string | null, dto: AssignDTO, audit: AuditContext): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
@@ -169,22 +169,22 @@ class WorkOrderService {
         return workOrderRepository.findByPkFull(wo.id);
     }
 
-    async delete(woId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+    async delete(woId: string, orgId: string | null, audit: AuditContext, force: boolean = false): Promise<{ message: string }> {
         const wo = await workOrderRepository.findByIdParanoid(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
-        if (wo.deleted_at === null) {
-            await workOrderRepository.softDelete(wo);
-            auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'delete' });
-            return { message: 'Work order deactivated (soft delete)' };
-        } else {
+        if (force || wo.deleted_at !== null) {
             await workOrderRepository.hardDelete(wo);
             auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'hard_delete' });
             return { message: 'Work order permanently deleted' };
         }
+
+        await workOrderRepository.softDelete(wo);
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'delete' });
+        return { message: 'Work order deactivated (soft delete)' };
     }
 
-    async restore(woId: string, orgId: string, audit: AuditContext): Promise<{ message: string }> {
+    async restore(woId: string, orgId: string | null, audit: AuditContext): Promise<{ message: string }> {
         const wo = await workOrderRepository.findByIdParanoid(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
@@ -197,20 +197,20 @@ class WorkOrderService {
         return { message: 'Work order is already active' };
     }
 
-    async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
+    async bulkDelete(orgId: string | null, dto: BulkDeleteDTO, audit: AuditContext): Promise<{ message: string }> {
         const count = await workOrderRepository.bulkDelete(dto.ids, orgId, !!dto.force);
         auditService.log({ ...audit, entityType: 'WorkOrder', entityId: dto.ids[0], action: dto.force ? 'bulk_hard_delete' : 'bulk_delete', newValues: { deleted_ids: dto.ids, count } });
         return { message: `${count} Work Orders successfully ${dto.force ? 'permanently deleted' : 'deactivated'}.` };
     }
 
     // ─── Comments ─────────────────────────────────────────────────
-    async getComments(woId: string, orgId: string): Promise<any[]> {
+    async getComments(woId: string, orgId: string | null): Promise<any[]> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
         return workOrderRepository.findComments(woId);
     }
 
-    async addComment(woId: string, orgId: string, dto: CommentDTO, user: AuthenticatedUser, io: any): Promise<any> {
+    async addComment(woId: string, orgId: string | null, dto: CommentDTO, user: AuthenticatedUser, io: any): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
@@ -231,12 +231,12 @@ class WorkOrderService {
         return workOrderRepository.findUsedParts(woId);
     }
 
-    async addInventoryUsage(woId: string, orgId: string, dto: InventoryUsageDTO): Promise<any> {
+    async addInventoryUsage(woId: string, orgId: string | null, dto: InventoryUsageDTO): Promise<any> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
         try {
-            return await workOrderRepository.addInventoryUsage(woId, dto.inventory_item_id, dto.quantity_used, orgId);
+            return await workOrderRepository.addInventoryUsage(woId, dto.inventory_item_id, dto.quantity_used, orgId as any);
         } catch (err: any) {
             throw new BadRequestError(err.message);
         }

@@ -143,7 +143,7 @@ const WorkOrdersPage = () => {
   const handleDelete = async (woId: string) => {
     if (!window.confirm(recordStatus === 'active' ? 'Delete this work order?' : 'Permanently delete this work order?')) return;
     try {
-      await deleteMutation.mutateAsync(woId);
+      await deleteMutation.mutateAsync(woId + (recordStatus === 'inactive' ? '?force=true' : ''));
       addNotification('success', recordStatus === 'active' ? 'Work order deactivated' : 'Work order permanently deleted');
     } catch (error: any) {
       addNotification('error', error.response?.data?.detail || 'Failed to delete work order');
@@ -247,6 +247,12 @@ const WorkOrdersPage = () => {
                 data-testid="wo-search-input"
               />
             </div>
+            {isManager() && selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                <Trash className="mr-2 h-4 w-4" />
+                Delete ({selectedIds.length})
+              </Button>
+            )}
             {isSuperAdmin && (
               <div className="w-[180px]">
                 <Select value={filters.org_id || "all"} onValueChange={(v) => {
@@ -294,12 +300,6 @@ const WorkOrdersPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            {isManager() && selectedIds.length > 0 && (
-              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            )}
           </div>
         </div>
         <CardContent className="pt-6">
