@@ -31,6 +31,7 @@ const CreateUserPage = () => {
     phone: '',
     role_id: '',
     org_id: '',
+    site_id: '',
   });
 
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);

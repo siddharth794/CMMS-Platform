@@ -57,6 +57,7 @@ class UserService {
             first_name: dto.first_name,
             last_name: dto.last_name,
             phone: dto.phone,
+            site_id: dto.site_id,
             password_hash
         });
 
