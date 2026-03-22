@@ -227,7 +227,9 @@ class WorkOrderService {
     }
 
     // ─── Inventory Usage ──────────────────────────────────────────
-    async getUsedParts(woId: string): Promise<any[]> {
+    async getUsedParts(woId: string, orgId: string | null): Promise<any[]> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
         return workOrderRepository.findUsedParts(woId);
     }
 
@@ -242,7 +244,9 @@ class WorkOrderService {
         }
     }
 
-    async removeInventoryUsage(woId: string, usageId: string): Promise<{ message: string }> {
+    async removeInventoryUsage(woId: string, usageId: string, orgId: string | null): Promise<{ message: string }> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
         try {
             await workOrderRepository.removeInventoryUsage(usageId, woId);
             return { message: 'Part usage removed, stock restored.' };
@@ -252,7 +256,7 @@ class WorkOrderService {
     }
 
     // ─── Attachments ──────────────────────────────────────────────
-    async addAttachments(woId: string, orgId: string, filenames: string[]): Promise<any[]> {
+    async addAttachments(woId: string, orgId: string | null, filenames: string[]): Promise<any[]> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
         if (!filenames.length) throw new BadRequestError('No files uploaded. Ensure images are < 1MB and max 3 files.');

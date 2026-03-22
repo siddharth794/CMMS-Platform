@@ -192,38 +192,62 @@ class WorkOrderController {
 
     // ─── Comments ─────────────────────────────────────────────────
     getComments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const comments = await workOrderService.getComments(req.params.wo_id as string, req.user!.org_id);
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const comments = await workOrderService.getComments(req.params.wo_id as string, targetOrgId);
         res.json(comments);
     }
 
     addComment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const io = req.app.get('io');
-        const comment = await workOrderService.addComment(req.params.wo_id as string, req.user!.org_id, req.body as CommentDTO, req.user!, io);
+
+        const comment = await workOrderService.addComment(req.params.wo_id as string, targetOrgId, req.body as CommentDTO, req.user!, io);
         res.status(201).json(comment);
     }
 
     // ─── Inventory Usage ──────────────────────────────────────────
     getUsedParts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const parts = await workOrderService.getUsedParts(req.params.wo_id as string);
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const parts = await workOrderService.getUsedParts(req.params.wo_id as string, targetOrgId);
         res.json(parts);
     }
 
     addInventoryUsage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const usage = await workOrderService.addInventoryUsage(req.params.wo_id as string, req.user!.org_id, req.body as InventoryUsageDTO);
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const usage = await workOrderService.addInventoryUsage(req.params.wo_id as string, targetOrgId, req.body as InventoryUsageDTO);
         res.status(201).json(usage);
     }
 
     removeInventoryUsage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const result = await workOrderService.removeInventoryUsage(req.params.wo_id as string, req.params.usage_id as string);
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const result = await workOrderService.removeInventoryUsage(req.params.wo_id as string, req.params.usage_id as string, targetOrgId);
         res.json(result);
     }
 
     // ─── Attachments ──────────────────────────────────────────────
     addAttachments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
+            const effectiveRoles = req.user!.effectiveRoles || [];
+            const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+            const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
             const files = req.files as Express.Multer.File[];
             const filenames = (files || []).map(f => f.filename);
-            const attachments = await workOrderService.addAttachments(req.params.wo_id as string, req.user!.org_id, filenames);
+            const attachments = await workOrderService.addAttachments(req.params.wo_id as string, targetOrgId, filenames);
             res.status(201).json(attachments);
         } catch (err) {
             if (err instanceof multer.MulterError) {
