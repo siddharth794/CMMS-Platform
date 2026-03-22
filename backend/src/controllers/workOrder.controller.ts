@@ -4,7 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import { workOrderService } from '../services/workOrder.service';
 import { siteRepository } from '../repositories/site.repository';
-import { BadRequestError, ForbiddenError } from '../errors/AppError';
+import { assetRepository } from '../repositories/asset.repository';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../errors/AppError';
 import {
     CreateWorkOrderDTO, UpdateWorkOrderDTO, WorkOrderListQuery,
     StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
@@ -70,13 +71,62 @@ class WorkOrderController {
         body.site_id = targetSiteId;
         body.org_id = targetOrgId;
 
+        // Verify asset belongs to the site if provided
+        if (body.asset_id) {
+            const asset = await assetRepository.findById(body.asset_id, targetOrgId);
+            if (!asset || asset.site_id !== targetSiteId) {
+                throw new BadRequestError('The provided asset does not belong to the selected site');
+            }
+        }
+
         const wo = await workOrderService.create(targetOrgId, req.user!.id, body, this.getAuditContext(req));
         res.status(201).json(wo);
     }
 
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const wo = await workOrderService.update(req.params.wo_id as string, req.user!.org_id, req.body as UpdateWorkOrderDTO, this.getAuditContext(req));
-        res.json(wo);
+        const woId = req.params.wo_id as string;
+        const orgId = req.user!.org_id;
+        const roleName = req.user!.effectiveRoles?.[0]?.name?.toLowerCase() || req.user!.Role?.name?.toLowerCase() || '';
+        const body = req.body as UpdateWorkOrderDTO;
+
+        const existingWO = await workOrderService.getById(woId, orgId);
+        if (!existingWO) throw new NotFoundError('Work order');
+
+        // Enforce Read-only fields based on role
+        if (roleName === 'super_admin') {
+            // Super Admin: Org, Site, and Asset are read-only
+            if (body.org_id && body.org_id !== existingWO.org_id) throw new BadRequestError('Organization is read-only');
+            if (body.site_id && body.site_id !== existingWO.site_id) throw new BadRequestError('Site is read-only');
+            if (body.asset_id && body.asset_id !== existingWO.asset_id) throw new BadRequestError('Asset is read-only');
+            
+            delete body.org_id;
+            delete body.site_id;
+            delete body.asset_id;
+        } else if (roleName === 'org_admin') {
+            // Org Admin: Site is read-only
+            if (body.site_id && body.site_id !== existingWO.site_id) throw new BadRequestError('Site is read-only');
+            
+            delete (body as any).org_id; // Org is always fixed for Org Admin
+            delete body.site_id;
+        } else if (roleName === 'facility_manager') {
+            // Facility Manager: Org and Site are fixed
+            if (body.org_id && body.org_id !== existingWO.org_id) throw new BadRequestError('Organization is fixed');
+            if (body.site_id && body.site_id !== existingWO.site_id) throw new BadRequestError('Site is fixed');
+            
+            delete (body as any).org_id;
+            delete body.site_id;
+        }
+
+        // If asset_id is being updated, verify it belongs to the fixed site
+        if (body.asset_id && body.asset_id !== existingWO.asset_id) {
+            const asset = await assetRepository.findById(body.asset_id, existingWO.org_id);
+            if (!asset || asset.site_id !== existingWO.site_id) {
+                throw new BadRequestError('The provided asset does not belong to the work order\'s site');
+            }
+        }
+
+        const updated = await workOrderService.update(woId, orgId, body, this.getAuditContext(req));
+        res.json(updated);
     }
 
     updateStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

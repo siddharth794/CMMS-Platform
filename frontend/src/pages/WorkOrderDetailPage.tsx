@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { workOrdersApi, usersApi, inventoryApi, BACKEND_URL } from '../lib/api';
+import { workOrdersApi, usersApi, inventoryApi, assetsApi, BACKEND_URL } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -55,11 +55,20 @@ const WorkOrderDetailPage = () => {
   const [workOrder, setWorkOrder] = useState(null);
   const [users, setUsers] = useState([]);
   const [inventoryCatalog, setInventoryCatalog] = useState([]);
+  const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [statusNotes, setStatusNotes] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    priority: '',
+    location: '',
+    asset_id: ''
+  });
   const [submitting, setSubmitting] = useState(false);
 
   // Comments state
@@ -97,14 +106,16 @@ const WorkOrderDetailPage = () => {
 
   const fetchData = async () => {
     try {
-      const [woRes, usersRes, invRes] = await Promise.all([
+      const [woRes, usersRes, invRes, assetsRes] = await Promise.all([
         workOrdersApi.get(id),
         usersApi.list(),
-        inventoryApi.list()
+        inventoryApi.list(),
+        assetsApi.list()
       ]);
       setWorkOrder(woRes.data);
       setUsers(usersRes.data.data || usersRes.data);
       setInventoryCatalog(invRes.data.data || invRes.data);
+      setAssets(assetsRes.data.data || assetsRes.data);
       await fetchComments();
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to load work order');
@@ -150,13 +161,30 @@ const WorkOrderDetailPage = () => {
 
     setSubmitting(true);
     try {
-      await workOrdersApi.updateStatus(id, { status: newStatus, notes: statusNotes });
+      await workOrdersApi.update(id, { status: newStatus, notes: statusNotes });
       addNotification('success', 'Status updated');
       setStatusDialogOpen(false);
       setStatusNotes('');
       fetchData();
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to update status');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGeneralEdit = async () => {
+    setSubmitting(true);
+    try {
+      const payload = { ...editFormData };
+      if (payload.asset_id === 'none') payload.asset_id = null;
+      
+      await workOrdersApi.update(id, payload);
+      addNotification('success', 'Work order updated');
+      setEditDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Failed to update work order');
     } finally {
       setSubmitting(false);
     }
@@ -286,6 +314,21 @@ const WorkOrderDetailPage = () => {
           <p className="text-muted-foreground">{workOrder.title}</p>
         </div>
         <div className="flex gap-2">
+          {isManager() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
+            <Button variant="outline" onClick={() => {
+              setEditFormData({
+                title: workOrder.title,
+                description: workOrder.description || '',
+                priority: workOrder.priority,
+                location: workOrder.location || '',
+                asset_id: workOrder.asset_id || 'none'
+              });
+              setEditDialogOpen(true);
+            }} data-testid="edit-details-btn">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Details
+            </Button>
+          )}
           {isManager() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
             <Button variant="outline" onClick={() => setAssignDialogOpen(true)} data-testid="assign-btn">
               <UserPlus className="mr-2 h-4 w-4" />
@@ -752,6 +795,93 @@ const WorkOrderDetailPage = () => {
                 </Button>
               ))}
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* General Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Work Order Details</DialogTitle>
+            <DialogDescription>Update the primary information for this work order.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title *</Label>
+              <Input
+                id="edit-title"
+                value={editFormData.title}
+                onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={editFormData.priority} onValueChange={(v) => setEditFormData({ ...editFormData, priority: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Asset</Label>
+                <Select 
+                  value={editFormData.asset_id} 
+                  onValueChange={(v) => setEditFormData({ ...editFormData, asset_id: v })}
+                  disabled={useAuth().hasRole(['super_admin', 'super admin', 'Super_Admin'])}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {assets
+                      .filter(item => item.site_id === workOrder.site_id)
+                      .map(item => (
+                        <SelectItem key={item.id} value={item.id}>{item.name} ({item.asset_tag})</SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Site (Read-Only)</Label>
+                <Input value={workOrder.site?.name || 'No site'} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Organization (Read-Only)</Label>
+                <Input value={workOrder.organization?.name || workOrder.org?.name || 'No organization'} disabled className="bg-muted" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                value={editFormData.location}
+                onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleGeneralEdit} disabled={submitting || !editFormData.title.trim()}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

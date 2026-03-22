@@ -180,6 +180,7 @@ export interface UpdateWorkOrderDTO {
     actual_hours?: number;
     notes?: string;
     site_id?: string | null;
+    org_id?: string;
 }
 
 export interface WorkOrderListQuery {
