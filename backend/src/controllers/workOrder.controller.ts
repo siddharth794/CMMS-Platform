@@ -11,6 +11,7 @@ import {
     StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
 } from '../types/dto';
 import { AuditContext, BulkDeleteDTO } from '../types/common.dto';
+import { ROLES } from '../constants/roles';
 
 // ─── Multer Setup ─────────────────────────────────────────────────
 const uploadDir = path.join(__dirname, '../../uploads/work-orders');
@@ -30,9 +31,13 @@ class WorkOrderController {
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const roleName = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = (roleName === 'super_admin' && req.query.org_id) ? String(req.query.org_id) : req.user!.org_id;
+        const targetOrgId = (roleName === ROLES.SUPER_ADMIN) 
+            ? (req.query.org_id ? String(req.query.org_id) : null) 
+            : req.user!.org_id;
         
-        const result = await workOrderService.getAll(targetOrgId, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery);
+        const siteIdRestriction = (roleName === ROLES.FACILITY_MANAGER) ? req.user!.site_id : undefined;
+        
+        const result = await workOrderService.getAll(targetOrgId, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery, siteIdRestriction);
         res.json(result);
     }
 

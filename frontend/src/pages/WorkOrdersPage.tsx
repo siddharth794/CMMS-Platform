@@ -57,12 +57,15 @@ const WorkOrdersPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
-  const [filters, setFilters] = useState({ status: '', priority: '', site_id: '' });
+  const [filters, setFilters] = useState({ status: '', priority: '', site_id: '', org_id: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [recordStatus, setRecordStatus] = useState('active');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const { isManager, isRequester } = useAuth();
+  const { hasRole, isManager, isRequester, user } = useAuth();
+  const isSuperAdmin = hasRole(['super_admin', 'super admin', 'Super_Admin']);
+  const isOrgAdmin = hasRole(['org_admin', 'org admin', 'Organization_Admin']);
+  const isFacilityManager = hasRole(['facility_manager', 'facility manager', 'Facility_Manager']);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
 
@@ -89,7 +92,9 @@ const WorkOrdersPage = () => {
   // useUsers from useSharedQueries might return an object with data property if not handled cleanly or an array
   const { data: usersData } = useUsers();
   const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
-  const { data: sites = [] } = useSites();
+  const { data: sites = [] } = useSites(filters.org_id ? { org_id: filters.org_id } : undefined);
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const orgs = orgsData?.data || [];
 
   const createMutation = useCreateWorkOrder();
   const assignMutation = useAssignWorkOrder();
@@ -241,11 +246,41 @@ const WorkOrdersPage = () => {
                 data-testid="wo-search-input"
               />
             </div>
-            {isManager() && selectedIds.length > 0 && (
-              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
+            {isSuperAdmin && (
+              <div className="w-[180px]">
+                <Select value={filters.org_id || "all"} onValueChange={(v) => {
+                  setFilters({ ...filters, org_id: v === 'all' ? '' : v, site_id: '' });
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="filter-org">
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {orgs.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {(isSuperAdmin || isOrgAdmin) && (
+              <div className="w-[180px]">
+                <Select value={filters.site_id || "all"} onValueChange={(v) => {
+                  setFilters({ ...filters, site_id: v === 'all' ? '' : v });
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="filter-site">
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {sites.map(site => (
+                      <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
@@ -258,6 +293,12 @@ const WorkOrdersPage = () => {
                 </SelectContent>
               </Select>
             </div>
+            {isManager() && selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
           </div>
         </div>
         <CardContent className="pt-6">
@@ -273,6 +314,9 @@ const WorkOrdersPage = () => {
                   </TableHead>
                 )}
                 <TableHead className="min-w-[180px] whitespace-nowrap">WO Number</TableHead>
+                {useAuth().hasRole(['super_admin', 'super admin', 'Super_Admin']) && (
+                  <TableHead className="min-w-[150px]">Organization</TableHead>
+                )}
                 <TableHead className="min-w-[250px]">Title</TableHead>
                 <TableHead className="min-w-[160px]">
                   <div onClick={(e) => e.stopPropagation()}>
@@ -309,21 +353,7 @@ const WorkOrdersPage = () => {
                   </div>
                 </TableHead>
                 <TableHead className="min-w-[200px]">Asset</TableHead>
-                <TableHead className="min-w-[150px]">
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Select value={filters.site_id || "all"} onValueChange={(v) => { setFilters({ ...filters, site_id: v === 'all' ? '' : v }); setPage(1); }}>
-                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[130px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
-                        <SelectValue placeholder="Site" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sites</SelectItem>
-                        {sites.map(site => (
-                          <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TableHead>
+                <TableHead className="min-w-[150px]">Site</TableHead>
                 <TableHead className="min-w-[200px]">Assignee</TableHead>
                 <TableHead className="min-w-[150px] whitespace-nowrap">Created</TableHead>
                 {!isRequester() && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
@@ -332,13 +362,13 @@ const WorkOrdersPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center py-8">
+                  <TableCell colSpan={isSuperAdmin ? (isRequester() ? 9 : 11) : (isRequester() ? 8 : 10)} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : workOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isSuperAdmin ? (isRequester() ? 9 : 11) : (isRequester() ? 8 : 10)} className="text-center text-muted-foreground py-8">
                     No work orders found
                   </TableCell>
                 </TableRow>
@@ -362,6 +392,9 @@ const WorkOrdersPage = () => {
                         </Link>
                       )}
                     </TableCell>
+                    {isSuperAdmin && (
+                      <TableCell className="text-muted-foreground">{wo.organization?.name || wo.org?.name || '-'}</TableCell>
+                    )}
                     <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                     <TableCell><StatusBadge status={wo.status} /></TableCell>
                     <TableCell><PriorityBadge priority={wo.priority} /></TableCell>

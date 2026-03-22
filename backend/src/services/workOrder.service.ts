@@ -19,9 +19,17 @@ function generateWoNumber(): string {
 }
 
 class WorkOrderService {
-    async getAll(orgId: string, userId: string, roleName: string, query: WorkOrderListQuery): Promise<PaginatedResponse<any>> {
+    async getAll(orgId: string | null, userId: string, roleName: string, query: WorkOrderListQuery, siteIdRestriction?: string | null): Promise<PaginatedResponse<any>> {
         const { skip = 0, limit = 100, status, priority, assignee_id, asset_id, search, record_status, site_id } = query;
-        let where: any = { org_id: orgId };
+        let where: any = {};
+        if (orgId) where.org_id = orgId;
+
+        // Apply site visibility/filter
+        if (siteIdRestriction) {
+            where.site_id = siteIdRestriction; // Strict restriction for FM
+        } else if (site_id) {
+            where.site_id = site_id; // Voluntary filter for others
+        }
         let paranoid = true;
 
         if (record_status === 'inactive') {
@@ -36,7 +44,6 @@ class WorkOrderService {
         if (priority) where.priority = priority;
         if (assignee_id) where.assignee_id = assignee_id;
         if (asset_id) where.asset_id = asset_id;
-        if (site_id) where.site_id = site_id;
 
         if (search) {
             where[Op.or] = [

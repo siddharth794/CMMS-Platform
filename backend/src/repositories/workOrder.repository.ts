@@ -1,9 +1,10 @@
 import { Op } from 'sequelize';
-import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, Site, sequelize } from '../models';
+import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, Site, Organization, sequelize } from '../models';
 
 const WO_INCLUDES = [
     { model: Asset, as: 'asset', paranoid: false },
     { model: Site, as: 'site', required: false },
+    { model: Organization, as: 'organization', required: false },
     { model: User, as: 'assignee', required: false, paranoid: false, include: [{ model: Role, required: false }] },
     { model: User, as: 'requester', required: false, paranoid: false, include: [{ model: Role, required: false }] },
     { model: WorkOrderInventoryItem, as: 'used_parts', required: false, include: [{ model: InventoryItem, as: 'item', required: false }] },
