@@ -12,7 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Separator } from '../components/ui/separator';
-import { ArrowLeft, Clock, User, Box, AlertTriangle, Calendar, Edit, UserPlus, CheckCircle, Loader2, MessageSquare, Send, Paperclip, X, UploadCloud } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import {
+  ArrowLeft,
+  Clock,
+  User,
+  Box,
+  AlertTriangle,
+  Calendar,
+  Edit,
+  UserPlus,
+  CheckCircle,
+  Loader2,
+  MessageSquare,
+  Send,
+  Paperclip,
+  X,
+  UploadCloud,
+  Save
+} from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -117,6 +135,17 @@ const WorkOrderDetailPage = () => {
       setUsers(usersRes.data.data || usersRes.data);
       setInventoryCatalog(invRes.data.data || invRes.data);
       setAssets(assetsRes.data.data || assetsRes.data);
+      
+      // Initialize edit form data
+      const wo = woRes.data;
+      setEditFormData({
+        title: wo.title,
+        description: wo.description || '',
+        priority: wo.priority,
+        location: wo.location || '',
+        asset_id: wo.asset_id || 'none'
+      });
+      
       await fetchComments();
     } catch (error) {
       addNotification('error', error.response?.data?.detail || 'Failed to load work order');
@@ -316,18 +345,9 @@ const WorkOrderDetailPage = () => {
         </div>
         <div className="flex gap-2">
           {isManager() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
-            <Button variant="outline" onClick={() => {
-              setEditFormData({
-                title: workOrder.title,
-                description: workOrder.description || '',
-                priority: workOrder.priority,
-                location: workOrder.location || '',
-                asset_id: workOrder.asset_id || 'none'
-              });
-              setEditDialogOpen(true);
-            }} data-testid="edit-details-btn">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Details
+            <Button onClick={handleGeneralEdit} disabled={submitting || !editFormData.title.trim()}>
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Changes
             </Button>
           )}
           {isManager() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
@@ -346,290 +366,333 @@ const WorkOrderDetailPage = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content */}
+        {/* Main Content with Tabs */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground whitespace-pre-wrap">
-                {workOrder.description || 'No description provided'}
-              </p>
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="form" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="form">General Form</TabsTrigger>
+              <TabsTrigger value="activity">Activity & Parts</TabsTrigger>
+              <TabsTrigger value="attachments">Images</TabsTrigger>
+            </TabsList>
 
-          {workOrder.resolution_notes && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader>
-                <CardTitle className="text-primary flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Resolution & Completion Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">
-                  {workOrder.resolution_notes}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {workOrder.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notes & History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground whitespace-pre-wrap text-sm">
-                  {workOrder.notes}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Comments Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Comments & Conversation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Comment List */}
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {comments.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4 text-sm">
-                    No comments yet. Start the conversation!
-                  </p>
-                ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-4">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
-                        {comment.User?.first_name?.[0]}{comment.User?.last_name?.[0]}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">
-                            {comment.User?.first_name} {comment.User?.last_name}
-                            <span className="text-muted-foreground font-normal ml-2">
-                              ({comment.User?.Role?.name?.replace('_', ' ')})
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                        <div className="text-sm rounded-lg bg-muted p-3 whitespace-pre-wrap">
-                          {comment.message}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Add Comment Input */}
-              {!isRequester() && (
-                <>
-                  <Separator />
-                  <div className="flex gap-4 items-end pt-2">
-                    <div className="flex-1 space-y-2">
-                      <Label htmlFor="comment" className="sr-only">New comment</Label>
-                      <Textarea
-                        id="comment"
-                        placeholder="Type your comment here..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        rows={2}
-                        className="resize-none"
-                        data-testid="comment-input"
-                      />
-                    </div>
-                    <Button
-                      onClick={handlePostComment}
-                      disabled={!newComment.trim() || postingComment}
-                      data-testid="post-comment-btn"
-                    >
-                      {postingComment ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Send
-                        </>
-                      )}
-                    </Button>
+            <TabsContent value="form">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Work Order Details</CardTitle>
+                  <CardDescription>Edit the primary information for this work order.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Title *</Label>
+                    <Input
+                      id="edit-title"
+                      value={editFormData.title}
+                      onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                      required
+                    />
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Parts & Inventory Used */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Box className="h-5 w-5" />
-                Parts & Inventory Used
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                {workOrder.used_parts?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No parts have been added to this work order yet.</p>
-                ) : (
-                  <div className="rounded-md border divide-y">
-                    {workOrder.used_parts?.map((usage) => (
-                      <div key={usage.id} className="flex items-center justify-between p-3 text-sm">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{usage.item?.name}</span>
-                          <span className="text-xs text-muted-foreground">SKU: {usage.item?.sku} ({usage.item?.category})</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="bg-muted px-2 py-1 rounded-md">Qty: {usage.quantity_used}</span>
-                          {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive h-8 px-2"
-                              onClick={() => handleRemovePart(usage.id)}
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
-                <>
-                  <Separator />
-                  <div className="flex gap-4 items-end pt-2">
-                    <div className="flex-1 space-y-2">
-                      <Label>Select Part</Label>
-                      <Select value={selectedPartId} onValueChange={setSelectedPartId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select inventory item..." />
-                        </SelectTrigger>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Priority</Label>
+                      <Select value={editFormData.priority} onValueChange={(v) => setEditFormData({ ...editFormData, priority: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {inventoryCatalog.map(item => (
-                            <SelectItem key={item.id} value={item.id} disabled={item.quantity <= 0}>
-                              {item.name} - {item.quantity} available
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="critical">Critical</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-24 space-y-2">
-                      <Label>Qty</Label>
-                      <input
-                        type="number"
-                        min="1"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        value={selectedPartQuantity}
-                        onChange={(e) => setSelectedPartQuantity(e.target.value)}
-                      />
+                    <div className="space-y-2">
+                      <Label>Asset</Label>
+                      <Select 
+                        value={editFormData.asset_id} 
+                        onValueChange={(v) => setEditFormData({ ...editFormData, asset_id: v })}
+                        disabled={useAuth().hasRole(['super_admin', 'super admin', 'Super_Admin'])}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {assets
+                            .filter(item => item.site_id === workOrder.site_id)
+                            .map(item => (
+                              <SelectItem key={item.id} value={item.id}>{item.name} ({item.asset_tag})</SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button onClick={handleAddPart} disabled={!selectedPartId || addingPart}>
-                      {addingPart ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Part"}
-                    </Button>
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Attachments / Images */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Paperclip className="h-5 w-5" />
-                Images & Attachments
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Existing Attachments */}
-              {workOrder.attachments?.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {workOrder.attachments.map(att => (
-                    <div key={att.id} className="relative group rounded-md overflow-hidden border">
-                      <img
-                        src={`${BACKEND_URL}${att.file_path}`}
-                        alt="Work Order"
-                        className="w-full h-32 object-cover"
-                      />
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-location">Location</Label>
+                    <Input
+                      id="edit-location"
+                      value={editFormData.location}
+                      onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Textarea
+                      id="edit-description"
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                      rows={6}
+                    />
+                  </div>
+
+                  {workOrder.resolution_notes && (
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-primary">
+                        <CheckCircle className="h-4 w-4" />
+                        Resolution Notes
+                      </h4>
+                      <p className="text-sm bg-primary/5 p-3 rounded-md border border-primary/10 whitespace-pre-wrap">
+                        {workOrder.resolution_notes}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Upload New Attachments */}
-              {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
-                <div className="space-y-4">
-                  {workOrder.attachments?.length === 0 && (
-                    <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200 flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>At least one image is required before this work order can be marked as completed.</span>
-                    </p>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                  <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center space-y-2 text-center">
-                    <UploadCloud className="h-8 w-8 text-muted-foreground" />
-                    <div className="text-sm border-b pb-1">
-                      <Label htmlFor="file-upload" className="cursor-pointer text-primary hover:underline font-medium">
-                        Click to upload
-                      </Label>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileSelect}
-                        disabled={uploading || (workOrder.attachments?.length + selectedFiles.length >= 3)}
-                      />
-                      <span className="text-muted-foreground ml-1">or drag and drop</span>
+            <TabsContent value="activity">
+              <div className="space-y-6">
+                {/* Parts & Inventory Used */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Box className="h-5 w-5" />
+                      Parts & Inventory Used
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      {workOrder.used_parts?.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No parts have been added to this work order yet.</p>
+                      ) : (
+                        <div className="rounded-md border divide-y">
+                          {workOrder.used_parts?.map((usage) => (
+                            <div key={usage.id} className="flex items-center justify-between p-3 text-sm">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{usage.item?.name}</span>
+                                <span className="text-xs text-muted-foreground">SKU: {usage.item?.sku} ({usage.item?.category})</span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <span className="bg-muted px-2 py-1 rounded-md">Qty: {usage.quantity_used}</span>
+                                {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive h-8 px-2"
+                                    onClick={() => handleRemovePart(usage.id)}
+                                  >
+                                    Remove
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">PNG, JPG up to 1MB. Max 3 files.</p>
-                  </div>
 
-                  {/* Selected Files Preview */}
-                  {selectedFiles.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium">Selected Files</h4>
-                      <div className="space-y-2">
-                        {selectedFiles.map((file, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2 text-sm bg-muted rounded-md pointer-events-none">
-                            <span className="truncate max-w-[200px]">{file.name}</span>
-                            <div className="flex gap-2 items-center pointer-events-auto">
-                              <span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                    {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                      <>
+                        <Separator />
+                        <div className="flex gap-4 items-end pt-2">
+                          <div className="flex-1 space-y-2">
+                            <Label>Select Part</Label>
+                            <Select value={selectedPartId} onValueChange={setSelectedPartId}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select inventory item..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {inventoryCatalog.map(item => (
+                                  <SelectItem key={item.id} value={item.id} disabled={item.quantity <= 0}>
+                                    {item.name} - {item.quantity} available
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-24 space-y-2">
+                            <Label>Qty</Label>
+                            <input
+                              type="number"
+                              min="1"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              value={selectedPartQuantity}
+                              onChange={(e) => setSelectedPartQuantity(e.target.value)}
+                            />
+                          </div>
+                          <Button onClick={handleAddPart} disabled={!selectedPartId || addingPart}>
+                            {addingPart ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Part"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Comments Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Comments & Conversation
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                      {comments.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-4 text-sm">
+                          No comments yet. Start the conversation!
+                        </p>
+                      ) : (
+                        comments.map((comment) => (
+                          <div key={comment.id} className="flex gap-4">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
+                              {comment.User?.first_name?.[0]}{comment.User?.last_name?.[0]}
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">
+                                  {comment.User?.first_name} {comment.User?.last_name}
+                                  <span className="text-muted-foreground font-normal ml-2">
+                                    ({comment.User?.Role?.name?.replace('_', ' ')})
+                                  </span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                </p>
+                              </div>
+                              <div className="text-sm rounded-lg bg-muted p-3 whitespace-pre-wrap">
+                                {comment.message}
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                      <Button onClick={handleUploadFiles} disabled={uploading || selectedFiles.length === 0} className="w-full">
-                        {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
-                        Upload {selectedFiles.length} Image{selectedFiles.length !== 1 && 's'}
-                      </Button>
+                        ))
+                      )}
+                    </div>
+
+                    {!isRequester() && (
+                      <>
+                        <Separator />
+                        <div className="flex gap-4 items-end pt-2">
+                          <div className="flex-1 space-y-2">
+                            <Label htmlFor="comment" className="sr-only">New comment</Label>
+                            <Textarea
+                              id="comment"
+                              placeholder="Type your comment here..."
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              rows={2}
+                              className="resize-none"
+                              data-testid="comment-input"
+                            />
+                          </div>
+                          <Button
+                            onClick={handlePostComment}
+                            disabled={!newComment.trim() || postingComment}
+                            data-testid="post-comment-btn"
+                          >
+                            {postingComment ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Send
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="attachments">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Paperclip className="h-5 w-5" />
+                    Images & Attachments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {workOrder.attachments?.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {workOrder.attachments.map(att => (
+                        <div key={att.id} className="relative group rounded-md overflow-hidden border">
+                          <img
+                            src={`${BACKEND_URL}${att.file_path}`}
+                            alt="Work Order"
+                            className="w-full h-32 object-cover"
+                          />
+                        </div>
+                      ))}
                     </div>
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
+                  {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center space-y-2 text-center">
+                        <UploadCloud className="h-8 w-8 text-muted-foreground" />
+                        <div className="text-sm border-b pb-1">
+                          <Label htmlFor="file-upload" className="cursor-pointer text-primary hover:underline font-medium">
+                            Click to upload
+                          </Label>
+                          <input
+                            id="file-upload"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleFileSelect}
+                            disabled={uploading || (workOrder.attachments?.length + selectedFiles.length >= 3)}
+                          />
+                          <span className="text-muted-foreground ml-1">or drag and drop</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">PNG, JPG up to 1MB. Max 3 files.</p>
+                      </div>
+
+                      {selectedFiles.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium">Selected Files</h4>
+                          <div className="space-y-2">
+                            {selectedFiles.map((file, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-2 text-sm bg-muted rounded-md border">
+                                <span className="truncate max-w-[200px]">{file.name}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                          <Button onClick={handleUploadFiles} disabled={uploading || selectedFiles.length === 0} className="w-full">
+                            {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+                            Upload {selectedFiles.length} Image{selectedFiles.length !== 1 && 's'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar */}
@@ -799,93 +862,6 @@ const WorkOrderDetailPage = () => {
                 </Button>
               ))}
           </div>
-        </DialogContent>
-      </Dialog>
-      {/* General Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Work Order Details</DialogTitle>
-            <DialogDescription>Update the primary information for this work order.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-title">Title *</Label>
-              <Input
-                id="edit-title"
-                value={editFormData.title}
-                onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editFormData.description}
-                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select value={editFormData.priority} onValueChange={(v) => setEditFormData({ ...editFormData, priority: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Asset</Label>
-                <Select 
-                  value={editFormData.asset_id} 
-                  onValueChange={(v) => setEditFormData({ ...editFormData, asset_id: v })}
-                  disabled={useAuth().hasRole(['super_admin', 'super admin', 'Super_Admin'])}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {assets
-                      .filter(item => item.site_id === workOrder.site_id)
-                      .map(item => (
-                        <SelectItem key={item.id} value={item.id}>{item.name} ({item.asset_tag})</SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Site (Read-Only)</Label>
-                <Input value={workOrder.site?.name || 'No site'} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label>Organization (Read-Only)</Label>
-                <Input value={workOrder.organization?.name || workOrder.org?.name || 'No organization'} disabled className="bg-muted" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-location">Location</Label>
-              <Input
-                id="edit-location"
-                value={editFormData.location}
-                onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleGeneralEdit} disabled={submitting || !editFormData.title.trim()}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
