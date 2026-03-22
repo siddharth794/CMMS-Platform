@@ -417,60 +417,12 @@ const WorkOrdersPage = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" />View
-                              </DropdownMenuItem>
                               {isManager() && (
                                 <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
                                   <UserPlus className="mr-2 h-4 w-4" />Assign
                                 </DropdownMenuItem>
                               )}
                               
-                              {/* Status Update Actions */}
-                              {!isRequester() && recordStatus === 'active' && (
-                                <>
-                                  {/* Technician / Manager Actions */}
-                                  {wo.status === WO_STATUS.OPEN && (
-                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, WO_STATUS.IN_PROGRESS)}>
-                                      Start Work
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {wo.status === WO_STATUS.IN_PROGRESS && (
-                                    <DropdownMenuItem onClick={() => {
-                                      const notes = window.prompt('Enter Resolution Notes (Mandatory):');
-                                      if (notes !== null) {
-                                        if (!notes.trim()) return addNotification('error', 'Resolution notes are mandatory');
-                                        handleStatusChange(wo.id, WO_STATUS.PENDING_REVIEW, notes);
-                                      }
-                                    }}>
-                                      Submit for Review
-                                    </DropdownMenuItem>
-                                  )}
-
-                                  {/* Manager Only Actions */}
-                                  {isManager() && wo.status === WO_STATUS.PENDING_REVIEW && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => {
-                                        const notes = window.prompt('Final Completion Notes (Optional):');
-                                        if (notes !== null) handleStatusChange(wo.id, WO_STATUS.COMPLETED, notes);
-                                      }}>
-                                        Approve & Complete
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => {
-                                        const notes = window.prompt('Reason for Rejection (Mandatory):');
-                                        if (notes !== null) {
-                                          if (!notes.trim()) return addNotification('error', 'Rejection reason is mandatory');
-                                          handleStatusChange(wo.id, WO_STATUS.IN_PROGRESS, notes);
-                                        }
-                                      }} className="text-warning">
-                                        Reject & Send Back
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                </>
-                              )}
-
                               {isManager() && (
                                 <>
                                   {recordStatus === 'inactive' && (
@@ -510,8 +462,8 @@ const WorkOrdersPage = () => {
           </DialogHeader>
           <div className="space-y-2">
             {users.filter(u => {
-              const roleName = (u.role?.name || u.Role?.name)?.toLowerCase();
-              return roleName === 'technician';
+              const roleName = (u.role?.name || u.Role?.name || u.role_name)?.toLowerCase();
+              return roleName === 'technician' && u.site_id === selectedWO?.site_id;
             }).map((user) => {
               const roleName = (user.role?.name || user.Role?.name)?.replace('_', ' ');
               return (
