@@ -11,6 +11,7 @@ import pmRoutes from './pmSchedules';
 import invRoutes from './inventory';
 import analyticsRoutes from './analytics';
 import siteRoutes from './sites';
+import aiAgentRoutes from './aiAgent.routes';
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use('/pm-schedules', pmRoutes);
 router.use('/inventory', invRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/sites', siteRoutes);
+router.use('/ai-agent', aiAgentRoutes);
 
 export default router;

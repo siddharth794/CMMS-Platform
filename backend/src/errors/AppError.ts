@@ -53,6 +53,17 @@ export class NotFoundError extends AppError {
     }
 }
 
+export class ClarificationRequiredError extends AppError {
+    public readonly field: string;
+    public readonly options: string[];
+
+    constructor(message: string, field: string, options: string[] = []) {
+        super(message, 200); // We return 200 OK because it's a valid conversational state, not an HTTP error
+        this.field = field;
+        this.options = options;
+    }
+}
+
 // ─── 409 Conflict ─────────────────────────────────────────────────
 export class ConflictError extends AppError {
     constructor(message = 'Resource already exists') {

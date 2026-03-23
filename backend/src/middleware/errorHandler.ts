@@ -14,6 +14,16 @@ export const errorHandler = (err: Error, req: Request, res: Response, _next: Nex
         return;
     }
 
+    if (err.name === 'ClarificationRequiredError') {
+        res.status((err as any).statusCode || 200).json({
+            status: 'needs_clarification',
+            field: (err as any).field,
+            message: err.message,
+            options: (err as any).options
+        });
+        return;
+    }
+
     if (err instanceof AppError) {
         res.status(err.statusCode).json({ detail: err.message });
         return;
