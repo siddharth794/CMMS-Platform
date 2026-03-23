@@ -17,11 +17,12 @@ import { useUsers, useCreateUser, useBulkDeleteUsers, useDeleteUser, useRestoreU
 import { rolesApi } from '../lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination } from '../components/ui/pagination';
+import { useOrganizations } from '../hooks/api/useOrganizations';
 
 const UsersPage = () => {
     const [editingUser, setEditingUser] = useState(null);
   const [recordStatus, setRecordStatus] = useState('active');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [filters, setFilters] = useState({ role: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -30,13 +31,18 @@ const UsersPage = () => {
   const navigate = useNavigate();
   const isSuperAdmin = (currentUser?.role?.name || currentUser?.Role?.name || '').toLowerCase() === 'super_admin';
 
+  const [orgFilter, setOrgFilter] = useState('');
+
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const orgs = orgsData?.data || [];
+
   
   const { data: usersData, isLoading: loading } = useUsers({
     record_status: recordStatus,
     search,
     skip: (page - 1) * 10,
     limit: 10,
-    ...(isSuperAdmin ? { org_id: 'all' } : {})
+    ...(isSuperAdmin ? { org_id: orgFilter || 'all' } : {})
   });
 
   const { data: roles = [] } = useQuery({
@@ -53,6 +59,7 @@ const UsersPage = () => {
 
   const users = usersData?.data || [];
   const total = usersData?.total || 0;
+  const filteredUsers = users.filter(u => !filters.role || (u.role?.name || u.Role?.name) === filters.role);
 
   
   
@@ -87,7 +94,7 @@ const UsersPage = () => {
   };
 
   const toggleSelectAll = () => {
-    const selectableUsers = users.filter((u) => u.id !== currentUser?.id);
+    const selectableUsers = filteredUsers.filter((u) => u.id !== currentUser?.id);
     if (selectedIds.length === selectableUsers.length && selectableUsers.length > 0) {
       setSelectedIds([]);
     } else {
@@ -132,8 +139,23 @@ const UsersPage = () => {
             {isAdmin() && selectedIds.length > 0 && (
               <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending}>
                 <Trash className="mr-2 h-4 w-4" />
-                Delete
+                Delete ({selectedIds.length})
               </Button>
+            )}
+            {isSuperAdmin && (
+              <div className="w-[180px]">
+                <Select value={orgFilter || "all"} onValueChange={(v) => { setOrgFilter(v === 'all' ? '' : v); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {orgs.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
@@ -153,20 +175,34 @@ const UsersPage = () => {
             <TableHeader>
               <TableRow>
                 {isAdmin() && (
-                  <TableHead className="w-[50px]">
+                  <TableHead className="w-[50px] min-w-[50px]">
                     <Checkbox 
-                      checked={users.length > 0 && selectedIds.length === users.filter((u) => u.id !== currentUser?.id).length && selectedIds.length > 0}
+                      checked={filteredUsers.length > 0 && selectedIds.length === filteredUsers.filter((u) => u.id !== currentUser?.id).length && selectedIds.length > 0}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
                 )}
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Assigned Site</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="min-w-[180px]">Name</TableHead>
+                <TableHead className="min-w-[200px]">Email</TableHead>
+                <TableHead className="min-w-[160px]">
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={filters.role || "all"} onValueChange={(v) => { setFilters({ ...filters, role: v === 'all' ? '' : v }); setPage(1); }}>
+                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[120px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
+                        <SelectValue placeholder="Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {roles.map(role => (
+                          <SelectItem key={role.id} value={role.name}>{role.name.replace('_', ' ')}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TableHead>
+                <TableHead className="min-w-[150px]">Assigned Site</TableHead>
+                <TableHead className="min-w-[100px]">Status</TableHead>
+                <TableHead className="min-w-[150px] whitespace-nowrap">Last Login</TableHead>
+                <TableHead className="w-[50px] min-w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -176,14 +212,14 @@ const UsersPage = () => {
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isAdmin() ? 8 : 7} className="text-center text-muted-foreground py-8">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
-                users.filter(u => !roleFilter || roleFilter === 'all' || (u.role?.name || u.Role?.name) === roleFilter).map((u) => (
+                filteredUsers.map((u) => (
                   <TableRow key={u.id}>
                     {isAdmin() && (
                       <TableCell>
