@@ -9,10 +9,13 @@ class InventoryController {
     }
 
     getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        let targetOrgId: string | null = req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const isFacilityManager = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'facility_manager');
+        const userRole = isSuperAdmin ? 'super_admin' : (isFacilityManager ? 'facility_manager' : (effectiveRoles[0]?.name?.toLowerCase() || ''));
 
-        if (userRole === 'super_admin') {
+        let targetOrgId: string | null = req.user!.org_id;
+        if (isSuperAdmin) {
             if (req.query.org_id && String(req.query.org_id).trim() !== '') {
                 targetOrgId = String(req.query.org_id);
             } else if (req.query.org_id === '' || req.query.org_id === undefined) {
@@ -23,8 +26,8 @@ class InventoryController {
         const query = req.query as unknown as InventoryListQuery;
         
         // Scope by site for Facility Managers
-        if (userRole === 'facility_manager' && req.user!.site_id) {
-            query.site_id = req.user!.site_id;
+        if (isFacilityManager) {
+            query.site_id = req.user!.managed_site?.id || req.user!.site_id || (query.site_id as string);
         }
 
         const result = await inventoryService.getAll(targetOrgId, query);
@@ -32,10 +35,13 @@ class InventoryController {
     }
 
     getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        let targetOrgId: string | null = req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const isFacilityManager = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'facility_manager');
+        const userRole = isSuperAdmin ? 'super_admin' : (isFacilityManager ? 'facility_manager' : (effectiveRoles[0]?.name?.toLowerCase() || ''));
 
-        if (userRole === 'super_admin') {
+        let targetOrgId: string | null = req.user!.org_id;
+        if (isSuperAdmin) {
             if (req.query.org_id && String(req.query.org_id).trim() !== '') {
                 targetOrgId = String(req.query.org_id);
             } else if (req.query.org_id === '' || req.query.org_id === undefined) {
@@ -44,8 +50,8 @@ class InventoryController {
         }
         
         const query: any = { ...req.query };
-        if (userRole === 'facility_manager' && req.user!.site_id) {
-            query.site_id = req.user!.site_id;
+        if (isFacilityManager) {
+            query.site_id = req.user!.managed_site?.id || req.user!.site_id || query.site_id;
         }
 
         const stats = await inventoryService.getStats(targetOrgId, query);
@@ -53,10 +59,13 @@ class InventoryController {
     }
 
     getCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        let targetOrgId: string | null = req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const isFacilityManager = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'facility_manager');
+        const userRole = isSuperAdmin ? 'super_admin' : (isFacilityManager ? 'facility_manager' : (effectiveRoles[0]?.name?.toLowerCase() || ''));
 
-        if (userRole === 'super_admin') {
+        let targetOrgId: string | null = req.user!.org_id;
+        if (isSuperAdmin) {
             if (req.query.org_id && String(req.query.org_id).trim() !== '') {
                 targetOrgId = String(req.query.org_id);
             } else if (req.query.org_id === '' || req.query.org_id === undefined) {
@@ -64,26 +73,32 @@ class InventoryController {
             }
         }
         
-        const siteId = (userRole === 'facility_manager' && req.user!.site_id) ? req.user!.site_id : (req.query.site_id as string);
+        const siteId = isFacilityManager 
+            ? (req.user!.managed_site?.id || req.user!.site_id) 
+            : (req.query.site_id as string);
 
         const result = await inventoryService.getCategories(targetOrgId, siteId);
         res.json(result);
     }
 
     getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const item = await inventoryService.getById(req.params.item_id as string, targetOrgId);
         res.json(item);
     }
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = (userRole === 'super_admin' && req.body.org_id) ? req.body.org_id : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const isFacilityManager = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'facility_manager');
+        
+        const targetOrgId = (isSuperAdmin && req.body.org_id) ? req.body.org_id : req.user!.org_id;
         
         // Auto-assign site for Facility Managers if missing
-        if (userRole === 'facility_manager' && !req.body.site_id) {
-            req.body.site_id = req.user!.site_id;
+        if (isFacilityManager && !req.body.site_id) {
+            req.body.site_id = req.user!.managed_site?.id || req.user!.site_id;
         }
 
         const item = await inventoryService.create(targetOrgId, req.body as CreateInventoryItemDTO, this.getAuditContext(req));
@@ -116,36 +131,41 @@ class InventoryController {
     }
 
     update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const item = await inventoryService.update(req.params.item_id as string, targetOrgId, req.body as UpdateInventoryItemDTO);
         res.json(item);
     }
 
     delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const result = await inventoryService.delete(req.params.item_id as string, targetOrgId, this.getAuditContext(req));
         res.json(result);
     }
 
     restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const result = await inventoryService.restore(req.params.item_id as string, targetOrgId, this.getAuditContext(req));
         res.json(result);
     }
 
     bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const result = await inventoryService.bulkDelete(targetOrgId, req.body as BulkDeleteDTO, this.getAuditContext(req));
         res.json(result);
     }
 
     bulkRestore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const userRole = req.user!.Role?.name?.toLowerCase() || '';
-        const targetOrgId = userRole === 'super_admin' ? null : req.user!.org_id;
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
         const result = await inventoryService.bulkRestore(targetOrgId, req.body.ids, this.getAuditContext(req));
         res.json(result);
     }
