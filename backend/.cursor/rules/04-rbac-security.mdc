@@ -1,23 +1,102 @@
 ---
-description: Security standards, RBAC, and Authentication rules.
-globs: backend/src/routes/*, backend/src/controllers/*
+description: Security standards, RBAC, authentication, and multi-tenancy rules.
+globs: backend/src/routes/*, backend/src/controllers/*, backend/src/middleware/*
 ---
-# Security, RBAC & Authentication Rules
+# Security, RBAC, Authentication & Multi-Tenancy Rules
 
-This CMMS platform relies heavily on **Role-Based Access Control (RBAC)** and multi-tenancy. When adding a new API endpoint, ensure these rules are strictly followed.
+## Authentication
 
-1. **Authentication Middleware (`authenticate`)**: 
-   - All protected routes must use the `authenticate` middleware from `src/middleware/auth.ts`.
-   - Ensure the user's JWT token is validated and their context (`org_id`, `id`, `roles`) is attached to the `req` object.
+### JWT Bearer Token
+- All protected routes use `authenticate` middleware from `src/middleware/auth.ts`.
+- Token format: `Authorization: Bearer <jwt_token>`.
+- The middleware verifies the JWT, loads the user from DB with eager-loaded relations (Roles, Groups, Accesses, Organization, Site), and injects `req.user`.
 
-2. **Authorization (RBAC) (`requirePermission` / `requireRole`)**: 
-   - Use `requireRole(['Admin', 'Manager'])` or `requirePermission('action_name')` middleware to protect sensitive endpoints from unauthorized access. 
-   - Never assume a logged-in user has permission to perform an action.
+### User Context on `req.user`
+After `authenticate` runs, `req.user` contains:
+```typescript
+{
+    id: string;
+    org_id: string;
+    site_id: string | null;
+    email: string;
+    username: string;
+    first_name?: string;
+    last_name?: string;
+    is_active: boolean;
+    Role?: { id: number; name: string; Accesses: any[] };  // legacy, first effective role
+    Roles?: any[];           // direct roles
+    Groups?: any[];          // groups with their roles
+    effectiveRoles?: any[];  // union of direct + group roles, deduped by id
+    effectiveAccesses?: any[]; // union of all permissions, deduped by name
+    site?: any;              // assigned site
+    managed_site?: any;      // site they manage (facility_manager)
+}
+```
 
-3. **User Context vs Request Body**: 
-   - Always extract `org_id` and `id` (user ID) from `req.user`. 
-   - **CRITICAL**: Never trust `org_id` or `user_id` passed in the `req.body` by the client for authorization purposes. The client could spoof another tenant's `org_id`.
+## Authorization (RBAC)
 
-4. **Input Validation (Zod)**: 
-   - Never trust user input. Validate all incoming data (body, query, params) against a strictly defined Zod schema before processing it in a controller. 
-   - Use `.strip()` or strict parsing to drop unexpected/malicious properties from the request body.
+### Middleware Options
+- `requireRole(['super_admin', 'org_admin'])` -- checks if user has ANY of the listed roles (case-insensitive).
+- `requirePermission('work_order:create')` -- checks granular permission. Super admin bypasses all checks.
+
+### When to Use Which
+- Use `requireRole` for broad role-based guards (e.g., "only managers can delete").
+- Use `requirePermission` for fine-grained feature access (e.g., "only users with `analytics:view` can see analytics").
+
+### Role Constants
+Always import from `src/constants/roles.ts`:
+```typescript
+import { ROLES, ADMIN_ROLES, MANAGER_ROLES, ALL_WO_ROLES } from '../constants/roles';
+// ROLES.SUPER_ADMIN = 'super_admin', ROLES.ORG_ADMIN = 'org_admin', etc.
+```
+
+### Effective Roles Calculation
+A user's effective roles are the union of:
+1. **Direct Roles** -- assigned via `user_roles` table
+2. **Group-Inherited Roles** -- assigned via `group_roles` -> `user_groups`
+
+Deduplication is by role ID using a `Map`. Computed in `authenticate` middleware on every request.
+
+## Multi-Tenancy
+
+### org_id Scoping
+- **CRITICAL**: Never trust `org_id` from `req.body` or `req.query` for authorization. Always use `req.user!.org_id`.
+- Exception: Super admin can pass `org_id` in query/body to manage other orgs.
+- Pattern in controllers:
+  ```typescript
+  const effectiveRoles = req.user!.effectiveRoles || [];
+  const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+  const targetOrgId = isSuperAdmin ? (req.query.org_id as string || req.user!.org_id) : req.user!.org_id;
+  ```
+
+### Site Scoping
+- Facility Managers are auto-scoped to their managed/assigned site.
+- Pattern in controllers:
+  ```typescript
+  const roleName = (req.user?.Role?.name || '').toLowerCase();
+  let siteId: string | undefined;
+  if (roleName === 'facility_manager') {
+      siteId = req.user?.managed_site?.id || req.user?.site_id || undefined;
+  }
+  if (req.query.site_id) siteId = req.query.site_id as string; // explicit override
+  ```
+
+### Super Admin Bypass
+- Super admin has `['*']` in their permissions array, which bypasses `requirePermission` checks.
+- Super admin with no `org_id` can query across all orgs by passing `?org_id=`.
+
+## Input Validation
+
+- **Never trust user input.** Validate all incoming data against Zod schemas before processing.
+- Use `.strict()` on all Zod schemas to reject unknown properties.
+- See `05-validation-zod.mdc` for detailed validation rules.
+
+## Data Access Patterns by Role
+
+| Role | Can see | Can modify |
+|------|---------|------------|
+| super_admin | All orgs, all data | Everything |
+| org_admin | Own org, all sites | Users, roles, groups, all entities |
+| facility_manager | Own org, own site | WOs, assets, inventory, PMs in own site |
+| technician | Own org, own assigned WOs | Own WO status, inventory stock |
+| requestor | Own org, own created WOs | Create WOs only |

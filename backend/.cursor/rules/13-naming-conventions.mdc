@@ -1,0 +1,93 @@
+---
+description: Naming conventions for files, variables, database columns, and API paths.
+globs: backend/src/**/*
+---
+# Naming Conventions
+
+## Files
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| Route | `camelCase.ts` | `workOrders.ts`, `pmSchedules.ts` |
+| Controller | `camelCase.controller.ts` | `workOrder.controller.ts` |
+| Service | `camelCase.service.ts` | `workOrder.service.ts` |
+| Repository | `camelCase.repository.ts` | `workOrder.repository.ts` |
+| Validator | `camelCase.validator.ts` | `workOrder.validator.ts` |
+| Model | `index.ts` (single file) | `models/index.ts` |
+| Migration | `timestamp-description.js` | `20260307180500-initial-schema.js` |
+| Worker | `camelCase.worker.ts` | `pmGenerator.worker.ts` |
+| Constants | `camelCase.ts` | `workOrder.ts`, `roles.ts` |
+| Middleware | `camelCase.ts` | `auth.ts`, `validate.ts`, `errorHandler.ts` |
+
+## TypeScript
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| Classes | PascalCase | `WorkOrderService`, `AnalyticsRepository` |
+| Interfaces/Types | PascalCase | `AuditContext`, `PaginatedResponse<T>` |
+| Functions/Methods | camelCase | `getAll`, `findByIdAndOrg`, `resolveOrgId` |
+| Variables | camelCase | `orgId`, `targetUserId`, `dateFilter` |
+| Constants | UPPER_SNAKE_CASE | `WO_STATUS`, `ROLES`, `ADMIN_ROLES` |
+| Enum values | lower_snake_case | `'in_progress'`, `'facility_manager'` |
+| DTO interfaces | PascalCase with DTO suffix | `CreateWorkOrderDTO`, `StatusUpdateDTO` |
+
+## Database
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| Table names | snake_case plurals | `work_orders`, `inventory_items`, `pm_schedules` |
+| Column names | snake_case | `org_id`, `created_at`, `asset_tag`, `is_active` |
+| Foreign keys | `<entity>_id` | `org_id`, `site_id`, `assignee_id`, `asset_id` |
+| Junction tables | `<a>_<b>` (alphabetical) | `user_roles`, `role_accesses`, `user_groups` |
+| Timestamps | `created_at`, `updated_at`, `deleted_at` | Always these exact names |
+| Booleans | `is_<adjective>` | `is_active`, `is_paused`, `is_read`, `is_system` |
+| Indexes | `<table>_<columns>_<type>` | `org_asset_tag_unique` |
+
+## API Paths
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| Base paths | kebab-case plurals | `/api/work-orders`, `/api/pm-schedules`, `/api/inventory` |
+| Sub-resources | `/:id/<resource>` | `/api/work-orders/:id/comments`, `/api/work-orders/:id/inventory` |
+| Actions | `/:id/<action>` | `/api/work-orders/:id/restore`, `/api/users/:id/roles` |
+| Bulk operations | `/bulk-delete`, `/bulk-restore` | `POST /api/work-orders/bulk-delete` |
+| Analytics | kebab-case descriptive | `/api/analytics/work-orders-trend`, `/api/analytics/pm-compliance` |
+
+## Zod Schemas
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| Create schema | `Create<Entity>Schema` | `CreateWorkOrderSchema` |
+| Update schema | `Update<Entity>Schema` | `UpdateWorkOrderSchema` |
+| Bulk delete | `BulkDeleteSchema` | `BulkDeleteSchema` |
+| Action schema | `<Action><Entity>Schema` | `StatusUpdateSchema`, `AssignSchema`, `CommentSchema` |
+
+## Error Messages
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| Not found | `'<Entity>'` (entity name, auto-appends "not found") | `new NotFoundError('Work Order')` |
+| Bad request | Full sentence | `new BadRequestError('Invalid status transition')` |
+| Forbidden | Full sentence | `new ForbiddenError('Only managers can approve')` |
+| Conflict | Full sentence | `new ConflictError('Email already registered')` |
+
+## Audit Entity Types
+
+Use PascalCase model name: `'WorkOrder'`, `'Asset'`, `'User'`, `'InventoryItem'`, `'PMSchedule'`.
+
+## Socket.IO Rooms
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| User room | `user_${userId}` | `user_abc-123` |
+| WO room | `wo_${woId}` | `wo_def-456` |
+
+## Permission Names
+
+Format: `module:action`
+- `work_order:view`, `work_order:create`, `work_order:update`, `work_order:delete`, `work_order:assign`
+- `asset:view`, `asset:create`, `asset:update`, `asset:delete`
+- `inventory:view`, `inventory:create`, `inventory:update`, `inventory:delete`
+- `pm:view`, `pm:create`, `pm:update`, `pm:delete`
+- `user:view`, `user:create`, `user:update`, `user:delete`
+- `rbac:manage`, `organization:view`, `organization:update`, `analytics:view`
