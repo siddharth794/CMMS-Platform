@@ -152,9 +152,10 @@ export const inventoryApi = {
   delete: (id) => api.delete(`/inventory/${id}`),
   restore: (id) => api.post(`/inventory/${id}/restore`),
   bulkDelete: (data) => api.post('/inventory/bulk-delete', data),
-  getStats: () => api.get('/inventory/stats'),
-  getCategories: () => api.get('/inventory/categories'),
+  getStats: (params?) => api.get('/inventory/stats', { params }),
+  getCategories: (params?) => api.get('/inventory/categories', { params }),
 };
+
 
 // Sites
 export const sitesApi = {

@@ -3,19 +3,26 @@ import { analyticsRepository } from '../repositories/analytics.repository';
 const WO_STATUSES = ['new', 'open', 'in_progress', 'on_hold', 'pending_review', 'completed', 'cancelled'];
 const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
+interface DateFilter {
+    startDate?: Date;
+    endDate?: Date;
+}
+
 function normalizeGrouped(raw: any[], key: string, allValues: string[]) {
     const map = new Map(raw.map((r: any) => [r[key], parseInt(r.count)]));
     return allValues.map(v => ({ [key]: v, count: map.get(v) || 0 }));
 }
 
 class AnalyticsService {
-    async getDashboard(orgId: string, userId?: string): Promise<any> {
+    async getDashboard(orgId: string | null, userId?: string, dateFilter?: DateFilter): Promise<any> {
         // If userId is provided, we fetch technician-specific stats but return them in the common dashboard format
         const [counts, woByStatusRaw, woByPriorityRaw, recentWorkOrders] = await Promise.all([
-            userId ? analyticsRepository.getTechnicianCounts(orgId, userId) : analyticsRepository.getDashboardCounts(orgId),
-            analyticsRepository.getWoByStatusGrouped(orgId, userId),
-            analyticsRepository.getWoByPriorityGrouped(orgId, userId),
-            analyticsRepository.getRecentWorkOrders(orgId, userId)
+            userId
+                ? analyticsRepository.getTechnicianCounts(orgId, userId, dateFilter)
+                : analyticsRepository.getDashboardCounts(orgId, dateFilter),
+            analyticsRepository.getWoByStatusGrouped(orgId, userId, dateFilter),
+            analyticsRepository.getWoByPriorityGrouped(orgId, userId, dateFilter),
+            analyticsRepository.getRecentWorkOrders(orgId, userId, dateFilter)
         ]);
 
         // Map technician count keys to dashboard keys if necessary
@@ -70,8 +77,8 @@ class AnalyticsService {
     }
 
     // Deprecated but keeping for backward compat if needed
-    async getTechnicianDashboard(orgId: string, userId: string): Promise<any> {
-        return this.getDashboard(orgId, userId);
+    async getTechnicianDashboard(orgId: string | null, userId: string, dateFilter?: DateFilter): Promise<any> {
+        return this.getDashboard(orgId, userId, dateFilter);
     }
 }
 
