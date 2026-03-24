@@ -1,0 +1,76 @@
+---
+description: Real-time notification patterns using Socket.IO.
+globs: backend/src/services/notification.service.ts, backend/src/server.ts, backend/src/controllers/*
+---
+# Real-Time Notification Rules (Socket.IO)
+
+## Architecture
+
+- Socket.IO server attached to the Express HTTP server in `src/server.ts`.
+- Stored on `app.set('io', io)` -- retrieved in controllers via `req.app.get('io')`.
+- Clients authenticate with JWT via `socket.handshake.auth.token`.
+
+## Room Conventions
+
+| Room | Pattern | Purpose |
+|------|---------|---------|
+| User room | `user_${userId}` | Targeted notifications (new WO assigned, comment added) |
+| WO room | `wo_${woId}` | Real-time comment feed on a specific work order |
+
+Clients auto-join their `user_${userId}` room on connection.
+Clients manually join WO rooms via `join_wo_room` socket event.
+
+## Notification Service (`src/services/notification.service.ts`)
+
+Class + singleton pattern:
+```typescript
+class NotificationService {
+    async notifyCommentAdded(params: CommentNotificationParams): Promise<void> {
+        const { workOrder, commenter, io } = params;
+        // 1. Determine recipients (assignee + requester, excluding commenter)
+        // 2. For each recipient:
+        //    a. Create Notification DB record
+        //    b. Emit: io.to(`user_${targetUserId}`).emit('new_notification', data)
+        // 3. Errors caught and logged, never thrown (fire-and-forget)
+    }
+}
+export const notificationService = new NotificationService();
+```
+
+## Usage from Controller
+
+```typescript
+// In controller method:
+const io = req.app.get('io');
+await workOrderService.addComment(woId, orgId, dto, audit, io);
+
+// In service:
+notificationService.notifyCommentAdded({ workOrder, commenter, io });
+```
+
+## Socket.IO Events
+
+### Server -> Client
+- `new_notification` -- new notification for the user
+- `new_comment` -- new comment on a WO the user is viewing (broadcast to `wo_${woId}` room)
+
+### Client -> Server
+- `join_wo_room` -- join a specific work order room for live comments
+- `leave_wo_room` -- leave a work order room
+
+## Error Handling
+
+- NotificationService methods are **fire-and-forget**. Errors are caught and logged via Pino, never thrown.
+- Notification DB creation failures do not block the primary operation (e.g., adding a comment).
+- Socket.IO emit failures are silently logged.
+
+## Notification DB Table
+
+Table: `notifications`
+- `id` (UUID PK)
+- `user_id` (UUID FK) -- recipient
+- `title` (STRING) -- notification title
+- `message` (TEXT) -- notification body
+- `is_read` (BOOLEAN, default false)
+- `link` (STRING, nullable) -- deep link (e.g., `/work-orders/uuid`)
+- `created_at`, `updated_at`, `deleted_at` (paranoid)

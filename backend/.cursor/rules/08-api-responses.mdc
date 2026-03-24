@@ -1,0 +1,94 @@
+---
+description: API response format conventions and HTTP status codes.
+globs: backend/src/controllers/*, backend/src/services/*, backend/src/middleware/*
+---
+# API Response Format Rules
+
+## Success Responses
+
+### Read (GET)
+Return raw data directly, no envelope wrapper:
+```json
+// GET /api/work-orders
+{ "data": [...], "total": 342, "skip": 0, "limit": 20 }
+
+// GET /api/work-orders/:id
+{ "id": "uuid", "title": "Fix HVAC", "status": "open", ... }
+```
+
+### Create (POST)
+Return created entity with 201 status:
+```typescript
+res.status(201).json(result);
+```
+
+### Update (PUT/PATCH)
+Return updated entity with 200 status:
+```typescript
+res.json(result);
+```
+
+### Delete / Restore / Bulk Operations
+Return message object:
+```json
+{ "message": "Work Order deleted successfully" }
+{ "message": "5 items deleted" }
+```
+
+### Analytics
+Return raw arrays or objects:
+```json
+// Array for charts
+[{ "month": "2026-01", "created_count": 35, "completed_count": 30 }, ...]
+
+// Object for KPIs
+{ "avg_hours": 18.5 }
+```
+
+## Error Responses
+
+All errors use `{ detail: string }` format:
+```json
+{ "detail": "Work Order not found" }
+{ "detail": "Cannot transition from 'completed' to 'open'" }
+```
+
+Validation errors additionally include `errors`:
+```json
+{
+    "detail": "Validation failed",
+    "errors": {
+        "title": ["Required"],
+        "priority": ["Invalid enum value"]
+    }
+}
+```
+
+## HTTP Status Codes
+
+| Code | When | Response |
+|------|------|----------|
+| 200 | Successful read/update/delete | Data or message |
+| 201 | Successful create | Created entity |
+| 400 | Validation error / bad input | `{ detail, errors? }` |
+| 401 | Missing or invalid JWT | `{ detail: "Authentication required" }` |
+| 403 | Insufficient permissions | `{ detail: "Insufficient permissions" }` or `{ detail: "Insufficient access" }` |
+| 404 | Entity not found | `{ detail: "Entity not found" }` |
+| 409 | Conflict (duplicate) | `{ detail: "Email already registered" }` |
+| 429 | Rate limit exceeded | `{ detail: "Rate limit exceeded" }` |
+| 500 | Unexpected server error | `{ detail: "Internal server error" }` |
+
+## Pagination Response Shape
+
+```typescript
+interface PaginatedResponse<T> {
+    data: T[];
+    total: number;   // total matching records
+    skip: number;    // offset
+    limit: number;   // page size
+}
+```
+
+## No Response Wrapping
+
+Do NOT wrap responses in an envelope like `{ success: true, data: ... }`. Return data directly.

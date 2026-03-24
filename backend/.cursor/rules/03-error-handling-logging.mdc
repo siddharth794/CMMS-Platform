@@ -1,27 +1,112 @@
 ---
-description: Guidelines for error handling and application logging.
+description: Guidelines for error handling, audit logging, and application logging.
 globs: backend/src/**/*
 ---
-# Error Handling & Application Logging Rules
+# Error Handling, Audit Logging & Application Logging Rules
 
-When writing code that interacts with the user, database, or external services, strictly follow these error handling rules to prevent app crashes and provide meaningful API responses.
+## Error Handling
 
-1. **Custom `AppError` Classes**: 
-   - **Never throw generic `Error` objects.** 
-   - Always import and throw custom errors from `src/errors/AppError.ts`. 
-   - Use `new BadRequestError('Invalid input')` (400)
-   - Use `new UnauthorizedError('Please login')` (401)
-   - Use `new ForbiddenError('Access denied')` (403)
-   - Use `new NotFoundError('Work Order not found')` (404)
+### Custom `AppError` Classes
+- **Never throw generic `Error` objects.** Always use typed errors from `src/errors/AppError.ts`.
+- `new BadRequestError('Invalid input')` -- 400
+- `new UnauthorizedError('Please login')` -- 401
+- `new ForbiddenError('Access denied')` -- 403
+- `new NotFoundError('Work Order')` -- 404 (pass entity name, auto-formats as "Work Order not found")
+- `new ConflictError('Email already registered')` -- 409
+- `new TooManyRequestsError('Rate limit exceeded')` -- 429
+- `new InternalError('Unexpected error')` -- 500
 
-2. **Controller Try/Catch Flow**: 
-   - Wrap controller logic in a `try/catch` block. 
-   - Pass caught errors to the `next(error)` function. 
-   - The global error handler (`src/middleware/errorHandler.ts`) will format the error into a JSON response. 
-   - Avoid creating custom `res.status(500).send()` logic directly inside controllers.
+### Error Hierarchy
+```
+AppError (base, statusCode, isOperational)
+  |-- BadRequestError (400)
+  |-- ValidationError (400, with errors: Record<string, string>[])
+  |-- UnauthorizedError (401)
+  |-- ForbiddenError (403)
+  |-- NotFoundError (404)
+  |-- ConflictError (409)
+  |-- TooManyRequestsError (429)
+  |-- InternalError (500, isOperational=false)
+```
 
-3. **Structured Logging (Pino)**: 
-   - Do not use `console.log`. 
-   - Import the configured Pino logger (`import logger from '../config/logger'`). 
-   - Use `logger.info()`, `logger.warn()`, or `logger.error()`. 
-   - Include contextual data (like `userId` or `workOrderId`) as the first argument in log objects, e.g., `logger.info({ userId: req.user.id }, 'User updated profile')`.
+### Controller Error Flow
+- Controllers do NOT need explicit try/catch. Express async errors propagate to the global error handler.
+- If you do use try/catch, pass errors via `next(error)`.
+- The global error handler (`src/middleware/errorHandler.ts`) formats all errors into JSON:
+  - `AppError` -> `{ detail: message }` with appropriate status code
+  - `ValidationError` -> `{ detail: 'Validation failed', errors: [...] }`
+  - Sequelize constraint errors -> mapped to friendly messages
+  - JWT errors -> 401
+  - Unknown errors -> 500 "Internal server error"
+
+### Error Response Format
+All error responses use `{ detail: string }` (not `message`, not `error`). Optionally include `errors` array for validation:
+```json
+{ "detail": "Work Order not found" }
+{ "detail": "Validation failed", "errors": { "title": ["Required"] } }
+```
+
+## Audit Logging
+
+### AuditService (`src/services/audit.service.ts`)
+Every mutating operation (create, update, delete, restore, status_change, assign) MUST call `auditService.log()`.
+
+### Usage Pattern
+```typescript
+import { auditService } from '../services/audit.service';
+
+// In service layer, after successful mutation:
+auditService.log({
+    orgId: audit.orgId,        // from AuditContext
+    userId: audit.userId,      // from AuditContext
+    userEmail: audit.userEmail, // from AuditContext
+    entityType: 'WorkOrder',   // entity name as PascalCase string
+    entityId: wo.id,
+    action: 'create',          // see AuditAction type
+    oldValues: { status: 'open' },  // optional: previous state
+    newValues: { status: 'in_progress' },  // optional: new state
+});
+```
+
+### AuditAction Types
+`'create' | 'update' | 'delete' | 'hard_delete' | 'bulk_delete' | 'bulk_hard_delete' | 'restore' | 'bulk_restore' | 'status_change' | 'assign'`
+
+### AuditContext (from controller)
+```typescript
+private getAuditContext = (req: Request): AuditContext => ({
+    orgId: req.user!.org_id,
+    userId: req.user!.id,
+    userEmail: req.user!.email,
+});
+```
+
+### Fire-and-Forget
+- `auditService.log()` **never throws**. Errors are caught internally and logged via Pino.
+- Do NOT wrap audit calls in try/catch. Do NOT await them in critical paths (though they are async).
+- This ensures audit failures never block the primary operation.
+
+## Application Logging (Pino)
+
+### Import
+```typescript
+import logger from '../config/logger';
+```
+
+### Usage
+- `logger.info({ userId, workOrderId }, 'Work order completed')` -- contextual data as first arg
+- `logger.warn({ statusCode, url }, 'Client error')`
+- `logger.error({ err, params }, 'Failed to process')` -- include error object
+- **Never use `console.log`.** Always use Pino.
+
+### Structured Context
+Always include relevant IDs and context in the log object (first argument), not in the message string:
+```typescript
+// Good
+logger.info({ userId: req.user.id, woId: wo.id }, 'Work order created');
+
+// Bad
+logger.info(`User ${req.user.id} created WO ${wo.id}`);
+```
+
+### Request Logging
+The `requestLogger` middleware automatically logs every request with: method, URL, statusCode, durationMs, requestId, userId, orgId. No manual request logging needed.

@@ -1,0 +1,82 @@
+---
+description: Background worker and cron job patterns.
+globs: backend/src/workers/*, backend/src/server.ts
+---
+# Background Worker & Cron Job Rules
+
+## Architecture
+
+- Workers are **in-process** (not separate processes or external queues like Bull/BullMQ).
+- Scheduling uses `node-cron` with cron expressions.
+- Workers are instantiated and scheduled in `src/server.ts` after the server starts.
+
+## Worker Class Pattern
+
+```typescript
+// src/workers/pmGenerator.worker.ts
+import logger from '../config/logger';
+
+export class PMGeneratorWorker {
+    public async evaluateAllActivePMs(): Promise<void> {
+        try {
+            logger.info('PM Generator: Starting evaluation');
+            // 1. Load active entities
+            // 2. Process each
+            // 3. Log results
+            logger.info({ generated: count }, 'PM Generator: Complete');
+        } catch (error) {
+            logger.error({ err: error }, 'PM Generator: Fatal error');
+        }
+    }
+
+    private async generateWorkOrder(...): Promise<void> {
+        // Individual task logic
+    }
+}
+```
+
+## Scheduling (in server.ts)
+
+```typescript
+import cron from 'node-cron';
+import { PMGeneratorWorker } from './workers/pmGenerator.worker';
+
+const pmWorker = new PMGeneratorWorker();
+cron.schedule('0 * * * *', () => {
+    pmWorker.evaluateAllActivePMs();
+});
+```
+
+## Key Rules
+
+### Idempotency
+- Workers must be safe to run multiple times without creating duplicates.
+- Check for existing records before creating: e.g., `PMExecution.count({ where: { status: 'generated' } })`.
+- Use unique constraints in the database as a safety net.
+
+### Error Handling
+- Wrap the entire worker loop in try/catch.
+- Log errors with Pino (`logger.error({ err }, 'Worker failed')`).
+- Never let a single item failure crash the entire worker. Catch per-item errors and continue.
+
+### Logging
+- Log start, progress, and completion of each worker run.
+- Include counts in completion logs: `logger.info({ evaluated: 50, generated: 3 }, 'PM Generator: Complete')`.
+
+### No External Dependencies
+- Workers run in the same Node.js process as the Express server.
+- They share the same Sequelize connection pool.
+- For long-running operations, consider yielding with `await` between items to avoid blocking the event loop.
+
+### Environment Awareness
+- Workers should respect `process.env` for configuration (e.g., cron schedule, batch size).
+- Consider disabling workers in test environments.
+
+## PM Generator Worker (existing)
+
+The PM generator runs every hour and:
+1. Loads all active, non-paused PM schedules with triggers and template.
+2. For each schedule, checks TIME triggers using `cron-parser`.
+3. If a trigger fires within the `lead_time_days` window, generates a WorkOrder.
+4. Creates a `PMExecution` record linking the PM schedule to the generated WO.
+5. Deduplicates by checking for existing `generated` executions.
