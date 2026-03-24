@@ -19,6 +19,7 @@ export interface CreateUserDTO {
     last_name?: string;
     phone?: string;
     org_id?: string;
+    site_id?: string;
 }
 
 export interface UpdateUserDTO {
@@ -30,6 +31,7 @@ export interface UpdateUserDTO {
     phone?: string;
     password?: string;
     is_active?: boolean;
+    site_id?: string | null;
 }
 
 export interface UserListQuery {

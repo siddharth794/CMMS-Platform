@@ -219,14 +219,13 @@ const InventoryPage = () => {
       {/* Filters & Table */}
       <Card>
         <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
-          <div className="flex flex-wrap gap-4 items-center w-full">
-            <div className="flex-1 min-w-[250px] flex items-center gap-2 rounded-lg border px-3 py-2 bg-background">
+          <div className="flex flex-wrap items-center gap-4 w-full">
+            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search inventory..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="border-0 p-0 focus-visible:ring-0"
                 data-testid="inv-search-input"
               />
             </div>

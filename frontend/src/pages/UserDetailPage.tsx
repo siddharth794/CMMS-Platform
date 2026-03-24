@@ -57,32 +57,41 @@ const UserDetailPage = () => {
   const sites = sitesData?.data || [];
 
   useEffect(() => {
-    if (user && roles.length > 0) {
-      // Find role ID from nested user object
-      const roleObj = user.Role || (user.Roles?.[0]) || user.role;
-      const assignedRoleId = (user.role_id || roleObj?.id)?.toString() || '';
-      
-      setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        username: user.username || '',
-        phone: user.phone || '',
-        role_id: assignedRoleId,
-        site_id: user.site_id || 'none',
-      });
-    } else if (user) {
-      // Fallback if roles aren't loaded yet
-      setFormData(prev => ({
-        ...prev,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        username: user.username || '',
-        phone: user.phone || '',
-        site_id: user.site_id || 'none',
-      }));
-    }
+    if (!user) return;
+
+    setFormData((prev) => {
+      let newData;
+      if (roles && roles.length > 0) {
+        // Find role ID from nested user object
+        const roleObj = user.Role || (user.Roles?.[0]) || user.role;
+        const assignedRoleId = (user.role_id || roleObj?.id)?.toString() || '';
+        
+        newData = {
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || '',
+          username: user.username || '',
+          phone: user.phone || '',
+          role_id: assignedRoleId,
+          site_id: user.site_id || 'none',
+        };
+      } else {
+        // Fallback if roles aren't loaded yet
+        newData = {
+          ...prev,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || '',
+          username: user.username || '',
+          phone: user.phone || '',
+          site_id: user.site_id || 'none',
+        };
+      }
+
+      // Check if anything actually changed to prevent infinite loops
+      const isChanged = Object.keys(newData).some(key => prev[key] !== newData[key]);
+      return isChanged ? newData : prev;
+    });
   }, [user, roles]);
 
   const handleDelete = async () => {

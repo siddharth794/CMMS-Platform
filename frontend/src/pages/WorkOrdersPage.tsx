@@ -29,7 +29,7 @@ const StatusBadge = ({ status }) => {
     open: 'status-open',
     in_progress: 'status-in_progress',
     on_hold: 'status-on_hold',
-    pending_review: 'status-open', // using open style for now, or define a new one in CSS
+    pending_review: 'status-pending_review',
     completed: 'status-completed',
     cancelled: 'status-cancelled',
   };
@@ -330,6 +330,7 @@ const WorkOrdersPage = () => {
                         <SelectItem value="new">New</SelectItem>
                         <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="on_hold">On Hold</SelectItem>
                         <SelectItem value="pending_review">Pending Review</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>

@@ -4,27 +4,76 @@ globs: backend/src/**/*
 ---
 # Architecture & Layered API Rules
 
-When creating a new feature or API endpoint in the CMMS backend, strictly follow the N-Tier layered architecture to ensure separation of concerns:
+This CMMS platform follows a strict **N-Tier Layered Architecture**. Every feature must flow through all layers. Never skip a layer.
 
-1. **Route (`src/routes/`)**: 
-   - Define the HTTP method and path (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`). 
-   - Attach authentication, RBAC, and Zod validation middleware here.
-   - Example: `router.post('/work-orders', authenticate, requirePermission('create_wo'), validate(createWoSchema), createWorkOrderController);`
+## Layer Order (request flow)
 
-2. **Validator (`src/validators/`)**: 
-   - Use `zod` to strictly validate `req.body`, `req.query`, and `req.params`. 
-   - Ensure you define error messages for missing or invalid data types.
+```
+Client  -->  Route  -->  Middleware  -->  Controller  -->  Service  -->  Repository  -->  Model  -->  MySQL
+                                                                      |
+                                                                      +-->  AuditService (fire-and-forget)
+                                                                      +-->  NotificationService (Socket.IO)
+```
 
-3. **Controller (`src/controllers/`)**: 
-   - Extract validated data (`req.body`) and user context (`req.user.org_id`, `req.user.id`). 
-   - Pass this extracted data to the corresponding Service layer.
-   - **Crucial**: Do NOT put heavy business logic or database logic here. The controller only parses the request and formats the response (e.g., `res.status(201).json({ ... })`).
+## 1. Route (`src/routes/`)
 
-4. **Service (`src/services/`)**: 
-   - Contains the core business logic. 
-   - Handle complex domain rules (e.g., status transitions, calculating estimated hours).
-   - Orchestrate multiple repository calls and trigger notifications (`notificationService`) or audit logs.
+- Define HTTP method and path (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`).
+- Compose middleware left-to-right: `authenticate` -> `requireRole`/`requirePermission` -> `validate(schema)` -> `controller.method`.
+- Apply `authenticate` globally via `router.use(authenticate)` at top of file (except auth login route).
+- Use `requireRole(MANAGER_ROLES)` for mutating operations (create/update/delete).
+- Use `requirePermission('analytics:view')` for analytics endpoints.
+- Example: `router.post('/work-orders', requireRole(ALL_WO_ROLES), validate(CreateWorkOrderSchema), workOrderController.create);`
+- Mount all sub-routers in `src/routes/index.ts` under the `/api` prefix.
 
-5. **Repository (`src/repositories/`)**: 
-   - All Sequelize database queries (`Model.find()`, `Model.create()`) go here. 
-   - **CRITICAL**: Always scope queries by `org_id` to maintain multi-tenancy and prevent cross-tenant data leaks.
+## 2. Validator (`src/validators/`)
+
+- Use Zod to validate `req.body`, `req.query`, and `req.params`.
+- Define `Create<Entity>Schema` and `Update<Entity>Schema` (usually `CreateSchema.partial()`).
+- All schemas must use `.strict()` to reject unknown properties.
+- Applied as middleware: `validate(CreateWorkOrderSchema)`.
+- See `05-validation-zod.mdc` for detailed rules.
+
+## 3. Controller (`src/controllers/`)
+
+- **Class + singleton pattern**: `class FooController { method = async (req, res, next) => { ... } }` + `export const fooController = new FooController()`.
+- Methods are **arrow function class properties** (not `method() {}`) to preserve `this` binding.
+- Extract validated data from `req.body` and user context from `req.user!`.
+- Pass extracted data to the corresponding Service layer.
+- **CRITICAL**: Do NOT put business logic or database queries in controllers. Controllers only parse requests and format responses.
+- Use `private getAuditContext = (req): AuditContext => ({ orgId, userId, userEmail })` for mutating operations.
+- See `07-controller-patterns.mdc` for detailed rules.
+
+## 4. Service (`src/services/`)
+
+- **Class + singleton pattern**: `class FooService { ... }` + `export const fooService = new FooService()`.
+- Contains core business logic: status transitions, validation rules, orchestration.
+- Calls repository methods for data access. Never touches Sequelize models directly (except auth).
+- Calls `auditService.log()` after every mutating operation (fire-and-forget).
+- Calls `notificationService` for real-time events (comments, assignments).
+- Throws typed errors from `src/errors/AppError.ts` (`NotFoundError`, `BadRequestError`, etc.).
+- See `06-service-layer.mdc` for detailed rules.
+
+## 5. Repository (`src/repositories/`)
+
+- **Class + singleton pattern**: `class FooRepository { ... }` + `export const fooRepository = new FooRepository()`.
+- All Sequelize queries (`findAll`, `findOne`, `create`, `update`, `destroy`) go here.
+- **CRITICAL**: Always scope queries by `org_id` for multi-tenancy.
+- Define reusable include arrays at top of file for association loading.
+- Use `sequelize.transaction()` for atomic multi-table operations.
+- See `02-database-sequelize.mdc` for detailed rules.
+
+## 6. Analytics Layer (special case)
+
+Analytics endpoints follow a simplified flow: Controller -> Service -> Repository (raw SQL).
+- No Zod validation on GET analytics endpoints (query params parsed in controller).
+- Repository uses raw `sequelize.query()` with `QueryTypes.SELECT` for complex aggregations.
+- Service layer handles data normalization (gap-filling, key mapping).
+- See `10-analytics-endpoints.mdc` for detailed rules.
+
+## General Rules
+
+- **Dependency direction**: Routes -> Controller -> Service -> Repository. Never reverse.
+- **No circular imports**: If a circular dependency arises, use lazy `require()` inside methods.
+- **One file per concern**: Each route, validator, controller, service, and repository is its own file.
+- **Naming**: Files use `camelCase` (e.g., `workOrder.controller.ts`). Classes use `PascalCase`.
+- **Exports**: Always export a singleton instance, not the class: `export const fooService = new FooService()`.

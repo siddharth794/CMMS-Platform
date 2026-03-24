@@ -31,6 +31,7 @@ const CreateUserPage = () => {
     phone: '',
     role_id: '',
     org_id: '',
+    site_id: '',
   });
 
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -75,7 +76,7 @@ const CreateUserPage = () => {
       const payload = { ...userForm, role_id: parseInt(userForm.role_id) };
       // Omit org_id if not super admin to let backend default to their own
       if (!isSuperAdmin) delete payload.org_id;
-      if (payload.site_id === 'none') delete payload.site_id;
+      if (!payload.site_id || payload.site_id === 'none') delete payload.site_id;
       
       const createdUser = await createUserMutation.mutateAsync(payload);
       const newUserId = createdUser.id;

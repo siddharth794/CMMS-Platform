@@ -39,7 +39,8 @@ class WorkOrderController {
             ? (req.query.org_id ? String(req.query.org_id) : null) 
             : req.user!.org_id;
         
-        const siteIdRestriction = isFacilityManager ? req.user!.site_id : undefined;
+        const assignedSiteId = req.user!.managed_site?.id || req.user!.site_id;
+        const siteIdRestriction = isFacilityManager ? assignedSiteId : undefined;
         
         const result = await workOrderService.getAll(targetOrgId, req.user!.id, roleName, req.query as unknown as WorkOrderListQuery, siteIdRestriction);
         res.json(result);
@@ -56,7 +57,12 @@ class WorkOrderController {
 
     create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const body = req.body as CreateWorkOrderDTO;
-        const roleName = req.user!.effectiveRoles?.[0]?.name?.toLowerCase() || req.user!.Role?.name?.toLowerCase() || '';
+        const effectiveRoles = req.user!.effectiveRoles || (req.user!.Role ? [req.user!.Role] : []);
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const isOrgAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.ORG_ADMIN);
+        const isFacilityManager = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.FACILITY_MANAGER);
+        
+        const roleName = isSuperAdmin ? ROLES.SUPER_ADMIN : (isOrgAdmin ? ROLES.ORG_ADMIN : (isFacilityManager ? ROLES.FACILITY_MANAGER : (effectiveRoles[0]?.name?.toLowerCase() || '')));
 
         let targetOrgId = req.user!.org_id;
         let targetSiteId = body.site_id;
@@ -73,7 +79,7 @@ class WorkOrderController {
             if (!body.site_id) throw new BadRequestError('Org Admins must provide site_id');
             targetSiteId = body.site_id;
         } else if (roleName === 'facility_manager') {
-            const assignedSiteId = req.user!.site_id;
+            const assignedSiteId = req.user!.managed_site?.id || req.user!.site_id;
             if (!assignedSiteId) throw new ForbiddenError('Facility Manager does not have an assigned site');
             targetSiteId = assignedSiteId;
         } else {

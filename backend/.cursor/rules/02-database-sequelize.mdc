@@ -1,28 +1,105 @@
 ---
-description: Rules for modifying the database, creating models, and migrations.
-globs: backend/src/models/*, backend/migrations/*
+description: Rules for modifying the database, creating models, migrations, and repository patterns.
+globs: backend/src/models/*, backend/src/repositories/*, backend/migrations/*
 ---
-# Database, Models & Migration Rules
+# Database, Models, Migrations & Repository Rules
 
-When adding new tables or modifying the database schema in this CMMS platform, follow these strict guidelines:
+## Multi-Tenancy (`org_id`)
 
-1. **Multi-Tenancy Enforced (`org_id`)**: 
-   - Almost all operational tables (Users, Work Orders, Assets, Inventory) MUST have an `org_id` (UUID) column. 
-   - Never query these tables without explicitly including `where: { org_id: currentOrgId }` in your repository.
+- Almost all operational tables (Users, Work Orders, Assets, Inventory, Sites, PMSchedules) MUST have an `org_id` (UUID) column.
+- **Never query these tables without `org_id` scoping.** Use conditional WHERE: `if (orgId) where.org_id = orgId;`.
+- Exception: System-level tables (`roles` for system roles, `accesses`, `audit_logs` for super admin queries).
+- Super admin queries pass `orgId = null` to skip org filtering. All other roles pass their `req.user!.org_id`.
 
-2. **Soft Deletes**: 
-   - Use `paranoid: true` and include a `deleted_at` timestamp column for core entities to prevent accidental data loss. 
-   - Only lookup or join tables (like `user_roles`) should use hard deletes.
+## Soft Deletes
 
-3. **Migrations**: 
-   - Never modify the database schema directly. 
-   - Always generate a Sequelize migration (`npx sequelize-cli migration:generate --name add_new_column_name`).
-   - Write both `up` (to apply) and `down` (to revert) logic using `queryInterface`.
+- Use `paranoid: true` with `deleted_at` timestamp column for all core entities.
+- Model config: `{ sequelize, tableName: 'foo', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' }`.
+- Only junction tables (`user_roles`, `role_accesses`, `user_groups`, `group_roles`) should use hard deletes.
+- Dual mechanism: `paranoid: true` (soft delete) + `is_active: boolean` (deactivation). Some queries filter by `is_active: true`, others by `deleted_at: null`.
 
-4. **Model Definitions**: 
-   - Update `src/models/index.ts` to register new models and define associations (`hasMany`, `belongsTo`, `belongsToMany`). 
-   - Use `UUIDv4` for primary keys unless it's a legacy static lookup table.
+## Migrations
 
-5. **Atomic Operations**: 
-   - For operations involving inventory deduction, status changes, or bulk updates, use Sequelize transactions (`sequelize.transaction()`). 
-   - This prevents race conditions and ensures data integrity if a step fails midway.
+- **Never modify the database schema directly.** Always generate a migration.
+- Command: `npx sequelize-cli migration:generate --name descriptive_name`.
+- Write both `up` (apply) and `down` (revert) logic using `queryInterface`.
+- Use `queryInterface.addColumn`, `queryInterface.changeColumn`, `queryInterface.sequelize.query()` for complex changes.
+- Migration files live in `backend/migrations/` with timestamp prefix.
+
+## Model Definitions
+
+- All models are defined in **a single file**: `src/models/index.ts`.
+- Pattern: `class Foo extends Model { public id!: string; ... }` then `Foo.init({ ... }, { sequelize, ... })`.
+- UUID primary keys: `{ type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true }`.
+- Timestamps: `{ timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' }`.
+- Table names: snake_case plurals (`work_orders`, `inventory_items`, `pm_schedules`).
+- Enum columns: `DataTypes.ENUM('value1', 'value2')`.
+- JSON columns: `DataTypes.JSON` for flexible data (audit log `old_values`/`new_values`).
+- Unique constraints: Define in `indexes` array, e.g., `{ unique: true, fields: ['org_id', 'asset_tag'], name: 'org_asset_tag_unique' }`.
+
+## Associations
+
+- Define all associations at the bottom of `src/models/index.ts` after all models are initialized.
+- Patterns: `ModelA.hasMany(ModelB, { foreignKey: 'a_id', as: 'bs' })`, `ModelB.belongsTo(ModelA, { foreignKey: 'a_id' })`.
+- Many-to-many: `ModelA.belongsToMany(ModelB, { through: 'junction_table', foreignKey: 'a_id', otherKey: 'b_id' })`.
+- Junction tables are referenced by string name, not a model class.
+- Always export all models + `sequelize` instance from `src/models/index.ts`.
+
+## Repository Patterns
+
+### Class + Singleton
+```typescript
+class WorkOrderRepository {
+    async findAndCountAll(where, paranoid, skip, limit): Promise<{ rows, count }> { ... }
+    async findByIdAndOrg(id: string, orgId: string | null): Promise<any | null> { ... }
+    async create(data: any): Promise<any> { ... }
+}
+export const workOrderRepository = new WorkOrderRepository();
+```
+
+### Association Loading (Include Arrays)
+Define reusable include arrays at the top of the repository file:
+```typescript
+const WO_INCLUDES = [
+    { model: Asset, as: 'asset', paranoid: false, required: false },
+    { model: Site, as: 'site', required: false },
+    { model: User, as: 'assignee', required: false, paranoid: false, include: [{ model: Role, required: false }] },
+];
+const WO_INCLUDES_STRICT = [ /* same but without required:false and paranoid:false */ ];
+```
+- `*_INCLUDES` for list queries (LEFT JOINs, includes soft-deleted related records).
+- `*_INCLUDES_STRICT` for single-entity fetches (INNER JOINs, excludes soft-deleted).
+
+### Transactions
+Use `sequelize.transaction()` for:
+- Hard deletes with cascading related record deletion.
+- Inventory deduction (row locking with `lock: t.LOCK.UPDATE`).
+- Bulk operations that must succeed or fail together.
+```typescript
+await sequelize.transaction(async (t) => {
+    await modelA.destroy({ where: { ... }, transaction: t });
+    await modelB.destroy({ where: { ... }, transaction: t });
+});
+```
+
+### Raw SQL (Analytics)
+For complex aggregations, use raw SQL with parameterized queries:
+```typescript
+const results = await sequelize.query(`
+    SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count
+    FROM work_orders
+    WHERE deleted_at IS NULL
+      AND org_id = :orgId
+      AND created_at >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY month ASC
+`, { replacements: { orgId, months }, type: QueryTypes.SELECT });
+```
+- Always use `:param` replacements, never interpolate user input into SQL strings.
+- Import `QueryTypes` from `sequelize`.
+
+## Pagination
+
+- Use `skip`/`limit` pattern (not page-based).
+- Return `PaginatedResponse<T>`: `{ data: T[], total: number, skip: number, limit: number }`.
+- Default `limit`: 20. Max `limit`: 100 (validate in Zod schema).

@@ -40,7 +40,7 @@ const StatusBadge = ({ status }) => {
     open: 'status-open',
     in_progress: 'status-in_progress',
     on_hold: 'status-on_hold',
-    pending_review: 'status-open',
+    pending_review: 'status-pending_review',
     completed: 'status-completed',
     cancelled: 'status-cancelled',
   };
@@ -193,7 +193,7 @@ const WorkOrderDetailPage = () => {
 
     setSubmitting(true);
     try {
-      await workOrdersApi.update(id, { status: newStatus, notes: statusNotes });
+      await workOrdersApi.updateStatus(id, { status: newStatus, notes: statusNotes });
       addNotification('success', 'Status updated');
       setStatusDialogOpen(false);
       setStatusNotes('');
