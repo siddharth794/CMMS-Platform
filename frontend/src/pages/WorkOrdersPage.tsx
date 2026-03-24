@@ -330,6 +330,7 @@ const WorkOrdersPage = () => {
                         <SelectItem value="new">New</SelectItem>
                         <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="on_hold">On Hold</SelectItem>
                         <SelectItem value="pending_review">Pending Review</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>

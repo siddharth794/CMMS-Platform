@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, UniqueConstraintError } from 'sequelize';
 import { workOrderRepository } from '../repositories/workOrder.repository';
 import { auditService } from './audit.service';
 import { notificationService } from './notification.service';
@@ -64,13 +64,25 @@ class WorkOrderService {
     }
 
     async create(orgId: string, userId: string, dto: CreateWorkOrderDTO, audit: AuditContext): Promise<any> {
-        const data: any = { ...dto, org_id: orgId, requester_id: userId, wo_number: generateWoNumber(), status: 'new' };
-        if (data.asset_id === "") data.asset_id = null;
+        const MAX_RETRIES = 5;
+        let wo: any;
 
-        const wo = await workOrderRepository.create(data);
-        const loaded = await workOrderRepository.findByPkFull(wo.id);
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            const data: any = { ...dto, org_id: orgId, requester_id: userId, wo_number: generateWoNumber(), status: 'new' };
+            if (data.asset_id === "") data.asset_id = null;
 
-        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'create', newValues: { wo_number: wo.wo_number, title: wo.title } });
+            try {
+                wo = await workOrderRepository.create(data);
+                break;
+            } catch (err: any) {
+                if (err instanceof UniqueConstraintError && attempt < MAX_RETRIES - 1) continue;
+                throw err;
+            }
+        }
+
+        const loaded = await workOrderRepository.findByPkFull(wo!.id);
+
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo!.id, action: 'create', newValues: { wo_number: wo!.wo_number, title: wo!.title } });
         return loaded;
     }
 
