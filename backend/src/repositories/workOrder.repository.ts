@@ -1,5 +1,9 @@
 import { Op } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
 import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, Site, Organization, sequelize } from '../models';
+
+const UPLOADS_DIR = path.join(__dirname, '../../uploads/work-orders');
 
 const WO_INCLUDES = [
     { model: Asset, as: 'asset', paranoid: false, required: false },
@@ -71,6 +75,13 @@ class WorkOrderRepository {
     }
 
     async hardDelete(wo: any): Promise<void> {
+        // Clean up attachment files from disk before deleting DB records
+        const attachments = await WOAttachment.findAll({ where: { work_order_id: wo.id }, paranoid: false });
+        for (const att of attachments) {
+            const filePath = path.join(UPLOADS_DIR, path.basename(att.file_path));
+            fs.unlink(filePath, () => {});
+        }
+
         await sequelize.transaction(async (t) => {
             const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');
             await PMExecution.destroy({ where: { work_order_id: wo.id }, force: true, transaction: t });
@@ -107,6 +118,16 @@ class WorkOrderRepository {
             if (toHardDelete.length > 0) {
                 // Manually clean up related records for hard delete
                 const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');
+
+                // Clean up attachment files from disk before deleting DB records
+                const attachmentsToDelete = await WOAttachment.findAll({
+                    where: { work_order_id: { [Op.in]: toHardDelete } },
+                    paranoid: false
+                });
+                for (const att of attachmentsToDelete) {
+                    const filePath = path.join(UPLOADS_DIR, path.basename(att.file_path));
+                    fs.unlink(filePath, () => {});
+                }
                 await PMExecution.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
                 await WOComment.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
                 await WorkOrderInventoryItem.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
