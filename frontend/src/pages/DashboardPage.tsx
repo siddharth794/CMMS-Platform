@@ -76,7 +76,7 @@ const CompletionGauge = ({ percentage = 0, size = 140, strokeWidth = 12 }) => {
 const StatusBadge = ({ status }) => {
   const cfg = {
     new: 'status-new', open: 'status-open', in_progress: 'status-in_progress',
-    on_hold: 'status-on_hold', pending_review: 'status-open',
+    on_hold: 'status-on_hold', pending_review: 'status-pending_review',
     completed: 'status-completed', cancelled: 'status-cancelled',
   };
   return <span className={`status-badge ${cfg[status] || 'status-new'}`}>{status?.replace(/_/g, ' ')}</span>;

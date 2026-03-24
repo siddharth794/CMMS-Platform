@@ -28,10 +28,10 @@ router.post('/:wo_id/comments', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]
 
 // ─── Inventory Usage ──────────────────────────────────────────────
 router.get('/:wo_id/inventory', workOrderController.getUsedParts);
-router.post('/:wo_id/inventory', validate(InventoryUsageSchema), workOrderController.addInventoryUsage);
-router.delete('/:wo_id/inventory/:usage_id', workOrderController.removeInventoryUsage);
+router.post('/:wo_id/inventory', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), validate(InventoryUsageSchema), workOrderController.addInventoryUsage);
+router.delete('/:wo_id/inventory/:usage_id', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), workOrderController.removeInventoryUsage);
 
 // ─── Attachments ──────────────────────────────────────────────────
-router.post('/:wo_id/attachments', upload.array('images', 3), workOrderController.addAttachments);
+router.post('/:wo_id/attachments', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), upload.array('images', 3), workOrderController.addAttachments);
 
 export default router;
