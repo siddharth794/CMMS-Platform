@@ -29,7 +29,11 @@ import {
   Paperclip,
   X,
   UploadCloud,
-  Save
+  Save,
+  Play,
+  Pause,
+  RotateCcw,
+  XCircle
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -90,6 +94,10 @@ const WorkOrderDetailPage = () => {
     asset_id: ''
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const [quickTargetStatus, setQuickTargetStatus] = useState('');
+  const [quickNotesRequired, setQuickNotesRequired] = useState(false);
+  const [quickStatusDialogOpen, setQuickStatusDialogOpen] = useState(false);
 
   // Comments state
   const [comments, setComments] = useState([]);
@@ -233,6 +241,77 @@ const WorkOrderDetailPage = () => {
     }
   };
 
+  const handleQuickStatus = (targetStatus: string) => {
+    const simpleTransitions: Record<string, string[]> = {
+      open: ['in_progress'],
+      on_hold: ['in_progress'],
+      in_progress: ['on_hold'],
+    };
+
+    if (simpleTransitions[workOrder.status]?.includes(targetStatus)) {
+      handleStatusChangeDirect(targetStatus);
+      return;
+    }
+
+    const notesRequired = targetStatus === 'pending_review' || (targetStatus === 'in_progress' && workOrder.status === 'pending_review');
+    setQuickTargetStatus(targetStatus);
+    setQuickNotesRequired(notesRequired);
+    setStatusNotes('');
+    setQuickStatusDialogOpen(true);
+  };
+
+  const handleStatusChangeDirect = async (status: string) => {
+    setSubmitting(true);
+    try {
+      await workOrdersApi.updateStatus(id, { status });
+      addNotification('success', 'Status updated');
+      fetchData();
+    } catch (error: any) {
+      addNotification('error', error.response?.data?.detail || 'Failed to update status');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleQuickStatusConfirm = async () => {
+    if (quickNotesRequired && !statusNotes.trim()) {
+      addNotification('error', 'Notes are required for this action.');
+      return;
+    }
+
+    // Client-side validation for pending_review and completed
+    if (quickTargetStatus === 'pending_review' || quickTargetStatus === 'completed') {
+      if (!statusNotes.trim() && !workOrder.resolution_notes) {
+        addNotification('error', 'Resolution notes are mandatory when completing or submitting for review.');
+        return;
+      }
+      if (['high', 'critical'].includes(workOrder.priority)) {
+        const hasAttachments = (workOrder.attachments && workOrder.attachments.length > 0) || (selectedFiles.length > 0);
+        if (!hasAttachments) {
+          addNotification('error', 'Proof of work (images) is required for High/Critical priority work orders.');
+          return;
+        }
+      }
+      if (quickTargetStatus === 'completed' && !(workOrder.attachments?.length > 0 || selectedFiles.length > 0)) {
+        addNotification('error', 'You must upload at least one image before completing the work order.');
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    try {
+      await workOrdersApi.updateStatus(id, { status: quickTargetStatus, notes: statusNotes || undefined });
+      addNotification('success', 'Status updated');
+      setQuickStatusDialogOpen(false);
+      setStatusNotes('');
+      fetchData();
+    } catch (error: any) {
+      addNotification('error', error.response?.data?.detail || 'Failed to update status');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handlePostComment = async () => {
     if (!newComment.trim()) return;
     setPostingComment(true);
@@ -358,10 +437,43 @@ const WorkOrderDetailPage = () => {
               Assign
             </Button>
           )}
-          {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
-            <Button onClick={() => { setNewStatus(workOrder.status); setStatusDialogOpen(true); }} data-testid="update-status-btn">
-              <Edit className="mr-2 h-4 w-4" />
-              Update Status
+
+          {/* Technician quick actions */}
+          {!isRequester() && !isManager() && workOrder.status === 'open' && (
+            <Button onClick={() => handleQuickStatus('in_progress')} data-testid="start-work-btn">
+              <Play className="mr-2 h-4 w-4" /> Start Work
+            </Button>
+          )}
+          {!isRequester() && !isManager() && workOrder.status === 'in_progress' && (
+            <>
+              <Button onClick={() => handleQuickStatus('pending_review')} data-testid="submit-review-btn">
+                <Send className="mr-2 h-4 w-4" /> Submit for Review
+              </Button>
+              <Button variant="outline" onClick={() => handleQuickStatus('on_hold')} data-testid="on-hold-btn">
+                <Pause className="mr-2 h-4 w-4" /> Put On Hold
+              </Button>
+            </>
+          )}
+          {!isRequester() && !isManager() && workOrder.status === 'on_hold' && (
+            <Button onClick={() => handleQuickStatus('in_progress')} data-testid="resume-work-btn">
+              <RotateCcw className="mr-2 h-4 w-4" /> Resume Work
+            </Button>
+          )}
+
+          {/* Manager quick actions */}
+          {isManager() && workOrder.status === 'pending_review' && (
+            <>
+              <Button onClick={() => handleQuickStatus('completed')} data-testid="approve-btn">
+                <CheckCircle className="mr-2 h-4 w-4" /> Approve
+              </Button>
+              <Button variant="outline" onClick={() => handleQuickStatus('in_progress')} data-testid="reject-btn">
+                <XCircle className="mr-2 h-4 w-4" /> Reject
+              </Button>
+            </>
+          )}
+          {isManager() && ['new', 'open', 'in_progress', 'on_hold', 'pending_review'].includes(workOrder.status) && (
+            <Button variant="destructive" onClick={() => handleStatusChangeDirect('cancelled')} data-testid="cancel-btn">
+              <XCircle className="mr-2 h-4 w-4" /> Cancel
             </Button>
           )}
         </div>
@@ -865,6 +977,45 @@ const WorkOrderDetailPage = () => {
                 </Button>
               ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Status Notes Dialog */}
+      <Dialog open={quickStatusDialogOpen} onOpenChange={setQuickStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {quickTargetStatus === 'completed' && 'Approve Work Order'}
+              {quickTargetStatus === 'in_progress' && workOrder.status === 'pending_review' && 'Reject Work Order'}
+              {quickTargetStatus === 'pending_review' && 'Submit for Review'}
+            </DialogTitle>
+            <DialogDescription>
+              {quickTargetStatus === 'completed' && 'Confirm that the work has been completed satisfactorily.'}
+              {quickTargetStatus === 'in_progress' && workOrder.status === 'pending_review' && 'Send this work order back for revision.'}
+              {quickTargetStatus === 'pending_review' && 'Submit your completed work for manager review.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Notes {quickNotesRequired ? '(Required)' : '(Optional)'}</Label>
+            <Textarea
+              value={statusNotes}
+              onChange={(e) => setStatusNotes(e.target.value)}
+              placeholder={
+                quickTargetStatus === 'completed' ? 'Add approval notes...' :
+                quickTargetStatus === 'in_progress' ? 'Explain why this is being rejected...' :
+                'Describe the work performed and resolution...'
+              }
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuickStatusDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleQuickStatusConfirm} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {quickTargetStatus === 'completed' ? 'Approve' :
+               quickTargetStatus === 'in_progress' ? 'Reject' : 'Submit'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

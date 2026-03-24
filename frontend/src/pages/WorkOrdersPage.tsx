@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download, Trash, RefreshCw } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserPlus, Trash2, Loader2, Download, Trash, RefreshCw, Play, Pause, Send, RotateCcw, CheckCircle, XCircle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 import { useWorkOrders, useCreateWorkOrder, useAssignWorkOrder, useUpdateWorkOrderStatus, useDeleteWorkOrder, useBulkDeleteWorkOrders, useRestoreWorkOrder } from '../hooks/api/useWorkOrders';
@@ -78,6 +78,11 @@ const WorkOrdersPage = () => {
     location: '',
   });
 
+  const [quickStatusDialogOpen, setQuickStatusDialogOpen] = useState(false);
+  const [quickTargetStatus, setQuickTargetStatus] = useState('');
+  const [quickNotes, setQuickNotes] = useState('');
+  const [quickNotesRequired, setQuickNotesRequired] = useState(false);
+
   const { data: woData, isLoading: loading } = useWorkOrders({
     ...filters,
     search,
@@ -138,6 +143,40 @@ const WorkOrdersPage = () => {
     } catch (error: any) {
       addNotification('error', error.response?.data?.detail || error.response?.data?.message || 'Failed to update status');
     }
+  };
+
+  const handleQuickStatus = (woId: string, currentStatus: string, targetStatus: string) => {
+    const simpleTransitions: Record<string, string[]> = {
+      open: ['in_progress'],
+      on_hold: ['in_progress'],
+      in_progress: ['on_hold'],
+    };
+
+    if (simpleTransitions[currentStatus]?.includes(targetStatus)) {
+      handleStatusChange(woId, targetStatus);
+      return;
+    }
+
+    const notesRequired = targetStatus === 'pending_review'
+      || (targetStatus === 'in_progress' && currentStatus === 'pending_review');
+
+    setSelectedWO({ id: woId } as any);
+    setQuickTargetStatus(targetStatus);
+    setQuickNotesRequired(notesRequired);
+    setQuickNotes('');
+    setQuickStatusDialogOpen(true);
+  };
+
+  const handleQuickStatusConfirm = async () => {
+    if (!selectedWO) return;
+    if (quickNotesRequired && !quickNotes.trim()) {
+      addNotification('error', 'Notes are required for this action.');
+      return;
+    }
+    await handleStatusChange(selectedWO.id, quickTargetStatus, quickNotes || undefined);
+    setQuickStatusDialogOpen(false);
+    setSelectedWO(null);
+    setQuickNotes('');
   };
 
   const handleDelete = async (woId: string) => {
@@ -418,12 +457,49 @@ const WorkOrdersPage = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {/* Technician quick actions */}
+                              {!isManager() && !isRequester() && wo.status === 'open' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatus(wo.id, wo.status, 'in_progress')}>
+                                  <Play className="mr-2 h-4 w-4" />Start Work
+                                </DropdownMenuItem>
+                              )}
+                              {!isManager() && !isRequester() && wo.status === 'in_progress' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleQuickStatus(wo.id, wo.status, 'pending_review')}>
+                                    <Send className="mr-2 h-4 w-4" />Submit for Review
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleQuickStatus(wo.id, wo.status, 'on_hold')}>
+                                    <Pause className="mr-2 h-4 w-4" />Put On Hold
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {!isManager() && !isRequester() && wo.status === 'on_hold' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatus(wo.id, wo.status, 'in_progress')}>
+                                  <RotateCcw className="mr-2 h-4 w-4" />Resume Work
+                                </DropdownMenuItem>
+                              )}
+
+                              {/* Manager actions */}
                               {isManager() && (
                                 <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
                                   <UserPlus className="mr-2 h-4 w-4" />Assign
                                 </DropdownMenuItem>
                               )}
-                              
+                              {isManager() && wo.status === 'pending_review' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleQuickStatus(wo.id, wo.status, 'completed')}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleQuickStatus(wo.id, wo.status, 'in_progress')}>
+                                    <XCircle className="mr-2 h-4 w-4" />Reject
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {isManager() && ['new', 'open', 'in_progress', 'on_hold', 'pending_review'].includes(wo.status) && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(wo.id, 'cancelled')}>
+                                  <XCircle className="mr-2 h-4 w-4" />Cancel
+                                </DropdownMenuItem>
+                              )}
                               {isManager() && (
                                 <>
                                   {recordStatus === 'inactive' && (
@@ -481,6 +557,44 @@ const WorkOrdersPage = () => {
               );
             })}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Status Notes Dialog */}
+      <Dialog open={quickStatusDialogOpen} onOpenChange={setQuickStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {quickTargetStatus === 'completed' && 'Approve Work Order'}
+              {quickTargetStatus === 'in_progress' && 'Reject Work Order'}
+              {quickTargetStatus === 'pending_review' && 'Submit for Review'}
+            </DialogTitle>
+            <DialogDescription>
+              {quickTargetStatus === 'completed' && 'Confirm that the work has been completed satisfactorily.'}
+              {quickTargetStatus === 'in_progress' && 'Send this work order back to the technician for revision.'}
+              {quickTargetStatus === 'pending_review' && 'Submit your completed work for manager review.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Notes {quickNotesRequired ? '(Required)' : '(Optional)'}</Label>
+            <Textarea
+              value={quickNotes}
+              onChange={(e) => setQuickNotes(e.target.value)}
+              placeholder={
+                quickTargetStatus === 'completed' ? 'Add approval notes...' :
+                quickTargetStatus === 'in_progress' ? 'Explain why this is being rejected...' :
+                'Describe the work performed...'
+              }
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuickStatusDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleQuickStatusConfirm}>
+              {quickTargetStatus === 'completed' ? 'Approve' :
+               quickTargetStatus === 'in_progress' ? 'Reject' : 'Submit'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
