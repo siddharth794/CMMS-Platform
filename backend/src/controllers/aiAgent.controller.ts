@@ -19,6 +19,16 @@ export class AIAgentController {
             next(error);
         }
     };
+
+    getLatestWorkOrders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const { site_id, location } = req.query;
+            const result = await aiAgentService.getLatestWorkOrders(site_id as string, location as string);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
 }
 
 export const aiAgentController = new AIAgentController();

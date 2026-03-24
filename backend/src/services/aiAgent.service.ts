@@ -1,4 +1,5 @@
 import { workOrderService } from './workOrder.service';
+import { workOrderRepository } from '../repositories/workOrder.repository';
 import { Site } from '../models';
 import { AuditContext } from '../types/common.dto';
 import { NotFoundError, BadRequestError } from '../errors/AppError';
@@ -47,6 +48,30 @@ export class AIAgentService {
             message: `Work order created successfully with ID ${newWo.wo_number}`,
             wo_number: newWo.wo_number,
             data: newWo
+        };
+    }
+
+    async getLatestWorkOrders(site_id: string, location?: string): Promise<any> {
+        if (!site_id) {
+            throw new BadRequestError('site_id is required.');
+        }
+
+        const site = await Site.findByPk(site_id);
+        if (!site) {
+            throw new NotFoundError(`Site with ID ${site_id}`);
+        }
+
+        const where: any = { site_id };
+        if (location) {
+            where.location = location;
+        }
+
+        const result = await workOrderRepository.findAndCountAll(where, true, 0, 10);
+
+        return {
+            status: 'success',
+            data: result.rows,
+            total: result.count
         };
     }
 }
