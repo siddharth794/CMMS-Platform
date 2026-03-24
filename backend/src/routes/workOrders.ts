@@ -6,7 +6,7 @@ import {
     AssignSchema, CommentSchema, InventoryUsageSchema, BulkDeleteSchema
 } from '../validators/workOrder.validator';
 import { workOrderController, upload } from '../controllers/workOrder.controller';
-import { ALL_WO_ROLES, MANAGER_ROLES } from '../constants/roles';
+import { ALL_WO_ROLES, MANAGER_ROLES, ROLES } from '../constants/roles';
 
 const router = Router();
 router.use(authenticate);
@@ -16,7 +16,7 @@ router.get('/', workOrderController.getAll);
 router.post('/', requireRole(ALL_WO_ROLES), validate(CreateWorkOrderSchema), workOrderController.create);
 router.get('/:wo_id', workOrderController.getById);
 router.put('/:wo_id', requireRole(MANAGER_ROLES), validate(UpdateWorkOrderSchema), workOrderController.update);
-router.patch('/:wo_id/status', validate(StatusUpdateSchema), workOrderController.updateStatus);
+router.patch('/:wo_id/status', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), validate(StatusUpdateSchema), workOrderController.updateStatus);
 router.patch('/:wo_id/assign', requireRole(MANAGER_ROLES), validate(AssignSchema), workOrderController.assign);
 router.delete('/:wo_id', requireRole(MANAGER_ROLES), workOrderController.delete);
 router.post('/:wo_id/restore', requireRole(MANAGER_ROLES), workOrderController.restore);
@@ -24,7 +24,7 @@ router.post('/bulk-delete', requireRole(MANAGER_ROLES), validate(BulkDeleteSchem
 
 // ─── Comments ─────────────────────────────────────────────────────
 router.get('/:wo_id/comments', workOrderController.getComments);
-router.post('/:wo_id/comments', validate(CommentSchema), workOrderController.addComment);
+router.post('/:wo_id/comments', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), validate(CommentSchema), workOrderController.addComment);
 
 // ─── Inventory Usage ──────────────────────────────────────────────
 router.get('/:wo_id/inventory', workOrderController.getUsedParts);
