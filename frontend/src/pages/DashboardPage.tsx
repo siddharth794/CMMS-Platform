@@ -300,7 +300,7 @@ const DashboardPage = () => {
       )}
 
       {/* ── Charts + Gauge Row ── */}
-      <div className="grid gap-6 lg:grid-cols-7">
+      <div className="grid gap-6 lg:grid-cols-8">
         {/* WO by Status — Donut */}
         <Card className="lg:col-span-3 animate-fade-in-up stagger-3" data-testid="chart-wo-status">
           <CardHeader>
@@ -308,10 +308,10 @@ const DashboardPage = () => {
             <CardDescription>Distribution of current work orders</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={woByStatus} cx="50%" cy="50%" innerRadius={65} outerRadius={100}
+                  <Pie data={woByStatus} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
                     paddingAngle={3} dataKey="count" nameKey="status"
                     animationBegin={200} animationDuration={1000}>
                     {woByStatus.map((entry, idx) => (
@@ -327,9 +327,9 @@ const DashboardPage = () => {
         </Card>
 
         {/* Completion Gauge — center */}
-        <Card className="lg:col-span-1 animate-fade-in-up stagger-4 flex flex-col items-center justify-center" data-testid="completion-gauge">
+        <Card className="lg:col-span-2 animate-fade-in-up stagger-4 flex flex-col items-center justify-center" data-testid="completion-gauge">
           <CardContent className="flex flex-col items-center justify-center py-8">
-            <CompletionGauge percentage={stats.completion_rate || 0} size={130} />
+            <CompletionGauge percentage={stats.completion_rate || 0} size={120} />
             <p className="text-xs text-muted-foreground mt-3 text-center">
               {stats.completed_work_orders || 0} of {stats.total_work_orders || 0}
             </p>
@@ -343,7 +343,7 @@ const DashboardPage = () => {
             <CardDescription>Breakdown by urgency level</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={woByPriority} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
