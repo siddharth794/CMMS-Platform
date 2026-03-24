@@ -1,0 +1,167 @@
+---
+description: Service layer patterns, orchestration, audit, and notification integration.
+globs: backend/src/services/*
+---
+# Service Layer Rules
+
+Services contain business logic. They orchestrate repository calls, enforce domain rules, and trigger side effects (audit logs, notifications).
+
+## Class + Singleton Pattern
+
+Every service follows this exact structure:
+```typescript
+import { fooRepository } from '../repositories/foo.repository';
+import { auditService } from './audit.service';
+import { notificationService } from './notification.service';
+import { NotFoundError, BadRequestError } from '../errors/AppError';
+
+class FooService {
+    async getAll(orgId: string | null, query: FooListQuery): Promise<PaginatedResponse<any>> {
+        const { rows, count } = await fooRepository.findAndCountAll(...);
+        return { data: rows, total: count, skip: query.skip || 0, limit: query.limit || 20 };
+    }
+
+    async getById(id: string, orgId: string | null): Promise<any> {
+        const foo = await fooRepository.findByIdAndOrg(id, orgId);
+        if (!foo) throw new NotFoundError('Foo');
+        return foo;
+    }
+
+    async create(orgId: string, dto: CreateFooDTO, audit: AuditContext): Promise<any> {
+        const foo = await fooRepository.create({ ...dto, org_id: orgId });
+        auditService.log({ ...audit, entityType: 'Foo', entityId: foo.id, action: 'create', newValues: dto });
+        return foo;
+    }
+
+    async update(id: string, orgId: string, dto: UpdateFooDTO, audit: AuditContext): Promise<any> {
+        const foo = await fooRepository.findByIdAndOrg(id, orgId);
+        if (!foo) throw new NotFoundError('Foo');
+        const oldValues = { status: foo.status };
+        await foo.update(dto);
+        auditService.log({ ...audit, entityType: 'Foo', entityId: foo.id, action: 'update', oldValues, newValues: dto });
+        return foo.reload();
+    }
+
+    async delete(id: string, orgId: string, audit: AuditContext, force?: boolean): Promise<MessageResponse> {
+        const foo = await fooRepository.findByIdParanoid(id, orgId);
+        if (!foo) throw new NotFoundError('Foo');
+        if (force) {
+            await fooRepository.hardDelete(foo);
+            auditService.log({ ...audit, entityType: 'Foo', entityId: id, action: 'hard_delete' });
+        } else {
+            await fooRepository.softDelete(foo);
+            auditService.log({ ...audit, entityType: 'Foo', entityId: id, action: 'delete' });
+        }
+        return { message: 'Foo deleted successfully' };
+    }
+
+    async restore(id: string, orgId: string, audit: AuditContext): Promise<any> {
+        const foo = await fooRepository.findByIdParanoid(id, orgId);
+        if (!foo) throw new NotFoundError('Foo');
+        await foo.restore();
+        auditService.log({ ...audit, entityType: 'Foo', entityId: id, action: 'restore' });
+        return foo;
+    }
+
+    async bulkDelete(orgId: string, dto: BulkDeleteDTO, audit: AuditContext): Promise<MessageResponse> {
+        await fooRepository.bulkDelete(dto.ids, orgId, dto.force);
+        auditService.log({ ...audit, entityType: 'Foo', entityId: dto.ids[0], action: dto.force ? 'bulk_hard_delete' : 'bulk_delete' });
+        return { message: `${dto.ids.length} items deleted` };
+    }
+}
+export const fooService = new FooService();
+```
+
+## Standard CRUD Methods
+
+Every entity service must implement these methods:
+
+| Method | Signature | Returns |
+|--------|-----------|---------|
+| `getAll` | `(orgId, query)` | `PaginatedResponse<T>` |
+| `getById` | `(id, orgId)` | Entity object |
+| `create` | `(orgId, dto, audit)` | Created entity |
+| `update` | `(id, orgId, dto, audit)` | Updated entity |
+| `delete` | `(id, orgId, audit, force?)` | `{ message: string }` |
+| `restore` | `(id, orgId, audit)` | Restored entity |
+| `bulkDelete` | `(orgId, dto, audit)` | `{ message: string }` |
+
+## Audit Logging
+
+- Call `auditService.log()` after every successful mutation.
+- Fire-and-forget: `auditService.log()` never throws. Do NOT wrap in try/catch.
+- Pass `AuditContext` from controller: `{ orgId, userId, userEmail }`.
+- Include `oldValues` and `newValues` for updates and status changes.
+
+## Notification Integration
+
+For real-time events (comments, assignments), call `notificationService`:
+```typescript
+// In controller, get Socket.IO instance:
+const io = req.app.get('io');
+
+// Pass to service:
+await workOrderService.addComment(woId, orgId, dto, audit, io);
+
+// In service:
+notificationService.notifyCommentAdded({ workOrder, commenter, io });
+```
+
+Socket.IO rooms: `user_${userId}` for targeted notifications.
+
+## Status Transitions
+
+For entities with state machines (e.g., Work Orders), validate transitions in the service:
+```typescript
+import { WO_STATUS_TRANSITIONS } from '../constants/workOrder';
+
+async updateStatus(id, orgId, dto, audit) {
+    const wo = await repository.findByIdAndOrg(id, orgId);
+    if (!wo) throw new NotFoundError('Work Order');
+
+    const allowed = WO_STATUS_TRANSITIONS[wo.status] || [];
+    if (!allowed.includes(dto.status)) {
+        throw new BadRequestError(`Cannot transition from '${wo.status}' to '${dto.status}'`);
+    }
+
+    // Role-based restrictions
+    if (['completed', 'cancelled'].includes(dto.status)) {
+        const isManager = audit.userRole && ['super_admin', 'org_admin', 'facility_manager'].includes(audit.userRole);
+        if (!isManager) throw new ForbiddenError('Only managers can complete or cancel work orders');
+    }
+
+    await wo.update({ status: dto.status, ... });
+    auditService.log({ ...audit, action: 'status_change', oldValues: { status: wo.status }, newValues: { status: dto.status } });
+}
+```
+
+## Error Throwing
+
+Services throw typed errors. Never return error objects.
+- `throw new NotFoundError('Work Order')` -- entity not found
+- `throw new BadRequestError('Invalid status transition')` -- business rule violation
+- `throw new ForbiddenError('Only managers can approve')` -- permission denied
+- `throw new ConflictError('Email already registered')` -- duplicate resource
+
+## Org Scoping
+
+- `orgId: string | null` -- `null` means no org filter (super admin).
+- Pass `orgId` through to repository methods. Repository handles conditional WHERE.
+
+## Transaction Usage
+
+For operations involving multiple tables (inventory deduction, bulk status changes):
+```typescript
+import sequelize from '../config/database';
+
+async deductInventory(woId, orgId, items, audit) {
+    await sequelize.transaction(async (t) => {
+        for (const item of items) {
+            const invItem = await inventoryRepository.findByIdWithLock(item.id, t);
+            if (invItem.quantity < item.quantity) throw new BadRequestError('Insufficient stock');
+            await invItem.update({ quantity: invItem.quantity - item.quantity }, { transaction: t });
+            await woInventoryRepository.create({ ... }, { transaction: t });
+        }
+    });
+}
+```

@@ -19,6 +19,7 @@ import { useNotification } from '../context/NotificationContext';
 import { format } from 'date-fns';
 import { useWorkOrders, useCreateWorkOrder, useAssignWorkOrder, useUpdateWorkOrderStatus, useDeleteWorkOrder, useBulkDeleteWorkOrders, useRestoreWorkOrder } from '../hooks/api/useWorkOrders';
 import { useAssets, useUsers, useSites } from '../hooks/api/useSharedQueries';
+import { useOrganizations } from '../hooks/api/useOrganizations';
 import { WO_STATUS, WO_PRIORITY, USER_ROLES } from '../lib/constants';
 import { WorkOrder, PaginatedResponse, User, Site } from '../types/models';
 
@@ -57,12 +58,15 @@ const WorkOrdersPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
-  const [filters, setFilters] = useState({ status: '', priority: '', site_id: '' });
+  const [filters, setFilters] = useState({ status: '', priority: '', site_id: '', org_id: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [recordStatus, setRecordStatus] = useState('active');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const { isManager, isRequester } = useAuth();
+  const { hasRole, isManager, isRequester, user } = useAuth();
+  const isSuperAdmin = hasRole(['super_admin', 'super admin', 'Super_Admin']);
+  const isOrgAdmin = hasRole(['org_admin', 'org admin', 'Organization_Admin']);
+  const isFacilityManager = hasRole(['facility_manager', 'facility manager', 'Facility_Manager']);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
 
@@ -87,9 +91,11 @@ const WorkOrdersPage = () => {
 
   const { data: assets = [] } = useAssets();
   // useUsers from useSharedQueries might return an object with data property if not handled cleanly or an array
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsers(isSuperAdmin ? { org_id: filters.org_id || 'all', limit: 1000 } : { limit: 1000 });
   const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
-  const { data: sites = [] } = useSites();
+  const { data: sites = [] } = useSites(filters.org_id ? { org_id: filters.org_id } : undefined);
+  const { data: orgsData } = useOrganizations({ limit: 1000 });
+  const orgs = orgsData?.data || [];
 
   const createMutation = useCreateWorkOrder();
   const assignMutation = useAssignWorkOrder();
@@ -137,7 +143,7 @@ const WorkOrdersPage = () => {
   const handleDelete = async (woId: string) => {
     if (!window.confirm(recordStatus === 'active' ? 'Delete this work order?' : 'Permanently delete this work order?')) return;
     try {
-      await deleteMutation.mutateAsync(woId);
+      await deleteMutation.mutateAsync(woId + (recordStatus === 'inactive' ? '?force=true' : ''));
       addNotification('success', recordStatus === 'active' ? 'Work order deactivated' : 'Work order permanently deleted');
     } catch (error: any) {
       addNotification('error', error.response?.data?.detail || 'Failed to delete work order');
@@ -244,8 +250,44 @@ const WorkOrdersPage = () => {
             {isManager() && selectedIds.length > 0 && (
               <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
                 <Trash className="mr-2 h-4 w-4" />
-                Delete
+                Delete ({selectedIds.length})
               </Button>
+            )}
+            {isSuperAdmin && (
+              <div className="w-[180px]">
+                <Select value={filters.org_id || "all"} onValueChange={(v) => {
+                  setFilters({ ...filters, org_id: v === 'all' ? '' : v, site_id: '' });
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="filter-org">
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {orgs.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {(isSuperAdmin || isOrgAdmin) && (
+              <div className="w-[180px]">
+                <Select value={filters.site_id || "all"} onValueChange={(v) => {
+                  setFilters({ ...filters, site_id: v === 'all' ? '' : v });
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="filter-site">
+                    <SelectValue placeholder="All Sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {sites.map(site => (
+                      <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <div className="w-[180px]">
               <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); }}>
@@ -273,6 +315,9 @@ const WorkOrdersPage = () => {
                   </TableHead>
                 )}
                 <TableHead className="min-w-[180px] whitespace-nowrap">WO Number</TableHead>
+                {useAuth().hasRole(['super_admin', 'super admin', 'Super_Admin']) && (
+                  <TableHead className="min-w-[150px]">Organization</TableHead>
+                )}
                 <TableHead className="min-w-[250px]">Title</TableHead>
                 <TableHead className="min-w-[160px]">
                   <div onClick={(e) => e.stopPropagation()}>
@@ -309,21 +354,7 @@ const WorkOrdersPage = () => {
                   </div>
                 </TableHead>
                 <TableHead className="min-w-[200px]">Asset</TableHead>
-                <TableHead className="min-w-[150px]">
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Select value={filters.site_id || "all"} onValueChange={(v) => { setFilters({ ...filters, site_id: v === 'all' ? '' : v }); setPage(1); }}>
-                      <SelectTrigger className="border-0 bg-transparent shadow-none w-[130px] justify-between p-0 h-auto font-medium text-muted-foreground hover:text-foreground hover:bg-transparent focus:ring-0 px-2 -ml-2">
-                        <SelectValue placeholder="Site" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sites</SelectItem>
-                        {sites.map(site => (
-                          <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TableHead>
+                <TableHead className="min-w-[150px]">Site</TableHead>
                 <TableHead className="min-w-[200px]">Assignee</TableHead>
                 <TableHead className="min-w-[150px] whitespace-nowrap">Created</TableHead>
                 {!isRequester() && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
@@ -332,13 +363,13 @@ const WorkOrdersPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center py-8">
+                  <TableCell colSpan={isSuperAdmin ? (isRequester() ? 9 : 11) : (isRequester() ? 8 : 10)} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : workOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isRequester() ? 7 : 8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={isSuperAdmin ? (isRequester() ? 9 : 11) : (isRequester() ? 8 : 10)} className="text-center text-muted-foreground py-8">
                     No work orders found
                   </TableCell>
                 </TableRow>
@@ -362,6 +393,9 @@ const WorkOrdersPage = () => {
                         </Link>
                       )}
                     </TableCell>
+                    {isSuperAdmin && (
+                      <TableCell className="text-muted-foreground">{wo.organization?.name || wo.org?.name || '-'}</TableCell>
+                    )}
                     <TableCell className="max-w-[200px] truncate">{wo.title}</TableCell>
                     <TableCell><StatusBadge status={wo.status} /></TableCell>
                     <TableCell><PriorityBadge priority={wo.priority} /></TableCell>
@@ -383,60 +417,12 @@ const WorkOrdersPage = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/work-orders/${wo.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" />View
-                              </DropdownMenuItem>
                               {isManager() && (
                                 <DropdownMenuItem onClick={() => { setSelectedWO(wo); setAssignOpen(true); }}>
                                   <UserPlus className="mr-2 h-4 w-4" />Assign
                                 </DropdownMenuItem>
                               )}
                               
-                              {/* Status Update Actions */}
-                              {!isRequester() && recordStatus === 'active' && (
-                                <>
-                                  {/* Technician / Manager Actions */}
-                                  {wo.status === WO_STATUS.OPEN && (
-                                    <DropdownMenuItem onClick={() => handleStatusChange(wo.id, WO_STATUS.IN_PROGRESS)}>
-                                      Start Work
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {wo.status === WO_STATUS.IN_PROGRESS && (
-                                    <DropdownMenuItem onClick={() => {
-                                      const notes = window.prompt('Enter Resolution Notes (Mandatory):');
-                                      if (notes !== null) {
-                                        if (!notes.trim()) return addNotification('error', 'Resolution notes are mandatory');
-                                        handleStatusChange(wo.id, WO_STATUS.PENDING_REVIEW, notes);
-                                      }
-                                    }}>
-                                      Submit for Review
-                                    </DropdownMenuItem>
-                                  )}
-
-                                  {/* Manager Only Actions */}
-                                  {isManager() && wo.status === WO_STATUS.PENDING_REVIEW && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => {
-                                        const notes = window.prompt('Final Completion Notes (Optional):');
-                                        if (notes !== null) handleStatusChange(wo.id, WO_STATUS.COMPLETED, notes);
-                                      }}>
-                                        Approve & Complete
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => {
-                                        const notes = window.prompt('Reason for Rejection (Mandatory):');
-                                        if (notes !== null) {
-                                          if (!notes.trim()) return addNotification('error', 'Rejection reason is mandatory');
-                                          handleStatusChange(wo.id, WO_STATUS.IN_PROGRESS, notes);
-                                        }
-                                      }} className="text-warning">
-                                        Reject & Send Back
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                </>
-                              )}
-
                               {isManager() && (
                                 <>
                                   {recordStatus === 'inactive' && (
@@ -476,8 +462,9 @@ const WorkOrdersPage = () => {
           </DialogHeader>
           <div className="space-y-2">
             {users.filter(u => {
-              const roleName = (u.role?.name || u.Role?.name)?.toLowerCase();
-              return roleName === 'technician';
+              const roleName = (u.role?.name || u.Role?.name || u.role_name || '').toLowerCase();
+              const userSiteId = u.site_id || u.Site?.id || u.site?.id;
+              return roleName === 'technician' && userSiteId === selectedWO?.site_id;
             }).map((user) => {
               const roleName = (user.role?.name || user.Role?.name)?.replace('_', ' ');
               return (

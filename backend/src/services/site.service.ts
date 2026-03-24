@@ -44,7 +44,7 @@ export class SiteService {
 
     async getById(siteId: string, orgId: string | null): Promise<any> {
         const site = await siteRepository.findById(siteId, orgId, false);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
         return site;
     }
 
@@ -76,7 +76,7 @@ export class SiteService {
 
     async update(siteId: string, orgId: string | null, data: UpdateSiteDTO, context: AuditContext): Promise<any> {
         const site = await siteRepository.findById(siteId, orgId);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
 
         // 1. Check name uniqueness
         if (data.name && data.name !== site.name) {
@@ -110,7 +110,7 @@ export class SiteService {
 
     async delete(siteId: string, orgId: string | null, context: AuditContext, force: boolean = false): Promise<void> {
         const site = await siteRepository.findById(siteId, orgId, false);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
 
         const isHardDelete = force || site.deleted_at !== null;
         if (!isHardDelete) {
@@ -140,7 +140,7 @@ export class SiteService {
 
     async restore(siteId: string, orgId: string | null, context: AuditContext): Promise<void> {
         const site = await siteRepository.findById(siteId, orgId, false);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
 
         await site.restore();
 
@@ -170,7 +170,7 @@ export class SiteService {
 
     async assignManager(siteId: string, orgId: string | null, managerId: string | null, context: AuditContext): Promise<any> {
         const site = await siteRepository.findById(siteId, orgId);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
 
         if (managerId) {
             await this.validateManagerAssignment(managerId, orgId);
@@ -197,13 +197,13 @@ export class SiteService {
 
     async assignTechnician(siteId: string, orgId: string | null, userId: string, context: AuditContext): Promise<void> {
         const site = await siteRepository.findById(siteId, orgId);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
 
         const user = await User.findOne({ 
-            where: { id: userId, org_id: orgId }, 
+            where: { id: userId, org_id: site.org_id }, 
             include: [{ model: Role, as: 'Roles' }] 
         }) as any;
-        if (!user) throw new NotFoundError('User not found');
+        if (!user) throw new NotFoundError('User');
 
         // Check user role
         const roleName = user.Role?.name || user.Roles?.[0]?.name || user.role?.name;
@@ -226,10 +226,10 @@ export class SiteService {
 
     async removeTechnician(siteId: string, orgId: string | null, userId: string, context: AuditContext): Promise<void> {
         const site = await siteRepository.findById(siteId, orgId);
-        if (!site) throw new NotFoundError('Site not found');
+        if (!site) throw new NotFoundError('Site');
 
-        const user = await User.findOne({ where: { id: userId, org_id: orgId } }) as any;
-        if (!user) throw new NotFoundError('User not found');
+        const user = await User.findOne({ where: { id: userId, org_id: site.org_id } }) as any;
+        if (!user) throw new NotFoundError('User');
         if (user.site_id !== siteId) {
             throw new BadRequestError('Technician is not assigned to this site');
         }
@@ -256,7 +256,7 @@ export class SiteService {
         }
         // 1. Ensure user exists and is a Facility Manager
         const user = await User.findOne({ where, include: [{ model: Role }] }) as any;
-        if (!user) throw new NotFoundError('Manager user not found');
+        if (!user) throw new NotFoundError('Manager user');
 
         const roleName = user.Role?.name || (user.Roles?.[0]?.name);
         // Note: the existing system uses "Facility Manager" role name

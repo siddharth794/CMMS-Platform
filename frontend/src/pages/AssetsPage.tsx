@@ -163,16 +163,17 @@ const AssetsPage = () => {
       {/* Search & Table */}
       <Card>
         <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
-          <div className="flex items-center gap-2 max-w-md w-full">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search assets by name, tag, or location..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              data-testid="asset-search-input"
-            />
-          </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-4 w-full">
+            <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search assets by name, tag, or location..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                data-testid="asset-search-input"
+              />
+            </div>
+            <div className="flex items-center gap-2">
             {isManager() && selectedIds.length > 0 && (
               <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
                 <Trash className="mr-2 h-4 w-4" />
@@ -221,6 +222,7 @@ const AssetsPage = () => {
               </Select>
             </div>
           </div>
+        </div>
         </div>
         <CardContent className="pt-6">
           <Table>

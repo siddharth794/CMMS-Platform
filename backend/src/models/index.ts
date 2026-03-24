@@ -322,7 +322,7 @@ Organization.hasMany(Asset, { foreignKey: 'org_id' });
 Asset.belongsTo(Organization, { foreignKey: 'org_id' });
 
 Organization.hasMany(WorkOrder, { foreignKey: 'org_id' });
-WorkOrder.belongsTo(Organization, { foreignKey: 'org_id' });
+WorkOrder.belongsTo(Organization, { foreignKey: 'org_id', as: 'organization' });
 
 Organization.hasMany(PMSchedule, { foreignKey: 'org_id' });
 PMSchedule.belongsTo(Organization, { foreignKey: 'org_id' });

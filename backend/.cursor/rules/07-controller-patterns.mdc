@@ -1,0 +1,160 @@
+---
+description: Controller patterns, request parsing, user context extraction, and response formatting.
+globs: backend/src/controllers/*
+---
+# Controller Patterns
+
+Controllers handle HTTP concerns: parsing requests, calling services, and formatting responses.
+
+## Class + Singleton Pattern
+
+```typescript
+import { Request, Response, NextFunction } from 'express';
+import { fooService } from '../services/foo.service';
+
+class FooController {
+    private getAuditContext = (req: Request): AuditContext => {
+        return {
+            orgId: req.user!.org_id,
+            userId: req.user!.id,
+            userEmail: req.user!.email,
+        };
+    };
+
+    getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orgId = this.resolveOrgId(req);
+            const query = req.query as any; // already validated by Zod if applicable
+            const result = await fooService.getAll(orgId, query);
+            res.json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orgId = this.resolveOrgId(req);
+            const dto = req.body; // already validated by Zod
+            const result = await fooService.create(orgId, dto, this.getAuditContext(req));
+            res.status(201).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    // ... other methods
+}
+export const fooController = new FooController();
+```
+
+## Key Conventions
+
+### Methods are Arrow Functions
+```typescript
+// Correct - preserves `this` binding
+getAll = async (req, res, next) => { ... };
+
+// Wrong - loses `this` when passed as callback
+async getAll(req, res, next) { ... }
+```
+
+### Audit Context
+Every mutating controller method must call `this.getAuditContext(req)` and pass it to the service:
+```typescript
+private getAuditContext = (req: Request): AuditContext => ({
+    orgId: req.user!.org_id,
+    userId: req.user!.id,
+    userEmail: req.user!.email,
+});
+```
+
+### Org ID Resolution
+```typescript
+private resolveOrgId = (req: Request): string | null => {
+    const effectiveRoles = req.user!.effectiveRoles || [];
+    const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === 'super_admin');
+    if (isSuperAdmin) {
+        return (req.query.org_id as string) || (req.body?.org_id) || req.user!.org_id;
+    }
+    return req.user!.org_id;
+};
+```
+
+### Site ID Resolution (for Facility Managers)
+```typescript
+private resolveSiteId = (req: Request): string | undefined => {
+    const roleName = (req.user?.Role?.name || '').toLowerCase();
+    if (roleName === 'facility_manager') {
+        return req.user?.managed_site?.id || req.user?.site_id || undefined;
+    }
+    return undefined;
+};
+```
+
+### Response Conventions
+- `res.json(result)` for reads (GET) -- returns raw data, no wrapper
+- `res.status(201).json(entity)` for creates (POST)
+- `res.json({ message: 'Deleted successfully' })` for deletes
+- `res.json({ message: 'Restored successfully' })` for restores
+- No response envelope -- return data directly
+
+### Error Handling
+- Controllers do NOT need explicit try/catch. Express v5 propagates async errors to the global handler.
+- If you use try/catch, pass to `next(error)`. Never do `res.status(500).send()`.
+- For specific error handling (e.g., MulterError), catch locally and format:
+  ```typescript
+  try { ... } catch (error) {
+      if (error instanceof MulterError) {
+          res.status(400).json({ detail: error.message });
+          return;
+      }
+      next(error);
+  }
+  ```
+
+### Socket.IO Access
+For endpoints that trigger real-time notifications, get the IO instance:
+```typescript
+const io = req.app.get('io');
+await fooService.doSomething(orgId, dto, audit, io);
+```
+
+### Common Patterns
+
+**Get by ID:**
+```typescript
+getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const orgId = this.resolveOrgId(req);
+    const result = await fooService.getById(req.params.id, orgId);
+    res.json(result);
+};
+```
+
+**Update:**
+```typescript
+update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const orgId = this.resolveOrgId(req);
+    const result = await fooService.update(req.params.id, orgId, req.body, this.getAuditContext(req));
+    res.json(result);
+};
+```
+
+**Delete (with optional force):**
+```typescript
+delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const orgId = this.resolveOrgId(req);
+    const force = req.query.force === 'true';
+    const result = await fooService.delete(req.params.id, orgId, this.getAuditContext(req), force);
+    res.json(result);
+};
+```
+
+**Bulk Delete:**
+```typescript
+bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const orgId = this.resolveOrgId(req);
+    const result = await fooService.bulkDelete(orgId, req.body, this.getAuditContext(req));
+    res.json(result);
+};
+```

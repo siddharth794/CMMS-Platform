@@ -1,0 +1,174 @@
+---
+description: Analytics endpoint patterns, raw SQL queries, and data normalization rules.
+globs: backend/src/controllers/analytics.controller.ts, backend/src/services/analytics.service.ts, backend/src/repositories/analytics.repository.ts, backend/src/routes/analytics.ts
+---
+# Analytics Endpoint Rules
+
+Analytics endpoints follow a simplified pattern optimized for chart data delivery.
+
+## Architecture
+
+```
+Route -> Controller (parse params) -> Service (normalize) -> Repository (raw SQL/Sequelize aggregations)
+```
+
+Key differences from CRUD endpoints:
+- **No Zod validation** on GET analytics endpoints (query params parsed manually in controller).
+- **Raw SQL** in repository for complex aggregations (monthly trends, cross-table joins).
+- **Data normalization** in service (gap-filling missing months, key mapping).
+- **Permission**: `requirePermission('analytics:view')` on admin-level endpoints.
+
+## Controller Patterns
+
+### Shared Helper Functions (in analytics controller)
+```typescript
+function parseDateFilter(req: Request): DateFilter {
+    const dateFilter: DateFilter = {};
+    if (req.query.start_date) {
+        const d = new Date(req.query.start_date as string);
+        if (!isNaN(d.getTime())) { d.setHours(0, 0, 0, 0); dateFilter.startDate = d; }
+    }
+    if (req.query.end_date) {
+        const d = new Date(req.query.end_date as string);
+        if (!isNaN(d.getTime())) { d.setHours(23, 59, 59, 999); dateFilter.endDate = d; }
+    }
+    return dateFilter;
+}
+
+function parseOrgAndSite(req: Request): { orgId: string | null; siteId?: string } {
+    // Extracts org_id from JWT, auto-sets site_id for facility managers
+    // Super admin can override via query params
+}
+
+function parsePagination(req: Request): number {
+    // Returns clamped limit (1-50) from ?limit= query param
+}
+```
+
+### Request Validation
+Analytics controllers validate manually (no Zod):
+```typescript
+if (!orgId) { res.status(400).json({ detail: 'Organization ID required' }); return; }
+const months = Math.min(parseInt(req.query.months as string) || 12, 24);
+```
+
+## Service Patterns
+
+### Monthly Gap-Filling
+Trend endpoints must always return exactly N entries (one per month), filling gaps with 0:
+```typescript
+function fillMonthlyGaps(data: any[], months: number, valueKeys: string[]): any[] {
+    const result: any[] = [];
+    const map = new Map(data.map((d: any) => [d.month, d]));
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const existing = map.get(key);
+        const entry: any = { month: key };
+        valueKeys.forEach(k => { entry[k] = existing ? parseInt(existing[k]) || 0 : 0; });
+        result.push(entry);
+    }
+    return result;
+}
+```
+
+### Data Normalization
+Map raw DB results to clean API shapes:
+```typescript
+// Raw: { site: { name: 'HQ' }, count: '145' }
+// Normalized: { site_name: 'HQ', count: 145 }
+(raw as any[]).map((r: any) => ({
+    site_name: r.site?.name || 'Unassigned',
+    count: parseInt(r.count) || 0
+}));
+```
+
+### Parallel Fetches
+Use `Promise.all` for independent analytics queries:
+```typescript
+const [counts, woByStatus, woByPriority, recentWOs] = await Promise.all([
+    analyticsRepository.getDashboardCounts(orgId, dateFilter),
+    analyticsRepository.getWoByStatusGrouped(orgId, userId, dateFilter),
+    analyticsRepository.getWoByPriorityGrouped(orgId, userId, dateFilter),
+    analyticsRepository.getRecentWorkOrders(orgId, userId, dateFilter),
+]);
+```
+
+## Repository Patterns
+
+### Raw SQL with Parameterized Queries
+```typescript
+const results = await sequelize.query(`
+    SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count
+    FROM work_orders
+    WHERE deleted_at IS NULL
+      AND org_id = :orgId
+      AND created_at >= DATE_SUB(CURDATE(), INTERVAL :months MONTH)
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY month ASC
+`, { replacements: { orgId, months }, type: QueryTypes.SELECT });
+```
+
+### Sequelize Aggregations
+```typescript
+return WorkOrder.findAll({
+    attributes: ['site_id', [fn('COUNT', col('WorkOrder.id')), 'count']],
+    where,
+    include: [{ model: Site, as: 'site', attributes: ['name'] }],
+    group: ['site_id', 'site.id', 'site.name'],
+    raw: true, nest: true
+});
+```
+
+### Conditional org_id / site_id in Raw SQL
+```typescript
+// Template literal approach for optional WHERE clauses
+${orgId ? `AND org_id = :orgId` : ''}
+${siteId ? `AND site_id = :siteId` : ''}
+```
+
+## Role-Based Scoping
+
+| Role | Behavior |
+|------|----------|
+| super_admin | Must pass `?org_id=` explicitly. Can pass `?site_id=`. |
+| org_admin | Auto-scoped to their org. Can pass `?site_id=`. |
+| facility_manager | Auto-scoped to org + their site. Can override `?site_id=`. |
+| technician | `/dashboard` auto-scoped to own assigned WOs. |
+| requestor | `/my-requests` auto-scoped to own created WOs. |
+
+## Common Query Params
+
+| Param | Type | Default | Max | Used by |
+|-------|------|---------|-----|---------|
+| `org_id` | UUID | user's org | - | super_admin only |
+| `site_id` | UUID | manager's site | - | all admin/manager |
+| `start_date` | ISO date | - | - | date-filtered endpoints |
+| `end_date` | ISO date | - | - | date-filtered endpoints |
+| `months` | int | 12 | 24 | trend endpoints |
+| `days` | int | 30 | 365 | audit activity |
+| `limit` | int | 10 | 50 | ranking endpoints |
+
+## Route Registration
+
+```typescript
+router.use(authenticate);
+router.get('/dashboard', analyticsController.getDashboard);                    // no permission check
+router.get('/my-requests', analyticsController.getMyRequests);                  // no permission check
+router.get('/work-orders-trend', requirePermission('analytics:view'), ...);     // requires permission
+```
+
+## Comprehensive Endpoint
+
+The `/comprehensive` endpoint combines multiple analytics in one call to reduce HTTP round-trips for initial page load:
+```typescript
+async getComprehensiveDashboard(orgId, siteId, dateFilter) {
+    const [avgResolution, pmCompliance, pmStatus, pvR, invStats, assetsByType] = await Promise.all([
+        analyticsRepository.getAvgResolutionTime(orgId, siteId),
+        analyticsRepository.getPMCompliance(orgId, siteId),
+        // ... etc
+    ]);
+    return { avg_resolution_hours: avgResolution, pm_compliance: pmCompliance, ... };
+}
+```

@@ -21,23 +21,28 @@ const CreateWorkOrderPage = () => {
   const { addNotification } = useNotification();
   const createMutation = useCreateWorkOrder();
   
-  const isSuperAdmin = hasRole(['super_admin']);
-  const isFacilityManager = hasRole(['facility_manager']);
+  const isSuperAdmin = hasRole(['super_admin', 'super admin', 'Super_Admin']);
+  const isOrgAdmin = hasRole(['org_admin', 'org admin', 'Org_Admin']);
+  const isFacilityManager = hasRole(['facility_manager', 'facility manager', 'Facility_Manager']);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'medium',
     asset_id: '',
-    site_id: '',
-    org_id: '',
+    site_id: isFacilityManager ? (user?.managed_site?.id || user?.site_id || '') : '',
+    org_id: (isOrgAdmin || isFacilityManager) ? (user?.org_id || '') : '',
     location: '',
   });
 
-  const { data: assetsData } = useAssetsData(isSuperAdmin && formData.org_id ? { org_id: formData.org_id } : undefined);
+  const { data: assetsData } = useAssetsData(formData.site_id ? { site_id: formData.site_id } : (isSuperAdmin && formData.org_id ? { org_id: formData.org_id } : undefined));
   const assets = assetsData?.data || [];
   
-  const { data: sites = [] } = useSites(isSuperAdmin && formData.org_id ? { org_id: formData.org_id } : undefined);
+  const { data: sites = [] } = useSites(
+    isSuperAdmin && formData.org_id 
+      ? { org_id: formData.org_id } 
+      : (isOrgAdmin ? { org_id: user?.org_id } : undefined)
+  );
   
   const { data: orgsData } = useOrganizations({ limit: 1000 });
   const orgs = orgsData?.data || [];
@@ -148,9 +153,9 @@ const CreateWorkOrderPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="asset_id">Related Asset</Label>
-                <Select value={formData.asset_id || "none"} onValueChange={handleAssetChange} disabled={isSuperAdmin && !formData.org_id}>
+                <Select value={formData.asset_id || "none"} onValueChange={handleAssetChange} disabled={!formData.site_id}>
                   <SelectTrigger>
-                    <SelectValue placeholder={isSuperAdmin && !formData.org_id ? "Select an organization first" : "Select an asset (optional)"} />
+                    <SelectValue placeholder={!formData.site_id ? "Select a site first" : "Select an asset (optional)"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
@@ -181,7 +186,7 @@ const CreateWorkOrderPage = () => {
               {!isFacilityManager && (
                 <div className="space-y-2">
                   <Label htmlFor="site_id">Site *</Label>
-                  <Select value={formData.site_id || "none"} onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v })} disabled={isSuperAdmin && !formData.org_id}>
+                  <Select value={formData.site_id || "none"} onValueChange={(v) => setFormData({ ...formData, site_id: v === 'none' ? '' : v, asset_id: '' })} disabled={(isSuperAdmin && !formData.org_id)}>
                     <SelectTrigger>
                       <SelectValue placeholder={isSuperAdmin && !formData.org_id ? "Select an organization first" : "Select a site"} />
                     </SelectTrigger>
@@ -192,6 +197,17 @@ const CreateWorkOrderPage = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {isFacilityManager && (
+                <div className="space-y-2">
+                  <Label>Assigned Site</Label>
+                  <Input 
+                    value={user?.managed_site?.name || user?.site?.name || 'Loading facility...'} 
+                    disabled 
+                    className="bg-muted" 
+                  />
                 </div>
               )}
 

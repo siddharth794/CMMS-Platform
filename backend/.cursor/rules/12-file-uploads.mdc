@@ -1,0 +1,95 @@
+---
+description: File upload patterns using Multer middleware.
+globs: backend/src/controllers/*, backend/src/routes/*, backend/src/middleware/*
+---
+# File Upload Rules (Multer)
+
+## Configuration
+
+File uploads use **Multer** with disk storage in the `uploads/` directory.
+
+### Constraints
+- **Max file size**: 1 MB per file
+- **Max files per request**: 3
+- **Accepted types**: Images only (jpeg, png, gif, webp)
+- **Storage**: Local disk at `./uploads/`
+
+### Middleware Setup
+
+```typescript
+import multer from 'multer';
+import path from 'path';
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+    },
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 1 * 1024 * 1024 }, // 1 MB
+    fileFilter: (req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed'));
+        }
+    },
+});
+```
+
+### Route Application
+
+```typescript
+router.post('/:wo_id/attachments', authenticate, upload.array('files', 3), controller.addAttachments);
+```
+
+## Controller Handling
+
+```typescript
+addAttachments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+            res.status(400).json({ detail: 'No files uploaded' });
+            return;
+        }
+        // Save file paths to database
+        const attachments = await service.addAttachments(woId, orgId, files);
+        res.status(201).json(attachments);
+    } catch (error) {
+        if (error instanceof MulterError) {
+            res.status(400).json({ detail: error.message });
+            return;
+        }
+        next(error);
+    }
+};
+```
+
+## Error Handling
+
+- `MulterError` codes: `LIMIT_FILE_SIZE`, `LIMIT_FILE_COUNT`, `LIMIT_UNEXPECTED_FILE`
+- Catch `MulterError` in controller and return 400 with descriptive message.
+- Invalid file types throw a regular Error (caught by Multer's fileFilter).
+
+## Static Serving
+
+Uploaded files are served statically:
+```typescript
+app.use('/uploads', express.static('uploads'));
+```
+
+Frontend accesses files at: `http://host:port/uploads/filename.ext`
+
+## Storage in Database
+
+Attachment records stored in `wo_attachments` table:
+- `id` (UUID PK)
+- `work_order_id` (UUID FK)
+- `file_path` (STRING) -- relative path like `uploads/1710892800000-123456789.png`
+- `created_at`, `deleted_at` (paranoid)
