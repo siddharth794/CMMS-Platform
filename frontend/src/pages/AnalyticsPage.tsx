@@ -195,7 +195,7 @@ export default function AnalyticsPage() {
         ] = await Promise.all([
           analyticsApi.getDashboard(params).then(r => r.data).catch(() => null),
           analyticsApi.getComprehensive(params).then(r => r.data).catch(() => null),
-          analyticsApi.getWorkOrdersTrend(params).then(r => r.data).catch(() => []),
+          analyticsApi.getWorkOrdersTrend(params).then(r => { console.debug('WO Trend response:', r.data); return r.data; }).catch((e) => { console.error('WO Trend API error:', e.response?.status, e.response?.data); return []; }),
           analyticsApi.getWorkOrdersBySite(params).then(r => r.data).catch(() => []),
           analyticsApi.getTopAssets({ ...params, limit: 10 }).then(r => r.data).catch(() => []),
           analyticsApi.getTechnicianPerformance(params).then(r => r.data).catch(() => []),
@@ -474,17 +474,21 @@ export default function AnalyticsPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Work Order Trend (Created vs Completed)</CardTitle></CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.woTrend}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tick={{fontSize: 12}} />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Line type="monotone" dataKey="created_count" name="Created" stroke="#3b82f6" strokeWidth={3} dot={{r: 4}} />
-                <Line type="monotone" dataKey="completed_count" name="Completed" stroke="#22c55e" strokeWidth={3} dot={{r: 4}} />
-              </LineChart>
-            </ResponsiveContainer>
+            {data.woTrend && data.woTrend.some(d => (d.created_count || 0) > 0 || (d.completed_count || 0) > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.woTrend}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" tick={{fontSize: 12}} />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Line type="monotone" dataKey="created_count" name="Created" stroke="#3b82f6" strokeWidth={3} dot={{r: 4}} />
+                  <Line type="monotone" dataKey="completed_count" name="Completed" stroke="#22c55e" strokeWidth={3} dot={{r: 4}} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">No work order data available</div>
+            )}
           </CardContent>
         </Card>
         <Card className="lg:col-span-1">

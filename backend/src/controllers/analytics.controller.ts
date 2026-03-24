@@ -104,6 +104,7 @@ class AnalyticsController {
             if (!orgId) { res.status(400).json({ detail: 'Organization ID required' }); return; }
             const months = parseInt(req.query.months as string) || 12;
             const data = await analyticsService.getWorkOrdersTrend(orgId, Math.min(months, 24), siteId);
+            console.debug('[Analytics] WO Trend for org:', orgId, 'months:', months, 'results:', data?.length);
             res.json(data);
         } catch (error) { next(error); }
     }
