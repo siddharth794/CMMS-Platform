@@ -78,25 +78,18 @@ class WorkOrderService {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
 
-        const oldStatus = wo.status;
+        // Block status changes — must use PATCH /:wo_id/status instead
+        if (dto.status && dto.status !== wo.status) {
+            throw new BadRequestError('Status changes must use the dedicated status update endpoint (PATCH /:wo_id/status).');
+        }
+
         const updateData: any = { ...dto };
+        delete updateData.status;
         if (updateData.asset_id === "") updateData.asset_id = null;
 
         await wo.update(updateData);
 
-        if (dto.status && dto.status !== oldStatus) {
-            // Check transition
-            const allowed = WO_STATUS_TRANSITIONS[oldStatus] || [];
-            if (!allowed.includes(dto.status)) {
-                throw new BadRequestError(`Invalid status transition from ${oldStatus} to ${dto.status}`);
-            }
-
-            if (dto.status === 'in_progress' && !wo.actual_start) wo.actual_start = new Date();
-            else if (dto.status === 'completed' && !wo.actual_end) wo.actual_end = new Date();
-            await wo.save();
-        }
-
-        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'update', oldValues: { status: oldStatus }, newValues: dto as any });
+        auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo.id, action: 'update', newValues: dto as any });
         return workOrderRepository.findByPkFull(wo.id);
     }
 

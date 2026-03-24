@@ -193,7 +193,7 @@ const WorkOrderDetailPage = () => {
 
     setSubmitting(true);
     try {
-      await workOrdersApi.update(id, { status: newStatus, notes: statusNotes });
+      await workOrdersApi.updateStatus(id, { status: newStatus, notes: statusNotes });
       addNotification('success', 'Status updated');
       setStatusDialogOpen(false);
       setStatusNotes('');
