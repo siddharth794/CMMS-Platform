@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Calendar } from '../components/ui/calendar';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, LineChart, Line, AreaChart, Area,
@@ -16,7 +18,7 @@ import {
   AlertTriangle, Package, DollarSign, Activity, Target, BarChart3, CheckIcon,
   Users, UserPlus, Clock, Wrench, FileText, CheckCircle2
 } from 'lucide-react';
-import { format, subDays, subMonths } from 'date-fns';
+import { format, subDays, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '../lib/utils';
 
 const STATUS_COLORS = {
@@ -139,22 +141,15 @@ export default function AnalyticsPage() {
     myRequests: null
   });
 
+  const [date, setDate] = useState({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
   const [appliedRange, setAppliedRange] = useState({ from: subDays(new Date(), 30), to: new Date() });
-  const [tempFrom, setTempFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [tempTo, setTempTo] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [monthsFilter, setMonthsFilter] = useState(12);
   const [activePreset, setActivePreset] = useState(30);
   
   const abortController = useRef(null);
-
-  const applyDateRange = () => {
-    const from = new Date(tempFrom);
-    const to = new Date(tempTo);
-    if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
-      setAppliedRange({ from, to });
-      setActivePreset(null);
-    }
-  };
 
   useEffect(() => {
     fetchData();
@@ -171,8 +166,8 @@ export default function AnalyticsPage() {
     
     try {
       const params = {
-        start_date: appliedRange.from ? appliedRange.from.toISOString() : undefined,
-        end_date: appliedRange.to ? appliedRange.to.toISOString() : undefined,
+        start_date: appliedRange.from ? startOfDay(appliedRange.from).toISOString() : undefined,
+        end_date: appliedRange.to ? endOfDay(appliedRange.to).toISOString() : undefined,
         months: monthsFilter
       };
 
@@ -278,21 +273,55 @@ export default function AnalyticsPage() {
             onClick={() => {
               const fromDate = subDays(new Date(), p.days);
               const toDate = new Date();
-              setTempFrom(format(fromDate, 'yyyy-MM-dd'));
-              setTempTo(format(toDate, 'yyyy-MM-dd'));
+              setDate({ from: fromDate, to: toDate });
               setActivePreset(p.days);
               setAppliedRange({ from: fromDate, to: toDate });
             }}>
             {p.label}
           </Button>
         ))}
-        <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-background">
-          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          <Input type="date" value={tempFrom} onChange={(e) => setTempFrom(e.target.value)} className="w-[140px] h-8 text-xs border-0 p-0 focus:ring-0" />
-          <span className="text-muted-foreground text-xs">to</span>
-          <Input type="date" value={tempTo} onChange={(e) => setTempTo(e.target.value)} className="w-[140px] h-8 text-xs border-0 p-0 focus:ring-0" />
-          <Button size="sm" variant="ghost" onClick={applyDateRange} className="h-7 px-2"><CheckIcon className="h-3 w-3" /></Button>
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant={"outline"}
+              className={cn(
+                "w-[260px] justify-start text-left font-normal bg-background",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "LLL dd, y")} -{" "}
+                    {format(date.to, "LLL dd, y")}
+                  </>
+                ) : (
+                  format(date.from, "LLL dd, y")
+                )
+              ) : (
+                <span>Pick a date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={(newDate) => {
+                setDate(newDate);
+                if (newDate?.from && newDate?.to) {
+                  setAppliedRange(newDate);
+                  setActivePreset(null);
+                }
+              }}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

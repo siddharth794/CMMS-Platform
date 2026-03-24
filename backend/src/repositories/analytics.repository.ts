@@ -105,12 +105,11 @@ class AnalyticsRepository {
 
         const results = await sequelize.query(`
             SELECT
-                DATE_FORMAT(wo_created.created_at, '%Y-%m') AS month,
+                wo_created.month_key AS month,
                 wo_created.created_count,
                 COALESCE(wo_completed.completed_count, 0) AS completed_count
             FROM (
                 SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key,
-                       DATE_FORMAT(created_at, '%Y-%m') AS created_at,
                        COUNT(*) AS created_count
                 FROM work_orders
                 WHERE deleted_at IS NULL
