@@ -278,12 +278,26 @@ const WorkOrderDetailPage = () => {
       addNotification('error', 'Notes are required for this action.');
       return;
     }
+
+    // Client-side validation for pending_review and completed
     if (quickTargetStatus === 'pending_review' || quickTargetStatus === 'completed') {
-      setNewStatus(quickTargetStatus);
-      await handleStatusUpdate();
-      setQuickStatusDialogOpen(false);
-      return;
+      if (!statusNotes.trim() && !workOrder.resolution_notes) {
+        addNotification('error', 'Resolution notes are mandatory when completing or submitting for review.');
+        return;
+      }
+      if (['high', 'critical'].includes(workOrder.priority)) {
+        const hasAttachments = (workOrder.attachments && workOrder.attachments.length > 0) || (selectedFiles.length > 0);
+        if (!hasAttachments) {
+          addNotification('error', 'Proof of work (images) is required for High/Critical priority work orders.');
+          return;
+        }
+      }
+      if (quickTargetStatus === 'completed' && !(workOrder.attachments?.length > 0 || selectedFiles.length > 0)) {
+        addNotification('error', 'You must upload at least one image before completing the work order.');
+        return;
+      }
     }
+
     setSubmitting(true);
     try {
       await workOrdersApi.updateStatus(id, { status: quickTargetStatus, notes: statusNotes || undefined });
