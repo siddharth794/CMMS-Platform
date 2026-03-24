@@ -14,7 +14,7 @@ export class AIAgentController {
             
             const result = await aiAgentService.smartCreateWorkOrder(req.body, user, auditContext);
 
-            res.status(200).json(result);
+            res.status(201).json(result);
         } catch (error) {
             next(error);
         }
@@ -23,7 +23,20 @@ export class AIAgentController {
     getLatestWorkOrders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { site_id, location } = req.query;
-            const result = await aiAgentService.getLatestWorkOrders(site_id as string, location as string);
+            
+            if (!site_id) {
+                res.status(400).json({ 
+                    status: 'error', 
+                    message: 'site_id query parameter is required' 
+                });
+                return;
+            }
+
+            const result = await aiAgentService.getLatestWorkOrders(
+                site_id as string, 
+                location as string | undefined
+            );
+            
             res.status(200).json(result);
         } catch (error) {
             next(error);

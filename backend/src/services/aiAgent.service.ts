@@ -1,8 +1,9 @@
 import { workOrderService } from './workOrder.service';
 import { workOrderRepository } from '../repositories/workOrder.repository';
-import { Site } from '../models';
+import { siteRepository } from '../repositories/site.repository';
 import { AuditContext } from '../types/common.dto';
 import { NotFoundError, BadRequestError } from '../errors/AppError';
+import { AuthenticatedUser } from '../types/express';
 
 export type PriorityLevel = 'low' | 'medium' | 'high' | 'critical';
 
@@ -10,12 +11,25 @@ export interface SmartCreatePayload {
     title: string;
     description?: string;
     priority?: PriorityLevel;
-    site_id: string; // Now required
-    location: string; // Now required
+    site_id: string;
+    location: string;
+}
+
+export interface SmartCreateResponse {
+    status: string;
+    message: string;
+    wo_number: string;
+    data: any;
+}
+
+export interface LatestWorkOrdersResponse {
+    status: string;
+    data: any[];
+    total: number;
 }
 
 export class AIAgentService {
-    async smartCreateWorkOrder(payload: SmartCreatePayload, user: any, auditContext: AuditContext): Promise<any> {
+    async smartCreateWorkOrder(payload: SmartCreatePayload, user: AuthenticatedUser, auditContext: AuditContext): Promise<SmartCreateResponse> {
         const { title, description, priority, site_id, location } = payload;
         
         if (!site_id) {
@@ -26,21 +40,23 @@ export class AIAgentService {
             throw new BadRequestError('location is required from the AI agent payload.');
         }
 
-        // 1. Validate Site and Extract Organization
-        const site = await Site.findByPk(site_id);
+        if (!title || title.trim().length === 0) {
+            throw new BadRequestError('title is required and cannot be empty.');
+        }
+
+        const site = await siteRepository.findById(site_id, null);
         if (!site) {
             throw new NotFoundError(`Site with ID ${site_id}`);
         }
         
         const orgId = site.org_id;
 
-        // 2. Create the Work Order
         const newWo = await workOrderService.create(orgId, user.id, {
-            title,
-            description,
+            title: title.trim(),
+            description: description?.trim(),
             priority: priority || 'medium',
             site_id: site.id,
-            location
+            location: location.trim()
         } as any, auditContext);
 
         return {
@@ -51,12 +67,12 @@ export class AIAgentService {
         };
     }
 
-    async getLatestWorkOrders(site_id: string, location?: string): Promise<any> {
+    async getLatestWorkOrders(site_id: string, location?: string): Promise<LatestWorkOrdersResponse> {
         if (!site_id) {
             throw new BadRequestError('site_id is required.');
         }
 
-        const site = await Site.findByPk(site_id);
+        const site = await siteRepository.findById(site_id, null);
         if (!site) {
             throw new NotFoundError(`Site with ID ${site_id}`);
         }
