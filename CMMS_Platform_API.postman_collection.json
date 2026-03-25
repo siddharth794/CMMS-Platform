@@ -1,0 +1,2832 @@
+{
+	"info": {
+		"_postman_id": "cmms-platform-api",
+		"name": "CMMS Platform API",
+		"description": "Comprehensive Postman collection for the CMMS (Computerized Maintenance Management System) Platform backend. Server runs on http://localhost:8000",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orgId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "siteId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "assetId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "workOrderId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "roleId",
+			"value": "",
+			"type": "number"
+		},
+		{
+			"key": "inventoryItemId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "pmScheduleId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "POST /api/auth/login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.access_token) {",
+									"        pm.collectionVariables.set('token', jsonData.access_token);",
+									"        pm.collectionVariables.set('userId', jsonData.user.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login and receive JWT access token. Rate limited to 15 requests per 15 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/auth/me",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "me"]
+						},
+						"description": "Get current authenticated user info"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "GET /api/users",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						},
+						"description": "Get all users (any authenticated user)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/users",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"password123\",\n    \"role_id\": 1,\n    \"username\": \"newuser\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"phone\": \"+1234567890\",\n    \"org_id\": \"{{orgId}}\",\n    \"site_id\": \"{{siteId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						},
+						"description": "Create new user (requires ADMIN_ROLES: super_admin, org_admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/users/:user_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:user_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":user_id"],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "User UUID"
+								}
+							]
+						},
+						"description": "Get user by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/users/:user_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"updated@example.com\",\n    \"username\": \"updateduser\",\n    \"first_name\": \"Updated\",\n    \"last_name\": \"Name\",\n    \"phone\": \"+9876543210\",\n    \"is_active\": true,\n    \"site_id\": \"{{siteId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:user_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":user_id"],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "User UUID"
+								}
+							]
+						},
+						"description": "Update user by ID (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/users/:user_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:user_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":user_id"],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "User UUID"
+								}
+							]
+						},
+						"description": "Soft delete user (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/users/:user_id/restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:user_id/restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":user_id", "restore"],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "User UUID"
+								}
+							]
+						},
+						"description": "Restore soft-deleted user (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/users/me",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"MyUpdated\",\n    \"last_name\": \"Name\",\n    \"phone\": \"+1111111111\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "me"]
+						},
+						"description": "Update current user profile"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/users/me/password",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentPassword\": \"oldpassword\",\n    \"newPassword\": \"newpassword123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/me/password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "me", "password"]
+						},
+						"description": "Update current user password"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/users/:user_id/roles",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_ids\": [1, 2]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:user_id/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":user_id", "roles"],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "User UUID"
+								}
+							]
+						},
+						"description": "Update user roles (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/users/bulk-delete",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"uuid-1\", \"uuid-2\"],\n    \"force\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/bulk-delete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "bulk-delete"]
+						},
+						"description": "Bulk delete users (requires ADMIN_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Organizations",
+			"item": [
+				{
+					"name": "GET /api/organizations",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/organizations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "organizations"]
+						},
+						"description": "Get all organizations"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/organizations",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Organization\",\n    \"description\": \"Organization description\",\n    \"address\": \"123 Main St\",\n    \"owner_name\": \"Owner Name\",\n    \"website_url\": \"https://example.com\",\n    \"email\": \"contact@example.com\",\n    \"phone\": \"+1234567890\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/organizations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "organizations"]
+						},
+						"description": "Create organization (public endpoint)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/organizations/:org_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/organizations/:org_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "organizations", ":org_id"],
+							"variable": [
+								{
+									"key": "org_id",
+									"value": "{{orgId}}",
+									"description": "Organization UUID"
+								}
+							]
+						},
+						"description": "Get organization by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/organizations/:org_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Organization Name\",\n    \"description\": \"Updated description\",\n    \"address\": \"456 New St\",\n    \"owner_name\": \"New Owner\",\n    \"website_url\": \"https://newsite.com\",\n    \"email\": \"newcontact@example.com\",\n    \"phone\": \"+0987654321\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/organizations/:org_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "organizations", ":org_id"],
+							"variable": [
+								{
+									"key": "org_id",
+									"value": "{{orgId}}",
+									"description": "Organization UUID"
+								}
+							]
+						},
+						"description": "Update organization"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/organizations/:org_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/organizations/:org_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "organizations", ":org_id"],
+							"variable": [
+								{
+									"key": "org_id",
+									"value": "{{orgId}}",
+									"description": "Organization UUID"
+								}
+							]
+						},
+						"description": "Delete organization"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "GET /api/roles",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "roles"]
+						},
+						"description": "Get all roles"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/roles",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Role\",\n    \"description\": \"Role description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "roles"]
+						},
+						"description": "Create role (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/roles/:role_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Role Name\",\n    \"description\": \"Updated description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/roles/:role_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "roles", ":role_id"],
+							"variable": [
+								{
+									"key": "role_id",
+									"value": "{{roleId}}",
+									"type": "string",
+									"description": "Role ID (integer)"
+								}
+							]
+						},
+						"description": "Update role (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/roles/:role_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/roles/:role_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "roles", ":role_id"],
+							"variable": [
+								{
+									"key": "role_id",
+									"value": "{{roleId}}",
+									"type": "string",
+									"description": "Role ID (integer)"
+								}
+							]
+						},
+						"description": "Delete role (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/roles/:role_id/accesses",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"access_ids\": [\"uuid-1\", \"uuid-2\", \"uuid-3\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/roles/:role_id/accesses",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "roles", ":role_id", "accesses"],
+							"variable": [
+								{
+									"key": "role_id",
+									"value": "{{roleId}}",
+									"type": "string",
+									"description": "Role ID (integer)"
+								}
+							]
+						},
+						"description": "Update role accesses (requires ADMIN_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Accesses",
+			"item": [
+				{
+					"name": "GET /api/accesses",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accesses",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accesses"]
+						},
+						"description": "Get all accesses"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/accesses",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"work_orders:create\",\n    \"description\": \"Create work orders\",\n    \"module\": \"work_orders\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accesses",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accesses"]
+						},
+						"description": "Create access (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/accesses/:access_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"updated_access_name\",\n    \"description\": \"Updated description\",\n    \"module\": \"updated_module\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accesses/:access_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accesses", ":access_id"],
+							"variable": [
+								{
+									"key": "access_id",
+									"value": "access-uuid",
+									"description": "Access UUID"
+								}
+							]
+						},
+						"description": "Update access (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/accesses/:access_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accesses/:access_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accesses", ":access_id"],
+							"variable": [
+								{
+									"key": "access_id",
+									"value": "access-uuid",
+									"description": "Access UUID"
+								}
+							]
+						},
+						"description": "Delete access (requires ADMIN_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Groups",
+			"item": [
+				{
+					"name": "GET /api/groups",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/groups",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "groups"]
+						},
+						"description": "Get all groups"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/groups",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Group\",\n    \"description\": \"Group description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/groups",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "groups"]
+						},
+						"description": "Create group (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/groups/:group_id",
+					"request": {
+						"auth": {
+							""type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Group Name\",\n    \"description\": \"Updated description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/groups/:group_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "groups", ":group_id"],
+							"variable": [
+								{
+									"key": "group_id",
+									"value": "group-uuid",
+									"description": "Group UUID"
+								}
+							]
+						},
+						"description": "Update group (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/groups/:group_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/groups/:group_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "groups", ":group_id"],
+							"variable": [
+								{
+									"key": "group_id",
+									"value": "group-uuid",
+									"description": "Group UUID"
+								}
+							]
+						},
+						"description": "Delete group (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/groups/:group_id/members",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_ids\": [\"user-uuid-1\", \"user-uuid-2\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/groups/:group_id/members",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "groups", ":group_id", "members"],
+							"variable": [
+								{
+									"key": "group_id",
+									"value": "group-uuid",
+									"description": "Group UUID"
+								}
+							]
+						},
+						"description": "Update group members (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/groups/:group_id/roles",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_ids\": [1, 2, 3]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/groups/:group_id/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "groups", ":group_id", "roles"],
+							"variable": [
+								{
+									"key": "group_id",
+									"value": "group-uuid",
+									"description": "Group UUID"
+								}
+							]
+						},
+						"description": "Update group roles (requires ADMIN_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Sites",
+			"item": [
+				{
+					"name": "GET /api/sites",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sites",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites"]
+						},
+						"description": "Get all sites"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/sites",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Site\",\n    \"address\": \"123 Site St\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip_code\": \"10001\",\n    \"country\": \"USA\",\n    \"phone\": \"+1234567890\",\n    \"description\": \"Site description\",\n    \"is_active\": true,\n    \"manager_id\": \"{{userId}}\",\n    \"org_id\": \"{{orgId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/sites",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites"]
+						},
+						"description": "Create site (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/sites/:site_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								}
+							]
+						},
+						"description": "Get site by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/sites/:site_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Site Name\",\n    \"address\": \"456 Updated St\",\n    \"city\": \"Los Angeles\",\n    \"state\": \"CA\",\n    \"zip_code\": \"90001\",\n    \"country\": \"USA\",\n    \"phone\": \"+0987654321\",\n    \"description\": \"Updated description\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								}
+							]
+						},
+						"description": "Update site (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/sites/:site_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								}
+							]
+						},
+						"description": "Delete site (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/sites/:site_id/restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id/restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id", "restore"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								}
+							]
+						},
+						"description": "Restore deleted site (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/sites/bulk-delete",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"site-uuid-1\", \"site-uuid-2\"],\n    \"force\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/bulk-delete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", "bulk-delete"]
+						},
+						"description": "Bulk delete sites (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/sites/:site_id/manager",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"manager_id\": \"{{userId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id/manager",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id", "manager"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								}
+							]
+						},
+						"description": "Assign manager to site (requires ADMIN_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/sites/:site_id/technicians/:user_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id/technicians/:user_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id", "technicians", ":user_id"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								},
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "Technician User UUID"
+								}
+							]
+						},
+						"description": "Assign technician to site (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/sites/:site_id/technicians/:user_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sites/:site_id/technicians/:user_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sites", ":site_id", "technicians", ":user_id"],
+							"variable": [
+								{
+									"key": "site_id",
+									"value": "{{siteId}}",
+									"description": "Site UUID"
+								},
+								{
+									"key": "user_id",
+									"value": "{{userId}}",
+									"description": "Technician User UUID"
+								}
+							]
+						},
+						"description": "Remove technician from site (requires MANAGER_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Assets",
+			"item": [
+				{
+					"name": "GET /api/assets",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/assets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets"]
+						},
+						"description": "Get all assets"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/assets",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Asset\",\n    \"site_id\": \"{{siteId}}\",\n    \"asset_tag\": \"AST-001\",\n    \"asset_type\": \"movable\",\n    \"category\": \"Equipment\",\n    \"description\": \"Asset description\",\n    \"location\": \"Building A, Floor 1\",\n    \"manufacturer\": \"Acme Corp\",\n    \"model\": \"Model X\",\n    \"serial_number\": \"SN123456\",\n    \"purchase_date\": \"2024-01-15\",\n    \"purchase_cost\": \"1500.00\",\n    \"warranty_expiry\": \"2026-01-15\",\n    \"status\": \"active\",\n    \"org_id\": \"{{orgId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/assets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets"]
+						},
+						"description": "Create asset (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/assets/bulk",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"assets\": [\n        {\n            \"name\": \"Bulk Asset 1\",\n            \"site_id\": \"{{siteId}}\",\n            \"asset_type\": \"movable\",\n            \"category\": \"Equipment\"\n        },\n        {\n            \"name\": \"Bulk Asset 2\",\n            \"site_id\": \"{{siteId}}\",\n            \"asset_type\": \"immovable\",\n            \"category\": \"Infrastructure\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/assets/bulk",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets", "bulk"]
+						},
+						"description": "Bulk create assets (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/assets/:asset_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/assets/:asset_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets", ":asset_id"],
+							"variable": [
+								{
+									"key": "asset_id",
+									"value": "{{assetId}}",
+									"description": "Asset UUID"
+								}
+							]
+						},
+						"description": "Get asset by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/assets/:asset_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Asset Name\",\n    \"description\": \"Updated description\",\n    \"location\": \"Building B, Floor 2\",\n    \"status\": \"maintenance\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/assets/:asset_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets", ":asset_id"],
+							"variable": [
+								{
+									"key": "asset_id",
+									"value": "{{assetId}}",
+									"description": "Asset UUID"
+								}
+							]
+						},
+						"description": "Update asset (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/assets/:asset_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/assets/:asset_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets", ":asset_id"],
+							"variable": [
+								{
+									"key": "asset_id",
+									"value": "{{assetId}}",
+									"description": "Asset UUID"
+								}
+							]
+						},
+						"description": "Delete asset (any authenticated user)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/assets/:asset_id/restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/assets/:asset_id/restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets", ":asset_id", "restore"],
+							"variable": [
+								{
+									"key": "asset_id",
+									"value": "{{assetId}}",
+									"description": "Asset UUID"
+								}
+							]
+						},
+						"description": "Restore deleted asset (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/assets/bulk-delete",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"asset-uuid-1\", \"asset-uuid-2\"],\n    \"force\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/assets/bulk-delete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "assets", "bulk-delete"]
+						},
+						"description": "Bulk delete assets (requires MANAGER_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Work Orders",
+			"item": [
+				{
+					"name": "GET /api/work-orders",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders"]
+						},
+						"description": "Get all work orders"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/work-orders",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"New Work Order\",\n    \"description\": \"Work order description\",\n    \"org_id\": \"{{orgId}}\",\n    \"asset_id\": \"{{assetId}}\",\n    \"site_id\": \"{{siteId}}\",\n    \"assignee_id\": \"{{userId}}\",\n    \"priority\": \"medium\",\n    \"location\": \"Building A\",\n    \"scheduled_start\": \"2024-03-01T09:00:00Z\",\n    \"scheduled_end\": \"2024-03-01T17:00:00Z\",\n    \"estimated_hours\": 4\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders"]
+						},
+						"description": "Create work order (ALL_WO_ROLES: super_admin, org_admin, facility_manager, technician, requestor)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/work-orders/:wo_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Get work order by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/work-orders/:wo_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Updated Work Order Title\",\n    \"description\": \"Updated description\",\n    \"priority\": \"high\",\n    \"status\": \"in_progress\",\n    \"location\": \"Building B\",\n    \"scheduled_start\": \"2024-03-02T09:00:00Z\",\n    \"scheduled_end\": \"2024-03-02T17:00:00Z\",\n    \"estimated_hours\": 6,\n    \"actual_hours\": 2,\n    \"notes\": \"Work started, additional parts needed\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Update work order (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH /api/work-orders/:wo_id/status",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"completed\",\n    \"notes\": \"Work completed successfully\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "status"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Update work order status (MANAGER_ROLES + TECHNICIAN). Status enum: new, open, in_progress, on_hold, pending_review, completed, cancelled"
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH /api/work-orders/:wo_id/assign",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"assignee_id\": \"{{userId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/assign",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "assign"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Assign work order (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/work-orders/:wo_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Delete work order (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/work-orders/:wo_id/restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "restore"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Restore deleted work order (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/work-orders/bulk-delete",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"wo-uuid-1\", \"wo-uuid-2\"],\n    \"force\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/bulk-delete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", "bulk-delete"]
+						},
+						"description": "Bulk delete work orders (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/work-orders/:wo_id/comments",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "comments"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Get comments for work order"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/work-orders/:wo_id/comments",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Work order comment here\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "comments"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Add comment to work order (MANAGER_ROLES + TECHNICIAN)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/work-orders/:wo_id/inventory",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "inventory"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Get used parts for work order"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/work-orders/:wo_id/inventory",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"inventory_item_id\": \"{{inventoryItemId}}\",\n    \"quantity_used\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "inventory"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Add inventory usage to work order (MANAGER_ROLES + TECHNICIAN)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/work-orders/:wo_id/inventory/:usage_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/inventory/:usage_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "inventory", ":usage_id"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								},
+								{
+									"key": "usage_id",
+									"value": "usage-uuid",
+									"description": "Inventory Usage UUID"
+								}
+							]
+						},
+						"description": "Remove inventory usage from work order (MANAGER_ROLES + TECHNICIAN)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/work-orders/:wo_id/attachments",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "images",
+									"type": "file",
+									"src": "",
+									"description": "Image files (max 3)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/work-orders/:wo_id/attachments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "work-orders", ":wo_id", "attachments"],
+							"variable": [
+								{
+									"key": "wo_id",
+									"value": "{{workOrderId}}",
+									"description": "Work Order UUID"
+								}
+							]
+						},
+						"description": "Add image attachments to work order (MANAGER_ROLES + TECHNICIAN). Multipart upload, max 3 images."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "PM Schedules",
+			"item": [
+				{
+					"name": "GET /api/pm-schedules",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules"]
+						},
+						"description": "Get all PM schedules"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/pm-schedules",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"org_id\": \"{{orgId}}\",\n    \"site_id\": \"{{siteId}}\",\n    \"asset_id\": \"{{assetId}}\",\n    \"name\": \"Monthly PM Check\",\n    \"description\": \"Monthly preventive maintenance check\",\n    \"schedule_logic\": \"FIXED\",\n    \"is_paused\": false,\n    \"triggers\": [\n        {\n            \"trigger_type\": \"TIME\",\n            \"cron_expression\": \"0 9 1 * *\",\n            \"lead_time_days\": 7\n        }\n    ],\n    \"template\": {\n        \"priority\": \"medium\",\n        \"estimated_hours\": 2,\n        \"assignee_id\": \"{{userId}}\"\n    },\n    \"tasks\": [\n        {\"description\": \"Inspect equipment\"},\n        {\"description\": \"Replace filters\"},\n        {\"description\": \"Test safety controls\"}\n    ],\n    \"parts\": [\n        {\"inventory_item_id\": \"{{inventoryItemId}}\", \"quantity_required\": 1}\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules"]
+						},
+						"description": "Create PM schedule (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/pm-schedules/bulk-delete",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"pm-uuid-1\", \"pm-uuid-2\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules/bulk-delete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules", "bulk-delete"]
+						},
+						"description": "Bulk delete PM schedules (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/pm-schedules/:pm_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules/:pm_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules", ":pm_id"],
+							"variable": [
+								{
+									"key": "pm_id",
+									"value": "{{pmScheduleId}}",
+									"description": "PM Schedule UUID"
+								}
+							]
+						},
+						"description": "Get PM schedule by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/pm-schedules/:pm_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated PM Schedule Name\",\n    \"description\": \"Updated description\",\n    \"is_paused\": true,\n    \"schedule_logic\": \"FLOATING\",\n    \"triggers\": [\n        {\n            \"trigger_type\": \"METER\",\n            \"meter_interval\": 1000,\n            \"lead_time_days\": 14\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules/:pm_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules", ":pm_id"],
+							"variable": [
+								{
+									"key": "pm_id",
+									"value": "{{pmScheduleId}}",
+									"description": "PM Schedule UUID"
+								}
+							]
+						},
+						"description": "Update PM schedule (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/pm-schedules/:pm_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules/:pm_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules", ":pm_id"],
+							"variable": [
+								{
+									"key": "pm_id",
+									"value": "{{pmScheduleId}}",
+									"description": "PM Schedule UUID"
+								}
+							]
+						},
+						"description": "Delete PM schedule (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/pm-schedules/:pm_id/restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pm-schedules/:pm_id/restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pm-schedules", ":pm_id", "restore"],
+							"variable": [
+								{
+									"key": "pm_id",
+									"value": "{{pmScheduleId}}",
+									"description": "PM Schedule UUID"
+								}
+							]
+						},
+						"description": "Restore deleted PM schedule (requires MANAGER_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Inventory",
+			"item": [
+				{
+					"name": "GET /api/inventory",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "Get all inventory items"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/inventory/stats",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "stats"]
+						},
+						"description": "Get inventory statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/inventory/categories",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "categories"]
+						},
+						"description": "Get inventory categories"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/inventory",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Inventory Item\",\n    \"description\": \"Item description\",\n    \"sku\": \"SKU-001\",\n    \"category\": \"Parts\",\n    \"quantity\": 100,\n    \"min_quantity\": 10,\n    \"unit\": \"pcs\",\n    \"unit_cost\": \"25.00\",\n    \"storage_location\": \"Warehouse A, Shelf 1\",\n    \"site_id\": \"{{siteId}}\",\n    \"org_id\": \"{{orgId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "Create inventory item (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/inventory/bulk",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"items\": [\n        {\n            \"name\": \"Bulk Item 1\",\n            \"sku\": \"BULK-001\",\n            \"category\": \"Parts\",\n            \"quantity\": 50,\n            \"min_quantity\": 5\n        },\n        {\n            \"name\": \"Bulk Item 2\",\n            \"sku\": \"BULK-002\",\n            \"category\": \"Tools\",\n            \"quantity\": 20,\n            \"min_quantity\": 2\n        }\n    ],\n    \"org_id\": \"{{orgId}}\",\n    \"site_id\": \"{{siteId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/bulk",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "bulk"]
+						},
+						"description": "Bulk create inventory items (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/inventory/:item_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:item_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":item_id"],
+							"variable": [
+								{
+									"key": "item_id",
+									"value": "{{inventoryItemId}}",
+									"description": "Inventory Item UUID"
+								}
+							]
+						},
+						"description": "Get inventory item by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "PUT /api/inventory/:item_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Item Name\",\n    \"description\": \"Updated description\",\n    \"quantity\": 150,\n    \"min_quantity\": 20,\n    \"unit_cost\": \"30.00\",\n    \"storage_location\": \"Warehouse B, Shelf 2\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:item_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":item_id"],
+							"variable": [
+								{
+									"key": "item_id",
+									"value": "{{inventoryItemId}}",
+									"description": "Inventory Item UUID"
+								}
+							]
+						},
+						"description": "Update inventory item (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE /api/inventory/:item_id",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:item_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":item_id"],
+							"variable": [
+								{
+									"key": "item_id",
+									"value": "{{inventoryItemId}}",
+									"description": "Inventory Item UUID"
+								}
+							]
+						},
+						"description": "Delete inventory item (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/inventory/:item_id/restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:item_id/restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":item_id", "restore"],
+							"variable": [
+								{
+									"key": "item_id",
+									"value": "{{inventoryItemId}}",
+									"description": "Inventory Item UUID"
+								}
+							]
+						},
+						"description": "Restore deleted inventory item (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/inventory/bulk-delete",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"item-uuid-1\", \"item-uuid-2\"],\n    \"force\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/bulk-delete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "bulk-delete"]
+						},
+						"description": "Bulk delete inventory items (requires MANAGER_ROLES)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST /api/inventory/bulk-restore",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"item-uuid-1\", \"item-uuid-2\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/bulk-restore",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "bulk-restore"]
+						},
+						"description": "Bulk restore inventory items (requires MANAGER_ROLES)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "GET /api/analytics/dashboard",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "dashboard"]
+						},
+						"description": "Get dashboard analytics (any authenticated user)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/technician-dashboard",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/technician-dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "technician-dashboard"]
+						},
+						"description": "Get technician dashboard (any authenticated user)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/my-requests",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/my-requests",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "my-requests"]
+						},
+						"description": "Get current user's requests (any authenticated user)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/comprehensive",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/comprehensive",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "comprehensive"]
+						},
+						"description": "Get comprehensive dashboard (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/work-orders-trend",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/work-orders-trend",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "work-orders-trend"]
+						},
+						"description": "Get work orders trend (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/work-orders-by-site",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/work-orders-by-site",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "work-orders-by-site"]
+						},
+						"description": "Get work orders by site (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/work-orders-by-category",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/work-orders-by-category",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "work-orders-by-category"]
+						},
+						"description": "Get work orders by category (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/top-assets",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/top-assets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "top-assets"]
+						},
+						"description": "Get top assets (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/workload-by-day",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/workload-by-day",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "workload-by-day"]
+						},
+						"description": "Get workload by day (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/preventive-vs-reactive",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/preventive-vs-reactive",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "preventive-vs-reactive"]
+						},
+						"description": "Get preventive vs reactive ratio (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/overdue-trend",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/overdue-trend",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "overdue-trend"]
+						},
+						"description": "Get overdue trend (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/estimated-vs-actual",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/estimated-vs-actual",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "estimated-vs-actual"]
+						},
+						"description": "Get estimated vs actual hours (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/site-comparison",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/site-comparison",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "site-comparison"]
+						},
+						"description": "Get site comparison (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/avg-resolution-time",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/avg-resolution-time",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "avg-resolution-time"]
+						},
+						"description": "Get average resolution time (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/technician-performance",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/technician-performance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "technician-performance"]
+						},
+						"description": "Get technician performance (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/pm-compliance",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/pm-compliance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "pm-compliance"]
+						},
+						"description": "Get PM compliance (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/pm-status",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/pm-status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "pm-status"]
+						},
+						"description": "Get PM schedule status (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/inventory-stats",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/inventory-stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "inventory-stats"]
+						},
+						"description": "Get inventory statistics (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/inventory-top-parts",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/inventory-top-parts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "inventory-top-parts"]
+						},
+						"description": "Get top used inventory parts (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/inventory-by-category",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/inventory-by-category",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "inventory-by-category"]
+						},
+						"description": "Get inventory by category (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/inventory-cost-trend",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/inventory-cost-trend",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "inventory-cost-trend"]
+						},
+						"description": "Get inventory cost trend (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/asset-stats",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/asset-stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "asset-stats"]
+						},
+						"description": "Get asset statistics (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/users-by-role",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/users-by-role",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "users-by-role"]
+						},
+						"description": "Get users by role (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/user-growth",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/user-growth",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "user-growth"]
+						},
+						"description": "Get user growth (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/site-technician-counts",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/site-technician-counts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "site-technician-counts"]
+						},
+						"description": "Get site technician counts (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/top-requesters",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/top-requesters",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "top-requesters"]
+						},
+						"description": "Get top requesters (requires analytics:view permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/analytics/audit-activity",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/audit-activity",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "audit-activity"]
+						},
+						"description": "Get audit activity (requires analytics:view permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI Agent",
+			"item": [
+				{
+					"name": "POST /api/ai-agent/work-orders/smart-create",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"The air conditioning unit in Building A, Room 101 is making unusual noise and not cooling properly. It started this morning.\",\n    \"site_id\": \"{{siteId}}\",\n    \"location\": \"Building A, Room 101\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ai-agent/work-orders/smart-create",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "ai-agent", "work-orders", "smart-create"]
+						},
+						"description": "Smart create work order using AI (any authenticated user)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET /api/ai-agent/work-orders/latest",
+					"request": {
+						"auth": {
+							"type": "inherit"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ai-agent/work-orders/latest",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "ai-agent", "work-orders", "latest"]
+						},
+						"description": "Get latest work orders by site/location (any authenticated user)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "GET /health",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["health"]
+						},
+						"description": "Health check endpoint. Returns database status, uptime, and memory usage. Public endpoint."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
