@@ -7,11 +7,13 @@ import path from 'path';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import swaggerUi from 'swagger-ui-express';
 import { sequelize, User } from './models';
 import { errorHandler } from './middleware/errorHandler';
 import { requestId } from './middleware/requestId';
 import { requestLogger } from './middleware/requestLogger';
 import logger from './config/logger';
+import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -122,6 +124,16 @@ import cron from 'node-cron';
 import { PMGeneratorWorker } from './workers/pmGenerator.worker';
 
 app.use('/api', apiRoutes);
+
+// ─── Swagger Documentation ─────────────────────────────────────────
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'CMMS Platform API Docs',
+}));
+app.get('/api-docs.json', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(swaggerSpec);
+});
 
 // ─── Background Workers ────────────────────────────────────────────
 const pmWorker = new PMGeneratorWorker();
