@@ -13,6 +13,7 @@ const router = Router();
  *     summary: User login
  *     description: Authenticate user and receive JWT token
  *     tags: [Authentication]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:

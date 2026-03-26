@@ -13,6 +13,7 @@ const router = Router();
  *     summary: Create organization
  *     description: Create a new organization (public endpoint)
  *     tags: [Organizations]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:

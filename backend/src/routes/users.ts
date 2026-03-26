@@ -54,17 +54,6 @@ router.use(authenticate);
  *     responses:
  *       200:
  *         description: List of users
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/PaginatedResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/UserResponse'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
@@ -131,10 +120,6 @@ router.get('/', userController.getAll);
  *     responses:
  *       201:
  *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UserResponse'
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
@@ -238,10 +223,6 @@ router.put('/me/password', userController.updatePassword);
  *     responses:
  *       200:
  *         description: User details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UserResponse'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
