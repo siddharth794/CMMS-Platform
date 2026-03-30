@@ -1,6 +1,15 @@
 import { mock, MockProxy } from 'jest-mock-extended';
 import type { Request, Response, NextFunction } from 'express';
 
+jest.mock('swagger-ui-express', () => {
+  return {
+    serve: [],
+    setup: function() { return function() {}; },
+  };
+});
+
+jest.mock('swagger-jsdoc', () => () => ({}));
+
 export * from 'jest-mock-extended';
 
 export const createMockRequest = (overrides?: Partial<Request>): MockProxy<Request> => {
