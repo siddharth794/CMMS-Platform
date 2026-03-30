@@ -1,0 +1,762 @@
+---
+title: CMMS Platform - Checklist Feature Implementation Plan
+author: Development Team
+date: March 2026
+subject: Software Implementation Plan
+keywords: CMMS, Checklist, Maintenance, Feature Implementation
+---
+
+<style>
+body { font-family: 'Calibri', Arial, sans-serif; line-height: 1.6; margin: 2cm; }
+h1 { color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px; font-size: 24pt; }
+h2 { color: #2c5282; margin-top: 24px; font-size: 16pt; }
+h3 { color: #2d3748; margin-top: 16px; font-size: 13pt; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+th, td { border: 1px solid #cbd5e0; padding: 10px; text-align: left; }
+th { background-color: #edf2f7; font-weight: bold; }
+code { background-color: #f7fafc; padding: 2px 6px; border-radius: 3px; font-family: Consolas, monospace; font-size: 11pt; }
+pre { background-color: #f7fafc; padding: 12px; border-radius: 5px; overflow-x: auto; font-size: 10pt; }
+.highlight { background-color: #fefcbf; padding: 2px 4px; border-radius: 3px; }
+</style>
+
+# CMMS Platform - Checklist Feature Implementation Plan
+
+**Project:** CMMS (Computerized Maintenance Management System) Platform  
+**Document Type:** Technical Implementation Plan  
+**Version:** 1.0  
+**Date:** March 27, 2026  
+**Status:** Draft  
+
+---
+
+## 1. Executive Summary
+
+This document outlines the comprehensive implementation plan for adding a **Checklist Feature** to the CMMS Platform. The feature enables users to define, track, and complete step-by-step maintenance tasks through interactive checklists that can be linked to Work Orders, Assets, or PM Schedules.
+
+### 1.1 Objectives
+
+- Provide a structured way to define and track maintenance task completion
+- Enable linking checklists to Work Orders for better task accountability
+- Support optional linking to Assets and PM Schedules
+- Track completion status with timestamps and user attribution
+- Integrate seamlessly with existing RBAC and authentication systems
+
+### 1.2 Scope
+
+- **In Scope:** Checklist creation, item management, completion tracking, Work Order integration, API endpoints, frontend UI
+- **Out of Scope:** Drag-and-drop reordering, checklist templates library, notifications, offline support
+
+---
+
+## 2. Technical Architecture
+
+### 2.1 System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (React)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ ChecklistsPage │  │ ChecklistDetail │  │ WorkOrderDetail    │  │
+│  │              │  │ Page          │  │ (Checklist Tab)      │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                            │                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              React Query Hooks (useChecklists.ts)          │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Backend (Express)                        │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                    Routes (/api/v1/checklists)              │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                            │                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │  Controller  │  │   Service    │  │     Repository       │  │
+│  │              │──▶│              │──▶│                      │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                            │                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Models (Checklist, ChecklistItem)             │ │
+│  │              Validators (Zod Schemas)                       │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Database (MySQL + Sequelize)                  │
+│  ┌──────────────────────┐  ┌───────────────────────────────┐   │
+│  │      Checklists      │  │       ChecklistItems          │   │
+│  │      (Header)        │  │       (Line Items)            │   │
+│  └──────────────────────┘  └───────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Database Design
+
+### 3.1 Database Schema
+
+#### Table: `Checklists`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK, DEFAULT UUIDV4 | Unique identifier |
+| `org_id` | UUID | FK, NOT NULL | Organization reference |
+| `work_order_id` | UUID | FK, NULLABLE | Optional Work Order link |
+| `asset_id` | UUID | FK, NULLABLE | Optional Asset link |
+| `pm_schedule_id` | UUID | FK, NULLABLE | Optional PM Schedule link |
+| `name` | VARCHAR(255) | NOT NULL | Checklist name |
+| `description` | TEXT | NULLABLE | Detailed description |
+| `is_required` | BOOLEAN | DEFAULT FALSE | Must complete before WO completion |
+| `is_active` | BOOLEAN | DEFAULT TRUE | Soft delete flag |
+| `created_by` | UUID | FK, NOT NULL | User who created |
+| `created_at` | DATETIME | DEFAULT NOW | Creation timestamp |
+| `updated_at` | DATETIME | AUTO | Last update timestamp |
+| `deleted_at` | DATETIME | NULLABLE | Soft delete timestamp |
+
+#### Table: `ChecklistItems`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK, DEFAULT UUIDV4 | Unique identifier |
+| `checklist_id` | UUID | FK, NOT NULL | Parent checklist reference |
+| `description` | VARCHAR(500) | NOT NULL | Task description |
+| `order_index` | INT | DEFAULT 0 | Display order |
+| `is_completed` | BOOLEAN | DEFAULT FALSE | Completion status |
+| `completed_by` | UUID | FK, NULLABLE | User who completed |
+| `completed_at` | DATETIME | NULLABLE | Completion timestamp |
+| `notes` | TEXT | NULLABLE | Optional notes |
+| `created_at` | DATETIME | DEFAULT NOW | Creation timestamp |
+| `updated_at` | DATETIME | AUTO | Last update timestamp |
+| `deleted_at` | DATETIME | NULLABLE | Soft delete timestamp |
+
+### 3.2 Relationships
+
+```
+Organization (1) ──────────< (N) Checklists
+WorkOrder (1) ────────────< (N) Checklists (optional)
+Asset (1) ────────────────< (N) Checklists (optional)
+PMSchedule (1) ───────────< (N) Checklists (optional)
+User (1) ─────────────────< (N) Checklists (created_by)
+Checklist (1) ────────────< (N) ChecklistItems
+User (1) ─────────────────< (N) ChecklistItems (completed_by)
+```
+
+---
+
+## 4. Backend Implementation
+
+### 4.1 File Structure
+
+Create the following files in the backend:
+
+```
+backend/src/
+├── models/
+│   └── checklist.model.ts          [NEW]
+├── validators/
+│   └── checklist.validator.ts      [NEW]
+├── repositories/
+│   └── checklist.repository.ts     [NEW]
+├── services/
+│   └── checklist.service.ts         [NEW]
+├── controllers/
+│   └── checklist.controller.ts      [NEW]
+└── routes/
+    └── checklists.ts                [NEW]
+```
+
+### 4.2 Files to Create
+
+| File | Purpose | Lines (Est.) |
+|------|---------|-------------|
+| `models/checklist.model.ts` | Sequelize models with associations | ~100 |
+| `validators/checklist.validator.ts` | Zod validation schemas | ~60 |
+| `repositories/checklist.repository.ts` | Data access layer | ~150 |
+| `services/checklist.service.ts` | Business logic | ~200 |
+| `controllers/checklist.controller.ts` | HTTP request handlers | ~150 |
+| `routes/checklists.ts` | Express routes with Swagger docs | ~120 |
+
+### 4.3 Files to Modify
+
+| File | Changes |
+|------|---------|
+| `models/index.ts` | Register Checklist and ChecklistItem models |
+| `routes/index.ts` | Add `/api/v1/checklists` route |
+| `types/dto.ts` | Add CreateChecklistDTO, UpdateChecklistDTO |
+
+### 4.4 API Endpoints
+
+#### Checklist Endpoints
+
+| Method | Endpoint | Description | Auth | Roles |
+|--------|----------|-------------|------|-------|
+| GET | `/checklists` | List all checklists (paginated) | JWT | All authenticated |
+| POST | `/checklists` | Create new checklist | JWT | manager_roles |
+| GET | `/checklists/:id` | Get checklist with items | JWT | All authenticated |
+| PUT | `/checklists/:id` | Update checklist | JWT | manager_roles |
+| DELETE | `/checklists/:id` | Soft delete checklist | JWT | manager_roles |
+| POST | `/checklists/:id/restore` | Restore deleted checklist | JWT | manager_roles |
+
+#### Checklist Item Endpoints
+
+| Method | Endpoint | Description | Auth | Roles |
+|--------|----------|-------------|------|-------|
+| POST | `/checklists/:id/items` | Add item to checklist | JWT | manager_roles |
+| PUT | `/checklists/:id/items/:item_id` | Update item | JWT | manager_roles |
+| DELETE | `/checklists/:id/items/:item_id` | Remove item | JWT | manager_roles |
+| PATCH | `/checklists/:id/items/:item_id/toggle` | Toggle completion | JWT | all_wo_roles |
+| POST | `/checklists/:id/complete-all` | Mark all items complete | JWT | all_wo_roles |
+
+### 4.5 Request/Response Formats
+
+#### Create Checklist
+
+**Request:**
+```json
+{
+  "name": "Preventive Maintenance Checklist",
+  "description": "Standard PM tasks for HVAC units",
+  "work_order_id": "uuid-string (optional)",
+  "asset_id": "uuid-string (optional)",
+  "pm_schedule_id": "uuid-string (optional)",
+  "is_required": false,
+  "items": [
+    { "description": "Inspect air filters", "order_index": 0 },
+    { "description": "Check refrigerant levels", "order_index": 1 },
+    { "description": "Clean condenser coils", "order_index": 2 }
+  ]
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid-string",
+  "org_id": "uuid-string",
+  "name": "Preventive Maintenance Checklist",
+  "description": "Standard PM tasks for HVAC units",
+  "is_required": false,
+  "is_active": true,
+  "created_by": "uuid-string",
+  "created_at": "2026-03-27T10:00:00Z",
+  "items": [
+    { "id": "uuid", "description": "Inspect air filters", "order_index": 0, "is_completed": false },
+    { "id": "uuid", "description": "Check refrigerant levels", "order_index": 1, "is_completed": false },
+    { "id": "uuid", "description": "Clean condenser coils", "order_index": 2, "is_completed": false }
+  ]
+}
+```
+
+#### Toggle Item Completion
+
+**Request:**
+```json
+PATCH /checklists/{checklist_id}/items/{item_id}/toggle
+```
+
+**Response (200):**
+```json
+{
+  "id": "uuid-string",
+  "description": "Inspect air filters",
+  "order_index": 0,
+  "is_completed": true,
+  "completed_by": "uuid-string",
+  "completed_at": "2026-03-27T10:15:00Z"
+}
+```
+
+---
+
+## 5. Frontend Implementation
+
+### 5.1 File Structure
+
+Create the following files in the frontend:
+
+```
+frontend/src/
+├── components/
+│   └── checklist/
+│       ├── ChecklistCard.tsx           [NEW]
+│       ├── ChecklistItemRow.tsx        [NEW]
+│       ├── ChecklistForm.tsx           [NEW]
+│       └── ChecklistProgress.tsx        [NEW]
+├── hooks/
+│   └── api/
+│       └── useChecklists.ts            [NEW]
+├── pages/
+│   ├── ChecklistsPage.tsx              [NEW]
+│   ├── ChecklistDetailPage.tsx         [NEW]
+│   └── CreateChecklistPage.tsx         [NEW]
+├── types/
+│   └── models.ts                       [MODIFY - add types]
+└── lib/
+    └── api.tsx                         [MODIFY - add API]
+```
+
+### 5.2 TypeScript Types
+
+Add to `types/models.ts`:
+
+```typescript
+export interface ChecklistItem {
+  id: string;
+  checklist_id: string;
+  description: string;
+  order_index: number;
+  is_completed: boolean;
+  completed_by?: string | null;
+  completed_at?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Checklist {
+  id: string;
+  org_id: string;
+  work_order_id?: string | null;
+  asset_id?: string | null;
+  pm_schedule_id?: string | null;
+  name: string;
+  description?: string | null;
+  is_required: boolean;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  items?: ChecklistItem[];
+  // Populated relations
+  WorkOrder?: WorkOrder;
+  Asset?: Asset;
+  CreatedBy?: User;
+}
+
+export interface CreateChecklistDTO {
+  name: string;
+  description?: string;
+  work_order_id?: string;
+  asset_id?: string;
+  pm_schedule_id?: string;
+  is_required?: boolean;
+  items?: { description: string; order_index: number }[];
+}
+
+export interface UpdateChecklistDTO extends Partial<CreateChecklistDTO> {}
+```
+
+### 5.3 API Functions
+
+Add to `lib/api.tsx`:
+
+```typescript
+export const checklistsApi = {
+  list: (params?: { skip?: number; limit?: number; work_order_id?: string }) =>
+    api.get('/checklists', { params }),
+  get: (id: string) => api.get(`/checklists/${id}`),
+  create: (data: CreateChecklistDTO) => api.post('/checklists', data),
+  update: (id: string, data: UpdateChecklistDTO) => api.put(`/checklists/${id}`, data),
+  delete: (id: string) => api.delete(`/checklists/${id}`),
+  restore: (id: string) => api.post(`/checklists/${id}/restore`),
+  addItem: (checklistId: string, item: { description: string; order_index: number }) =>
+    api.post(`/checklists/${checklistId}/items`, item),
+  updateItem: (checklistId: string, itemId: string, data: Partial<ChecklistItem>) =>
+    api.put(`/checklists/${checklistId}/items/${itemId}`, data),
+  deleteItem: (checklistId: string, itemId: string) =>
+    api.delete(`/checklists/${checklistId}/items/${itemId}`),
+  toggleItem: (checklistId: string, itemId: string) =>
+    api.patch(`/checklists/${checklistId}/items/${itemId}/toggle`),
+  completeAll: (checklistId: string) =>
+    api.post(`/checklists/${checklistId}/complete-all`),
+};
+```
+
+### 5.4 React Query Hooks
+
+Create `hooks/api/useChecklists.ts`:
+
+```typescript
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { checklistsApi } from '@/lib/api';
+import { useNotification } from '@/context/NotificationContext';
+
+export const useChecklists = (params?: { skip?: number; limit?: number; work_order_id?: string }) => {
+  return useQuery({
+    queryKey: ['checklists', params],
+    queryFn: () => checklistsApi.list(params).then(res => res.data),
+  });
+};
+
+export const useChecklist = (id: string) => {
+  return useQuery({
+    queryKey: ['checklists', id],
+    queryFn: () => checklistsApi.get(id).then(res => res.data),
+    enabled: !!id,
+  });
+};
+
+export const useCreateChecklist = () => {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotification();
+  
+  return useMutation({
+    mutationFn: (data: any) => checklistsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklists'] });
+      addNotification('success', 'Checklist created successfully');
+    },
+    onError: (error: any) => {
+      addNotification('error', error.response?.data?.detail || 'Failed to create checklist');
+    },
+  });
+};
+
+// ... similar hooks for update, delete, item operations
+```
+
+### 5.5 Components
+
+#### ChecklistCard Component
+
+Displays a checklist summary with progress bar and item list.
+
+```typescript
+interface ChecklistCardProps {
+  checklist: Checklist;
+  onToggle?: (itemId: string) => void;
+  onEdit?: () => void;
+  showActions?: boolean;
+}
+
+// Features:
+// - Progress bar showing completion percentage
+// - List of items with checkboxes
+// - Completion timestamp and user attribution
+// - Edit/Delete actions (if permitted)
+```
+
+#### ChecklistForm Component
+
+Form for creating/editing checklists.
+
+```typescript
+interface ChecklistFormProps {
+  initialData?: Partial<Checklist>;
+  onSubmit: (data: CreateChecklistDTO) => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+// Features:
+// - Name and description inputs
+// - Link selection (Work Order, Asset, PM Schedule - optional)
+// - Dynamic item list with add/remove
+// - Item reordering (optional)
+```
+
+#### ChecklistItemRow Component
+
+Single checklist item with toggle functionality.
+
+```typescript
+interface ChecklistItemRowProps {
+  item: ChecklistItem;
+  onToggle: () => void;
+  onUpdate: (data: Partial<ChecklistItem>) => void;
+  onDelete: () => void;
+  disabled?: boolean;
+}
+```
+
+### 5.6 Pages
+
+#### ChecklistsPage
+
+- List view with filtering by Work Order/Asset
+- Search functionality
+- Create new checklist button
+- Quick actions (view, edit, delete)
+
+#### ChecklistDetailPage
+
+- Full checklist view with all items
+- Toggle item completion
+- Add/edit/remove items
+- Checklist metadata display
+- Link management
+
+#### CreateChecklistPage
+
+- Dedicated page for checklist creation
+- Multi-step form (optional): Basic Info → Items → Review
+- Validation feedback
+
+### 5.7 Routes
+
+Add to `App.tsx`:
+
+```typescript
+const ChecklistsPage = lazy(() => import('@/pages/ChecklistsPage'));
+const ChecklistDetailPage = lazy(() => import('@/pages/ChecklistDetailPage'));
+const CreateChecklistPage = lazy(() => import('@/pages/CreateChecklistPage'));
+
+<Route path="checklists" element={<ChecklistsPage />} />
+<Route path="checklists/new" element={<CreateChecklistPage />} />
+<Route path="checklists/:id" element={<ChecklistDetailPage />} />
+```
+
+### 5.8 Navigation
+
+Add to `Layout.tsx` sidebar:
+
+```tsx
+<SidebarItem
+  icon={<ClipboardCheck className="h-5 w-5" />}
+  label="Checklists"
+  href="/checklists"
+/>
+```
+
+---
+
+## 6. Work Order Integration
+
+### 6.1 Checklist Tab in Work Order Detail
+
+Add a new tab in `WorkOrderDetailPage.tsx`:
+
+```tsx
+<TabsContent value="checklists" className="space-y-4">
+  <ChecklistsSection workOrderId={workOrder.id} />
+</TabsContent>
+```
+
+### 6.2 Required Checklist Validation (Optional)
+
+When Work Order status changes to `completed` or `pending_review`:
+
+```typescript
+// In work order status update logic
+const checklist = await checklistService.getByWorkOrderId(workOrderId);
+if (checklist?.is_required && !allItemsComplete(checklist)) {
+  throw new BadRequestError('Please complete all required checklist items');
+}
+```
+
+---
+
+## 7. Database Migration
+
+### 7.1 Migration File
+
+Create `backend/src/migrations/XXXXXXXX-create-checklist-tables.js`:
+
+```javascript
+'use strict';
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    // Create Checklists table
+    await queryInterface.createTable('Checklists', {
+      id: { type: Sequelize.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },
+      org_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'Organizations', key: 'id' } },
+      work_order_id: { type: Sequelize.UUID, allowNull: true, references: { model: 'WorkOrders', key: 'id' } },
+      asset_id: { type: Sequelize.UUID, allowNull: true, references: { model: 'Assets', key: 'id' } },
+      pm_schedule_id: { type: Sequelize.UUID, allowNull: true, references: { model: 'PMSchedules', key: 'id' } },
+      name: { type: Sequelize.STRING(255), allowNull: false },
+      description: { type: Sequelize.TEXT, allowNull: true },
+      is_required: { type: Sequelize.BOOLEAN, defaultValue: false },
+      is_active: { type: Sequelize.BOOLEAN, defaultValue: true },
+      created_by: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' } },
+      created_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+      updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+      deleted_at: { type: Sequelize.DATE, allowNull: true },
+    });
+
+    // Create ChecklistItems table
+    await queryInterface.createTable('ChecklistItems', {
+      id: { type: Sequelize.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },
+      checklist_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'Checklists', key: 'id' } },
+      description: { type: Sequelize.STRING(500), allowNull: false },
+      order_index: { type: Sequelize.INTEGER, defaultValue: 0 },
+      is_completed: { type: Sequelize.BOOLEAN, defaultValue: false },
+      completed_by: { type: Sequelize.UUID, allowNull: true, references: { model: 'Users', key: 'id' } },
+      completed_at: { type: Sequelize.DATE, allowNull: true },
+      notes: { type: Sequelize.TEXT, allowNull: true },
+      created_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+      updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+      deleted_at: { type: Sequelize.DATE, allowNull: true },
+    });
+
+    // Add indexes
+    await queryInterface.addIndex('Checklists', ['org_id']);
+    await queryInterface.addIndex('Checklists', ['work_order_id']);
+    await queryInterface.addIndex('ChecklistItems', ['checklist_id']);
+  },
+
+  async down(queryInterface) {
+    await queryInterface.dropTable('ChecklistItems');
+    await queryInterface.dropTable('Checklists');
+  },
+};
+```
+
+---
+
+## 8. Security & Authorization
+
+### 8.1 Permission Definitions
+
+Add to `constants/roles.ts`:
+
+```typescript
+export const CHECKLIST_PERMISSIONS = {
+  VIEW: 'checklist:view',
+  CREATE: 'checklist:create',
+  UPDATE: 'checklist:update',
+  DELETE: 'checklist:delete',
+  COMPLETE_ITEMS: 'checklist:complete_items',
+};
+```
+
+### 8.2 Role-Based Access
+
+| Action | Super Admin | Org Admin | Facility Manager | Technician | Requestor |
+|--------|-------------|-----------|-------------------|------------|-----------|
+| View checklists | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create checklist | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Edit checklist | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Delete checklist | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Toggle items | ✓ | ✓ | ✓ | ✓ | ✗ |
+| View own WO checklists | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+---
+
+## 9. UI/UX Design
+
+### 9.1 Color Scheme
+
+Follow existing CMMS platform design tokens:
+
+| Element | Light Mode | Dark Mode |
+|---------|-----------|-----------|
+| Primary | `#1a365d` | `#63b3ed` |
+| Success (completed) | `#38a169` | `#68d391` |
+| Pending | `#d69e2e` | `#faf089` |
+| Required badge | `#e53e3e` | `#fc8181` |
+
+### 9.2 Component States
+
+**Checklist Item States:**
+- **Pending:** Default checkbox, normal text
+- **Completed:** Checked checkbox, strikethrough text (optional), muted color
+- **Disabled:** Grayed out, no interaction
+
+**Progress Indicator:**
+- Visual progress bar with percentage
+- Color changes: < 50% yellow, 50-99% blue, 100% green
+
+### 9.3 Responsive Design
+
+- Mobile: Stack items vertically, full-width buttons
+- Tablet: 2-column layout for forms
+- Desktop: Full layout with sidebar
+
+---
+
+## 10. Testing Strategy
+
+### 10.1 Unit Tests
+
+- Model validation
+- Service business logic
+- Zod validator schemas
+
+### 10.2 Integration Tests
+
+- API endpoint testing
+- Database operations
+- Authentication/authorization
+
+### 10.3 E2E Tests
+
+- Create checklist flow
+- Complete checklist items
+- Link checklist to work order
+
+---
+
+## 11. Implementation Phases
+
+### Phase 1: Backend Core (Est. 2-3 days)
+
+1. Create database migration
+2. Implement Sequelize models
+3. Add Zod validators
+4. Build repository layer
+5. Create service layer
+6. Implement controller
+7. Add routes with Swagger
+
+**Deliverable:** Fully functional REST API
+
+### Phase 2: Frontend Core (Est. 3-4 days)
+
+1. Add TypeScript types
+2. Implement API functions
+3. Create React Query hooks
+4. Build UI components
+5. Create pages
+6. Add routing
+
+**Deliverable:** Full frontend with CRUD operations
+
+### Phase 3: Integration (Est. 1-2 days)
+
+1. Add checklist tab to Work Order detail
+2. Implement completion validation (optional)
+3. Add navigation link
+4. Final testing and bug fixes
+
+**Deliverable:** Integrated feature ready for use
+
+### Total Estimated Time: 6-9 days
+
+---
+
+## 12. Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Scope creep | Medium | High | Clear scope definition; defer optional features |
+| Integration complexity | Low | Medium | Start with standalone checklist first |
+| Performance with large lists | Low | Low | Add pagination for items if needed |
+| Concurrent edit conflicts | Low | Low | Implement optimistic locking if needed |
+
+---
+
+## 13. Documentation Requirements
+
+- API documentation (Swagger/OpenAPI)
+- User guide for checklist feature
+- Developer documentation for future maintenance
+
+---
+
+## 14. Approval
+
+| Role | Name | Date | Signature |
+|------|------|------|-----------|
+| Project Manager | | | |
+| Technical Lead | | | |
+| QA Lead | | | |
+
+---
+
+*End of Document*
