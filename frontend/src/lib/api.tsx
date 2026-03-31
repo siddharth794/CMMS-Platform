@@ -196,6 +196,19 @@ export const sitesApi = {
   removeTechnician: (id: string, userId: string) => api.delete(`/sites/${id}/technicians/${userId}`),
 };
 
+// Checklists
+export const checklistsApi = {
+  list: (params?: any) => api.get('/checklists', { params }),
+  get: (id: string) => api.get(`/checklists/${id}`),
+  create: (data: any) => api.post('/checklists', data),
+  update: (id: string, data: any) => api.put(`/checklists/${id}`, data),
+  delete: (id: string) => api.delete(`/checklists/${id}`),
+  addItem: (checklistId: string, data: any) => api.post(`/checklists/${checklistId}/items`, data),
+  updateItem: (checklistId: string, itemId: string, data: any) => api.put(`/checklists/${checklistId}/items/${itemId}`, data),
+  deleteItem: (checklistId: string, itemId: string) => api.delete(`/checklists/${checklistId}/items/${itemId}`),
+  toggleItem: (checklistId: string, itemId: string, is_completed: boolean) => api.patch(`/checklists/${checklistId}/items/${itemId}/toggle`, { is_completed }),
+};
+
 // Seed Demo Data
 export const seedDemoData = () => api.post('/seed-demo-data');
 
