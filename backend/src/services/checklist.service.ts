@@ -28,7 +28,7 @@ class ChecklistService {
     }
 
     async getChecklists(orgId: string, query: any) {
-        const { skip = 0, limit = 10, search, asset_id, pm_schedule_id, work_order_id, is_template } = query;
+        const { skip = 0, limit = 10, search, asset_id, pm_schedule_id, work_order_id, is_template, record_status } = query;
         
         const where: any = { org_id: orgId };
         if (search) where.name = { [Op.like]: `%${search}%` };
@@ -37,12 +37,18 @@ class ChecklistService {
         if (work_order_id) where.work_order_id = work_order_id;
         if (is_template !== undefined) where.is_template = is_template === 'true';
 
-        const result = await checklistRepository.findAndCountAll(where, Number(skip), Number(limit));
+        let paranoid = true;
+        if (record_status === 'inactive') {
+            paranoid = false;
+            where.deleted_at = { [Op.not]: null };
+        }
+
+        const result = await checklistRepository.findAndCountAll(where, Number(skip), Number(limit), paranoid);
         return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
     }
 
     async getChecklistById(id: string, orgId: string) {
-        const checklist = await checklistRepository.findById(id, orgId);
+        const checklist = await checklistRepository.findById(id, orgId, undefined, false);
         if (!checklist) throw new NotFoundError('Checklist not found');
         return checklist;
     }
@@ -53,10 +59,41 @@ class ChecklistService {
         return this.getChecklistById(id, orgId);
     }
 
-    async deleteChecklist(id: string, orgId: string) {
+    async deleteChecklist(id: string, orgId: string, force: boolean = false) {
         const checklist = await this.getChecklistById(id, orgId);
+        
+        if (force || checklist.deleted_at !== null) {
+            await checklistRepository.delete(id, orgId, true);
+            return { message: 'Checklist permanently deleted' };
+        }
+        
         await checklistRepository.delete(id, orgId);
-        return true;
+        return { message: 'Checklist deactivated (soft delete)' };
+    }
+
+    async bulkDeleteChecklists(ids: string[], orgId: string, force: boolean = false) {
+        let deletedCount = 0;
+        for (const id of ids) {
+            const checklist = await checklistRepository.findById(id, orgId, undefined, false);
+            if (checklist) {
+                 if (force || checklist.deleted_at !== null) {
+                     await checklistRepository.delete(id, orgId, true);
+                 } else {
+                     await checklistRepository.delete(id, orgId);
+                 }
+                 deletedCount++;
+            }
+        }
+        return deletedCount;
+    }
+
+    async restoreChecklist(id: string, orgId: string) {
+        const checklist = await this.getChecklistById(id, orgId);
+        if (checklist.deleted_at !== null) {
+            await checklistRepository.restore(id, orgId);
+            return { message: 'Checklist restored successfully' };
+        }
+        return { message: 'Checklist is already active' };
     }
 
     async addChecklistItem(checklistId: string, orgId: string, data: any) {

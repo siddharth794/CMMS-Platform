@@ -9,18 +9,19 @@ const CHECKLIST_INCLUDES = [
 ];
 
 class ChecklistRepository {
-    async findAndCountAll(where: any, skip: number, limit: number): Promise<{ rows: any[]; count: number }> {
+    async findAndCountAll(where: any, skip: number, limit: number, paranoid: boolean = true): Promise<{ rows: any[]; count: number }> {
         return Checklist.findAndCountAll({
             where,
             include: CHECKLIST_INCLUDES,
             offset: skip,
             limit: limit,
             order: [['created_at', 'DESC']],
-            distinct: true
+            distinct: true,
+            paranoid
         });
     }
 
-    async findById(id: string, orgId: string, transaction?: any): Promise<any> {
+    async findById(id: string, orgId: string, transaction?: any, paranoid: boolean = true): Promise<any> {
         return Checklist.findOne({
             where: { id, org_id: orgId },
             include: [
@@ -33,7 +34,8 @@ class ChecklistRepository {
                 }
             ],
             order: [[{ model: ChecklistItem, as: 'items' }, 'order_index', 'ASC']],
-            transaction
+            transaction,
+            paranoid
         });
     }
 
@@ -60,8 +62,15 @@ class ChecklistRepository {
         return affectedCount;
     }
 
-    async delete(id: string, orgId: string): Promise<number> {
+    async delete(id: string, orgId: string, force: boolean = false): Promise<number> {
         return Checklist.destroy({
+            where: { id, org_id: orgId },
+            force
+        });
+    }
+    
+    async restore(id: string, orgId: string): Promise<void> {
+        await Checklist.restore({
             where: { id, org_id: orgId }
         });
     }

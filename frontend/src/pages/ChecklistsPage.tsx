@@ -2,13 +2,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useChecklists, useDeleteChecklist } from '@/hooks/api/useChecklists';
+import { useChecklists, useDeleteChecklist, useRestoreChecklist, useBulkDeleteChecklists } from '@/hooks/api/useChecklists';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
-import { Plus, Search, Loader2, FileText, Trash2, Edit } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Search, Loader2, FileText, Trash2, Edit, RefreshCw, Trash } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNotification } from '@/context/NotificationContext';
 
@@ -19,15 +21,20 @@ export default function ChecklistsPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [recordStatus, setRecordStatus] = useState('active');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const { data: response, isLoading } = useChecklists({ 
     is_template: 'true', 
     search: searchTerm,
+    record_status: recordStatus,
     skip: (page - 1) * 10,
     limit: 10
   });
   
   const deleteMutation = useDeleteChecklist();
+  const restoreMutation = useRestoreChecklist();
+  const bulkDeleteMutation = useBulkDeleteChecklists();
 
   if (!isManager()) {
     return (
@@ -40,17 +47,54 @@ export default function ChecklistsPage() {
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this template?')) {
-      deleteMutation.mutate(id, {
+    if (confirm(recordStatus === 'active' ? 'Delete this template?' : 'Permanently delete this template?')) {
+      deleteMutation.mutate({ id, force: recordStatus === 'inactive' }, {
         onSuccess: () => {
-          addNotification('success', 'Template deleted successfully');
+          addNotification('success', recordStatus === 'active' ? 'Template deactivated' : 'Template permanently deleted');
+          setSelectedIds([]);
         }
       });
     }
   };
 
+  const handleRestore = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    restoreMutation.mutate(id, {
+      onSuccess: () => {
+        addNotification('success', 'Template restored');
+      }
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (!window.confirm(`Are you sure you want to ${recordStatus === 'active' ? 'delete' : 'permanently delete'} ${selectedIds.length} templates?`)) return;
+    
+    bulkDeleteMutation.mutate({ ids: selectedIds, force: recordStatus === 'inactive' }, {
+      onSuccess: () => {
+        addNotification('success', `${selectedIds.length} templates ${recordStatus === 'active' ? 'deactivated' : 'permanently deleted'}`);
+        setSelectedIds([]);
+      }
+    });
+  };
+
   const templates = response?.data || [];
   const total = response?.total || 0;
+  const submitting = bulkDeleteMutation.isPending;
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === templates.length && templates.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(templates.map((t) => t.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter((prevId) => prevId !== id) : [...prev, id]
+    );
+  };
 
   return (
     <div className="space-y-6" data-testid="checklists-page">
@@ -81,6 +125,25 @@ export default function ChecklistsPage() {
                 data-testid="checklist-search-input"
               />
             </div>
+            <div className="flex items-center gap-2">
+              {selectedIds.length > 0 && (
+                <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+              <div className="w-[180px]">
+                <Select value={recordStatus} onValueChange={(v) => { setRecordStatus(v); setPage(1); setSelectedIds([]); }}>
+                  <SelectTrigger data-testid="filter-record-status">
+                    <SelectValue placeholder="Record Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -88,6 +151,12 @@ export default function ChecklistsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox 
+                    checked={templates.length > 0 && selectedIds.length === templates.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead className="min-w-[200px]">Template Name</TableHead>
                 <TableHead className="min-w-[300px]">Description</TableHead>
                 <TableHead className="min-w-[100px]">Tasks</TableHead>
@@ -99,13 +168,13 @@ export default function ChecklistsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : templates.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     <div className="flex flex-col items-center justify-center">
                       <FileText className="h-10 w-10 text-muted-foreground/30 mb-2" />
                       <p>No templates found.</p>
@@ -115,6 +184,12 @@ export default function ChecklistsPage() {
               ) : (
                 templates.map((template) => (
                   <TableRow key={template.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/checklists/${template.id}`)}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox 
+                        checked={selectedIds.includes(template.id)}
+                        onCheckedChange={() => toggleSelect(template.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium text-primary hover:underline">
                       {template.name}
                     </TableCell>
@@ -149,12 +224,23 @@ export default function ChecklistsPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {recordStatus === 'inactive' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-primary h-8 w-8"
+                            onClick={(e) => handleRestore(template.id, e)}
+                            title="Restore template"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="text-destructive h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                           onClick={(e) => handleDelete(template.id, e)}
-                          title="Delete template"
+                          title={recordStatus === 'inactive' ? 'Permanently delete template' : 'Delete template'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

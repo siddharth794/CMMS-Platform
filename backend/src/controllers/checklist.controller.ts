@@ -39,8 +39,28 @@ export const updateChecklist = async (req: Request, res: Response, next: NextFun
 
 export const deleteChecklist = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await checklistService.deleteChecklist(req.params.id as string, req.user!.org_id);
-        res.status(200).json({ message: 'Checklist deleted successfully' });
+        const force = req.query.force === 'true';
+        const result = await checklistService.deleteChecklist(req.params.id as string, req.user!.org_id, force);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const restoreChecklist = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await checklistService.restoreChecklist(req.params.id as string, req.user!.org_id);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const bulkDeleteChecklists = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { ids, force } = req.body;
+        const count = await checklistService.bulkDeleteChecklists(ids, req.user!.org_id, force);
+        res.status(200).json({ message: `${count} checklists deleted` });
     } catch (error) {
         next(error);
     }

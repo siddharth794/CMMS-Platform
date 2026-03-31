@@ -8,6 +8,8 @@ import {
     getChecklistById,
     updateChecklist,
     deleteChecklist,
+    restoreChecklist,
+    bulkDeleteChecklists,
     addChecklistItem,
     updateChecklistItem,
     toggleChecklistItem,
@@ -30,8 +32,10 @@ router.use(authenticate);
 router.get('/', getChecklists);
 router.get('/:id', getChecklistById);
 router.post('/', requirePermission('checklist:manage'), validate(createChecklistSchema), createChecklist);
+router.post('/bulk-delete', requirePermission('checklist:manage'), bulkDeleteChecklists);
 router.put('/:id', requirePermission('checklist:manage'), validate(updateChecklistSchema), updateChecklist);
 router.delete('/:id', requirePermission('checklist:manage'), deleteChecklist);
+router.post('/:id/restore', requirePermission('checklist:manage'), restoreChecklist);
 
 // Checklist Item Routes
 router.post('/:id/items', requirePermission('checklist:manage'), validate(addChecklistItemSchema), addChecklistItem);

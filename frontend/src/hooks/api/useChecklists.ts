@@ -56,13 +56,42 @@ export const useDeleteChecklist = () => {
   const { addNotification } = useNotification();
   
   return useMutation({
-    mutationFn: (id: string) => checklistsApi.delete(id),
+    mutationFn: ({ id, force }: { id: string; force?: boolean }) => checklistsApi.delete(id, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checklists'] });
-      addNotification('success', 'Checklist deleted successfully');
     },
     onError: (error: any) => {
       addNotification('error', error.response?.data?.message || 'Failed to delete checklist');
+    },
+  });
+};
+
+export const useRestoreChecklist = () => {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotification();
+  
+  return useMutation({
+    mutationFn: (id: string) => checklistsApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklists'] });
+    },
+    onError: (error: any) => {
+      addNotification('error', error.response?.data?.message || 'Failed to restore checklist');
+    },
+  });
+};
+
+export const useBulkDeleteChecklists = () => {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotification();
+  
+  return useMutation({
+    mutationFn: (data: { ids: string[]; force?: boolean }) => checklistsApi.bulkDelete(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklists'] });
+    },
+    onError: (error: any) => {
+      addNotification('error', error.response?.data?.message || 'Failed to delete checklists');
     },
   });
 };
