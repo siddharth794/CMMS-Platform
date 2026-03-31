@@ -1,7 +1,8 @@
 import cronParser from 'cron-parser';
 import { Op } from 'sequelize';
-import { PMSchedule, PMTrigger, PMTemplate, PMTask, PMPart, PMExecution, WorkOrder, Asset } from '../models';
+import { PMSchedule, PMTrigger, PMTemplate, PMPart, PMExecution, WorkOrder, Asset } from '../models';
 import logger from '../config/logger';
+import checklistService from '../services/checklist.service';
 
 export class PMGeneratorWorker {
   public async evaluateAllActivePMs() {
@@ -12,7 +13,6 @@ export class PMGeneratorWorker {
         include: [
           { model: PMTrigger, as: 'triggers' },
           { model: PMTemplate, as: 'template' },
-          { model: PMTask, as: 'tasks' },
           { model: PMPart, as: 'parts' },
           { model: Asset, as: 'asset' }
         ]
@@ -91,13 +91,21 @@ export class PMGeneratorWorker {
       is_pm_generated: true
     });
 
-    // We can insert tasks into a work_order_tasks table if it existed, for now we log it in execution
+    // Create PM Execution record
     await PMExecution.create({
       pm_schedule_id: schedule.id,
       work_order_id: newWO.id,
       triggered_by: triggeredBy,
       status: 'generated'
     });
+
+    // Auto-assign checklists linked to this PM schedule or asset
+    try {
+      await checklistService.autoAssignChecklistsToWorkOrder(newWO);
+      logger.info(`Auto-assigned checklists for Work Order ${woNumber}`);
+    } catch (error) {
+      logger.error({ error }, `Failed to auto-assign checklists for Work Order ${woNumber}`);
+    }
 
     logger.info(`Generated Work Order ${woNumber} from PM Schedule ${schedule.name}`);
   }

@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { PMSchedule, Asset, Site, Organization, PMTrigger, PMTemplate, PMTask, PMPart, InventoryItem, sequelize } from '../models';
+import { PMSchedule, Asset, Site, Organization, PMTrigger, PMTemplate, PMPart, InventoryItem, sequelize } from '../models';
 
 class PMScheduleRepository {
     async findAll(orgId: string | null, options: { asset_id?: string, site_id?: string, skip: number, limit: number, search?: string, record_status?: string }): Promise<any> {
@@ -55,7 +55,6 @@ class PMScheduleRepository {
                 { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
-                { model: PMTask, as: 'tasks' },
                 { model: PMPart, as: 'parts', include: [{ model: InventoryItem, as: 'item' }] }
             ],
         });
@@ -69,7 +68,6 @@ class PMScheduleRepository {
                 { model: Organization, as: 'organization' },
                 { model: PMTrigger, as: 'triggers' },
                 { model: PMTemplate, as: 'template' },
-                { model: PMTask, as: 'tasks' },
                 { model: PMPart, as: 'parts', include: [{ model: InventoryItem, as: 'item' }] }
             ] 
         });
@@ -90,11 +88,6 @@ class PMScheduleRepository {
                 await PMTrigger.bulkCreate(triggersData, { transaction: t });
             }
 
-            if (tasks && tasks.length > 0) {
-                const tasksData = tasks.map((tk: any) => ({ ...tk, pm_schedule_id: pm.id }));
-                await PMTask.bulkCreate(tasksData, { transaction: t });
-            }
-
             if (parts && parts.length > 0) {
                 const partsData = parts.map((pt: any) => ({ ...pt, pm_schedule_id: pm.id }));
                 await PMPart.bulkCreate(partsData, { transaction: t });
@@ -112,7 +105,7 @@ class PMScheduleRepository {
             const pm = await PMSchedule.findOne({ where });
             if (!pm) return null;
 
-            const { triggers, template, tasks, parts, ...pmData } = data;
+            const { triggers, template, parts, ...pmData } = data;
             await pm.update(pmData, { transaction: t });
 
             if (template) {
@@ -124,17 +117,11 @@ class PMScheduleRepository {
                 }
             }
 
-            // For collections (triggers, tasks, parts) we replace them completely for simplicity.
+            // For collections (triggers, parts) we replace them completely for simplicity.
             if (triggers) {
                 await PMTrigger.destroy({ where: { pm_schedule_id: pmId }, transaction: t });
                 const triggersData = triggers.map((tr: any) => ({ ...tr, pm_schedule_id: pmId }));
                 await PMTrigger.bulkCreate(triggersData, { transaction: t });
-            }
-
-            if (tasks) {
-                await PMTask.destroy({ where: { pm_schedule_id: pmId }, transaction: t });
-                const tasksData = tasks.map((tk: any) => ({ ...tk, pm_schedule_id: pmId }));
-                await PMTask.bulkCreate(tasksData, { transaction: t });
             }
 
             if (parts) {

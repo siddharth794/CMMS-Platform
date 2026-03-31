@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import checklistRepository from '../repositories/checklist.repository';
 import { NotFoundError, BadRequestError } from '../errors/AppError';
-import { sequelize, WorkOrder } from '../models';
+import { sequelize, WorkOrder, PMExecution } from '../models';
 
 class ChecklistService {
     async createChecklist(orgId: string, userId: string, data: any) {
@@ -176,8 +176,9 @@ class ChecklistService {
             description: template.description,
             is_template: false,
             is_required: template.is_required,
+            asset_id: template.asset_id,  // Copy asset_id for reference
             work_order_id: workOrderId,
-            created_by: template.created_by // Retain original creator or use system?
+            created_by: template.created_by
         }, transaction);
 
         if (template.items && template.items.length > 0) {
@@ -194,18 +195,33 @@ class ChecklistService {
     }
 
     async autoAssignChecklistsToWorkOrder(workOrder: any, transaction?: any) {
+        const clonedTemplateIds: string[] = [];
+
         // Find templates for the asset
         if (workOrder.asset_id) {
             const assetTemplates = await checklistRepository.findTemplatesByEntity('asset_id', workOrder.asset_id, workOrder.org_id);
             for (const template of assetTemplates) {
                 await this.cloneChecklistForWorkOrder(template.id, workOrder.id, workOrder.org_id, transaction);
+                clonedTemplateIds.push(template.id);
             }
         }
 
-        // Find templates for the PM schedule
-        // Currently, PM Schedule triggers work orders. If we have a link to PM template here, we clone it.
-        // Assuming the WO has `pm_schedule_id` or `is_pm_generated` flag.
-        // If your workOrder model doesn't store pm_schedule_id, you might need to fetch the PM execution or similar.
+        // Find templates for the PM schedule (for PM-generated work orders)
+        if (workOrder.is_pm_generated) {
+            const pmExecution = await PMExecution.findOne({
+                where: { work_order_id: workOrder.id },
+                transaction
+            });
+            if (pmExecution) {
+                const pmTemplates = await checklistRepository.findTemplatesByEntity('pm_schedule_id', pmExecution.pm_schedule_id, workOrder.org_id);
+                for (const template of pmTemplates) {
+                    // Avoid cloning the same template twice if it's linked to both asset and PM
+                    if (!clonedTemplateIds.includes(template.id)) {
+                        await this.cloneChecklistForWorkOrder(template.id, workOrder.id, workOrder.org_id, transaction);
+                    }
+                }
+            }
+        }
     }
 
     async checkRequiredChecklistsComplete(workOrderId: string, orgId: string) {

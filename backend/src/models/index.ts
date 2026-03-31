@@ -198,13 +198,6 @@ PMTemplate.init({
     assignee_id: { type: DataTypes.UUID },
 }, { sequelize, tableName: 'pm_templates', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-class PMTask extends Model { public id!: string; public pm_schedule_id!: string; public description!: string; }
-PMTask.init({
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
-    description: { type: DataTypes.TEXT, allowNull: false },
-}, { sequelize, tableName: 'pm_tasks', timestamps: true, createdAt: 'created_at', updatedAt: false });
-
 class PMPart extends Model { public id!: string; public pm_schedule_id!: string; public inventory_item_id!: string; public quantity_required!: number; }
 PMPart.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
@@ -395,9 +388,6 @@ PMTrigger.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
 PMSchedule.hasOne(PMTemplate, { as: 'template', foreignKey: 'pm_schedule_id' });
 PMTemplate.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
 
-PMSchedule.hasMany(PMTask, { as: 'tasks', foreignKey: 'pm_schedule_id' });
-PMTask.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
-
 PMSchedule.hasMany(PMPart, { as: 'parts', foreignKey: 'pm_schedule_id' });
 PMPart.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
 
@@ -492,7 +482,6 @@ export {
     PMSchedule,
     PMTrigger,
     PMTemplate,
-    PMTask,
     PMPart,
     PMExecution,
     AuditLog,

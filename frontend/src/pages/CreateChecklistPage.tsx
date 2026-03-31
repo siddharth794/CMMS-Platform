@@ -1,9 +1,10 @@
 // @ts-nocheck
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCreateChecklist } from '../hooks/api/useChecklists';
 import { useAssets } from '../hooks/api/useSharedQueries';
+import { usePMSchedules } from '../hooks/api/usePMSchedules';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,21 +13,30 @@ import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save, Calendar } from 'lucide-react';
 
 export default function CreateChecklistPage() {
   const { isManager } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addNotification } = useNotification();
   const createMutation = useCreateChecklist();
   
+  // Get pre-selected values from URL params
+  const preselectedAssetId = searchParams.get('asset_id');
+  const preselectedPMScheduleId = searchParams.get('pm_schedule_id');
+  
   // Fetch assets for dropdown
   const { data: assets, isLoading: assetsLoading } = useAssets({ limit: 1000 });
+  // Fetch PM schedules for dropdown
+  const { data: pmSchedulesData } = usePMSchedules({ limit: 1000 });
+  const pmSchedules = pmSchedulesData?.data || [];
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isRequired, setIsRequired] = useState(false);
-  const [assetId, setAssetId] = useState('none');
+  const [assetId, setAssetId] = useState(preselectedAssetId || 'none');
+  const [pmScheduleId, setPmScheduleId] = useState(preselectedPMScheduleId || 'none');
   const [items, setItems] = useState([{ id: Date.now().toString(), description: '' }]);
 
   if (!isManager()) {
@@ -59,7 +69,7 @@ export default function CreateChecklistPage() {
       return;
     }
 
-    // Build payload - only include asset_id if one is selected
+    // Build payload - only include asset_id or pm_schedule_id if one is selected
     const payload: any = {
       name: name.trim(),
       description: description.trim(),
@@ -71,31 +81,52 @@ export default function CreateChecklistPage() {
     if (assetId !== 'none') {
       payload.asset_id = assetId;
     }
+    if (pmScheduleId !== 'none') {
+      payload.pm_schedule_id = pmScheduleId;
+    }
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        navigate('/checklists');
+        // Navigate back to PM schedule if that was the context
+        if (preselectedPMScheduleId) {
+          navigate(`/pm-schedules/${preselectedPMScheduleId}`);
+        } else {
+          navigate('/checklists');
+        }
       }
     });
   };
 
   const isSaving = createMutation.isPending;
+  const goBack = () => {
+    if (preselectedPMScheduleId) {
+      navigate(`/pm-schedules/${preselectedPMScheduleId}`);
+    } else {
+      navigate('/checklists');
+    }
+  };
+  
+  const linkedPMSchedule = pmSchedules.find((pm: any) => pm.id === pmScheduleId);
 
   return (
     <div className="space-y-6">
       {/* Page Header (Matches other Create pages) */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/checklists')}>
+          <Button variant="ghost" size="icon" onClick={goBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Create Checklist Template</h1>
-            <p className="text-muted-foreground">Define a new standard operating procedure.</p>
+            <p className="text-muted-foreground">
+              {linkedPMSchedule 
+                ? `For PM Schedule: ${linkedPMSchedule.name}` 
+                : 'Define a new standard operating procedure.'}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate('/checklists')}>
+          <Button type="button" variant="outline" onClick={goBack}>
             Cancel
           </Button>
           <Button type="submit" form="checklist-form" disabled={!name.trim() || isSaving}>
@@ -138,12 +169,12 @@ export default function CreateChecklistPage() {
                 />
               </div>
 
-              {/* Asset Selection */}
+              {/* Link to Asset or PM Schedule */}
               <div className="pt-4 border-t">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="asset">Link to Asset (Optional)</Label>
-                    <Select value={assetId} onValueChange={setAssetId}>
+                    <Select value={assetId} onValueChange={(v) => { setAssetId(v); if (v !== 'none') setPmScheduleId('none'); }}>
                       <SelectTrigger id="asset">
                         <SelectValue placeholder={assetsLoading ? "Loading assets..." : "Select an asset..."} />
                       </SelectTrigger>
@@ -158,6 +189,26 @@ export default function CreateChecklistPage() {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       When linked, this checklist auto-attaches to work orders for this asset.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pm-schedule">Link to PM Schedule (Optional)</Label>
+                    <Select value={pmScheduleId} onValueChange={(v) => { setPmScheduleId(v); if (v !== 'none') setAssetId('none'); }} disabled={assetId !== 'none'}>
+                      <SelectTrigger id="pm-schedule">
+                        <SelectValue placeholder="Select a PM schedule..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No PM schedule (Standalone template)</SelectItem>
+                        {pmSchedules?.map((pm: any) => (
+                          <SelectItem key={pm.id} value={pm.id}>
+                            {pm.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      When linked, this checklist auto-attaches when PM triggers a work order.
                     </p>
                   </div>
                 </div>

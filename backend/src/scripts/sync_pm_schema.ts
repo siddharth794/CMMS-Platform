@@ -1,5 +1,5 @@
 import sequelize from '../config/database';
-import { PMSchedule, PMTrigger, PMTemplate, PMTask, PMPart, PMExecution } from '../models';
+import { PMSchedule, PMTrigger, PMTemplate, PMPart, PMExecution } from '../models';
 
 async function sync() {
   try {
@@ -11,9 +11,6 @@ async function sync() {
 
     await PMTemplate.sync({ alter: true });
     console.log('pm_templates table synced');
-
-    await PMTask.sync({ alter: true });
-    console.log('pm_tasks table synced');
 
     await PMPart.sync({ alter: true });
     console.log('pm_parts table synced');
