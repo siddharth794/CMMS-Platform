@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCreateChecklist } from '../hooks/api/useChecklists';
+import { useAssets } from '../hooks/api/useSharedQueries';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save } from 'lucide-react';
 
@@ -17,10 +19,14 @@ export default function CreateChecklistPage() {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const createMutation = useCreateChecklist();
+  
+  // Fetch assets for dropdown
+  const { data: assets, isLoading: assetsLoading } = useAssets({ limit: 1000 });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isRequired, setIsRequired] = useState(false);
+  const [assetId, setAssetId] = useState('none');
   const [items, setItems] = useState([{ id: Date.now().toString(), description: '' }]);
 
   if (!isManager()) {
@@ -53,15 +59,21 @@ export default function CreateChecklistPage() {
       return;
     }
 
-    createMutation.mutate({
+    // Build payload - only include asset_id if one is selected
+    const payload: any = {
       name: name.trim(),
       description: description.trim(),
       is_required: isRequired,
-      is_template: true, // We are creating a master template here
+      is_template: true,
       items: validItems
-    }, {
+    };
+    
+    if (assetId !== 'none') {
+      payload.asset_id = assetId;
+    }
+
+    createMutation.mutate(payload, {
       onSuccess: () => {
-        // useCreateChecklist already fires a success toast, but we navigate
         navigate('/checklists');
       }
     });
@@ -124,6 +136,31 @@ export default function CreateChecklistPage() {
                   placeholder="Guidelines or context for this checklist..."
                   rows={3}
                 />
+              </div>
+
+              {/* Asset Selection */}
+              <div className="pt-4 border-t">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="asset">Link to Asset (Optional)</Label>
+                    <Select value={assetId} onValueChange={setAssetId}>
+                      <SelectTrigger id="asset">
+                        <SelectValue placeholder={assetsLoading ? "Loading assets..." : "Select an asset..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No asset (Standalone template)</SelectItem>
+                        {assets?.map((asset: any) => (
+                          <SelectItem key={asset.id} value={asset.id}>
+                            {asset.name} {asset.asset_tag ? `(${asset.asset_tag})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      When linked, this checklist auto-attaches to work orders for this asset.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-start space-x-3 pt-4 border-t">

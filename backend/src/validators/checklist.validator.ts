@@ -5,8 +5,8 @@ export const createChecklistSchema = z.object({
     description: z.string().optional(),
     is_required: z.boolean().optional(),
     is_template: z.boolean().optional(),
-    asset_id: z.string().uuid('Invalid Asset ID').optional(),
-    pm_schedule_id: z.string().uuid('Invalid PM Schedule ID').optional(),
+    asset_id: z.string().uuid('Invalid Asset ID').nullable().optional(),
+    pm_schedule_id: z.string().uuid('Invalid PM Schedule ID').nullable().optional(),
     items: z.array(z.object({
         description: z.string().min(1, 'Item description is required').max(500),
         order_index: z.number().int().min(0).default(0)

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useChecklist, useUpdateChecklist } from '../hooks/api/useChecklists';
 import { useNotification } from '../context/NotificationContext';
@@ -10,7 +10,8 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
+import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save, Box, ExternalLink } from 'lucide-react';
 import { checklistsApi } from '@/lib/api';
 
 export default function ChecklistDetailPage() {
@@ -178,6 +179,30 @@ export default function ChecklistDetailPage() {
                   rows={3}
                 />
               </div>
+
+              {/* Asset Information (Read-only) */}
+              {checklist.asset && (
+                <div className="pt-4 border-t">
+                  <Label>Linked Asset</Label>
+                  <div className="flex items-center gap-3 p-3 mt-2 rounded-lg border bg-muted/50">
+                    <Box className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="font-medium">{checklist.asset.name}</p>
+                      {checklist.asset.asset_tag && (
+                        <p className="text-sm text-muted-foreground">Tag: {checklist.asset.asset_tag}</p>
+                      )}
+                    </div>
+                    <Link to={`/assets/${checklist.asset.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <ExternalLink className="h-4 w-4 mr-1" /> View Asset
+                      </Button>
+                    </Link>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    This checklist automatically attaches to work orders for this asset.
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-start space-x-3 pt-4 border-t">
                 <Switch

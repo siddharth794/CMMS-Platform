@@ -6,13 +6,23 @@ import { sequelize } from '../models';
 class ChecklistService {
     async createChecklist(orgId: string, userId: string, data: any) {
         return sequelize.transaction(async (t) => {
-            const { items, ...checklistData } = data;
+            const { items, asset_id, pm_schedule_id, ...checklistData } = data;
             
-            const checklist = await checklistRepository.create({
+            // Filter out null/undefined values for optional foreign keys
+            const createData: any = {
                 ...checklistData,
                 org_id: orgId,
                 created_by: userId
-            }, t);
+            };
+            
+            if (asset_id) {
+                createData.asset_id = asset_id;
+            }
+            if (pm_schedule_id) {
+                createData.pm_schedule_id = pm_schedule_id;
+            }
+            
+            const checklist = await checklistRepository.create(createData, t);
 
             if (items && items.length > 0) {
                 const itemsToCreate = items.map((item: any, index: number) => ({

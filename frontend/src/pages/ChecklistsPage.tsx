@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Pagination } from '@/components/ui/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, FileText, Trash2, Edit, RefreshCw, Trash } from 'lucide-react';
+import { Plus, Search, Loader2, FileText, Trash2, Edit, RefreshCw, Trash, Box } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNotification } from '@/context/NotificationContext';
 
@@ -158,7 +158,8 @@ export default function ChecklistsPage() {
                   />
                 </TableHead>
                 <TableHead className="min-w-[200px]">Template Name</TableHead>
-                <TableHead className="min-w-[300px]">Description</TableHead>
+                <TableHead className="min-w-[150px]">Asset</TableHead>
+                <TableHead className="min-w-[250px]">Description</TableHead>
                 <TableHead className="min-w-[100px]">Tasks</TableHead>
                 <TableHead className="min-w-[120px]">Requirement</TableHead>
                 <TableHead className="min-w-[150px]">Created Date</TableHead>
@@ -168,13 +169,13 @@ export default function ChecklistsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
               ) : templates.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     <div className="flex flex-col items-center justify-center">
                       <FileText className="h-10 w-10 text-muted-foreground/30 mb-2" />
                       <p>No templates found.</p>
@@ -193,7 +194,17 @@ export default function ChecklistsPage() {
                     <TableCell className="font-medium text-primary hover:underline">
                       {template.name}
                     </TableCell>
-                    <TableCell className="text-muted-foreground truncate max-w-[300px]">
+                    <TableCell>
+                      {template.asset ? (
+                        <div className="flex items-center gap-2">
+                          <Box className="h-4 w-4 text-muted-foreground" />
+                          <span className="truncate">{template.asset.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground truncate max-w-[250px]">
                       {template.description || '-'}
                     </TableCell>
                     <TableCell>
