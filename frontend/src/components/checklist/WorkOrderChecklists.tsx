@@ -80,7 +80,8 @@ export function WorkOrderChecklists({ workOrderId, workOrderStatus }: { workOrde
 }
 
 function ChecklistCard({ checklist, isEditable, onToggle, isToggling }: { checklist: Checklist; isEditable: boolean; onToggle: (itemId: string, isCompleted: boolean) => void; isToggling: boolean }) {
-  const items = checklist.items || [];
+  // Sort items by order_index
+  const items = [...(checklist.items || [])].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
   const completedCount = items.filter(item => item.is_completed).length;
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
   const isFullyComplete = progress === 100;
@@ -111,7 +112,7 @@ function ChecklistCard({ checklist, isEditable, onToggle, isToggling }: { checkl
       </CardHeader>
       <CardContent>
         <div className="space-y-4 pt-2">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
               <Checkbox 
                 id={`item-${item.id}`} 
@@ -120,6 +121,7 @@ function ChecklistCard({ checklist, isEditable, onToggle, isToggling }: { checkl
                 disabled={isToggling || !isEditable}
                 className="mt-1"
               />
+              <span className="text-sm font-medium text-gray-400 w-6 text-right shrink-0">{index + 1}.</span>
               <div className="flex-1 space-y-1">
                 <label 
                   htmlFor={`item-${item.id}`} 

@@ -1,7 +1,11 @@
 import { Checklist, ChecklistItem, User, Asset, PMSchedule, WorkOrder, sequelize } from '../models';
 
 const CHECKLIST_INCLUDES = [
-    { model: ChecklistItem, as: 'items', required: false },
+    { 
+        model: ChecklistItem, 
+        as: 'items', 
+        required: false
+    },
     { model: User, as: 'creator', attributes: ['id', 'first_name', 'last_name', 'email'], required: false },
     { model: Asset, as: 'asset', attributes: ['id', 'name', 'asset_tag'], required: false },
     { model: PMSchedule, as: 'pm_schedule', attributes: ['id', 'name'], required: false },
@@ -15,7 +19,7 @@ class ChecklistRepository {
             include: CHECKLIST_INCLUDES,
             offset: skip,
             limit: limit,
-            order: [['created_at', 'DESC']],
+            order: [['created_at', 'DESC'], [{ model: ChecklistItem, as: 'items' }, 'order_index', 'ASC']],
             distinct: true,
             paranoid
         });
@@ -46,7 +50,8 @@ class ChecklistRepository {
                 is_template: true,
                 [entityType]: entityId
             },
-            include: [{ model: ChecklistItem, as: 'items', required: false }]
+            include: [{ model: ChecklistItem, as: 'items', required: false }],
+            order: [[{ model: ChecklistItem, as: 'items' }, 'order_index', 'ASC']]
         });
     }
 
