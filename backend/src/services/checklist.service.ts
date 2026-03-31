@@ -37,7 +37,8 @@ class ChecklistService {
         if (work_order_id) where.work_order_id = work_order_id;
         if (is_template !== undefined) where.is_template = is_template === 'true';
 
-        return checklistRepository.findAndCountAll(where, Number(skip), Number(limit));
+        const result = await checklistRepository.findAndCountAll(where, Number(skip), Number(limit));
+        return { data: result.rows, total: result.count, skip: Number(skip), limit: Number(limit) };
     }
 
     async getChecklistById(id: string, orgId: string) {
