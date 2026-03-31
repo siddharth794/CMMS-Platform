@@ -11,7 +11,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save, Box, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save, Box, ExternalLink, Calendar } from 'lucide-react';
 import { checklistsApi } from '@/lib/api';
 
 export default function ChecklistDetailPage() {
@@ -200,6 +200,27 @@ export default function ChecklistDetailPage() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     This checklist automatically attaches to work orders for this asset.
+                  </p>
+                </div>
+              )}
+
+              {/* PM Schedule Information (Read-only) */}
+              {checklist.pm_schedule && (
+                <div className="pt-4 border-t">
+                  <Label>Linked PM Schedule</Label>
+                  <div className="flex items-center gap-3 p-3 mt-2 rounded-lg border bg-muted/50">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="font-medium">{checklist.pm_schedule.name}</p>
+                    </div>
+                    <Link to={`/pm-schedules/${checklist.pm_schedule.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <ExternalLink className="h-4 w-4 mr-1" /> View PM Schedule
+                      </Button>
+                    </Link>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    This checklist automatically attaches when this PM schedule triggers a work order.
                   </p>
                 </div>
               )}
