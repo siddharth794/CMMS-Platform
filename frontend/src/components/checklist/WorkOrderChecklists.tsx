@@ -1,16 +1,40 @@
 // @ts-nocheck
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useChecklists, useToggleChecklistItem } from '@/hooks/api/useChecklists';
+import { useSocket } from '@/context/SocketContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { Checklist, ChecklistItem } from '@/types/models';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, ClipboardCheck } from 'lucide-react';
+import { Loader2, ClipboardCheck, Lock } from 'lucide-react';
 
-export function WorkOrderChecklists({ workOrderId }: { workOrderId: string }) {
+export function WorkOrderChecklists({ workOrderId, workOrderStatus }: { workOrderId: string; workOrderStatus: string }) {
   const { data: response, isLoading } = useChecklists({ work_order_id: workOrderId });
   const toggleItemMutation = useToggleChecklistItem();
+  const { socket } = useSocket();
+  const queryClient = useQueryClient();
+  
+  // Only allow toggling when work order is in progress
+  const isEditable = workOrderStatus === 'in_progress';
+
+  // Listen for real-time checklist item toggles
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleToggle = (data: any) => {
+      if (data.workOrderId === workOrderId) {
+        queryClient.invalidateQueries({ queryKey: ['checklists'] });
+      }
+    };
+    
+    socket.on('checklist_item_toggled', handleToggle);
+    
+    return () => {
+      socket.off('checklist_item_toggled', handleToggle);
+    };
+  }, [socket, workOrderId, queryClient]);
 
   if (isLoading) {
     return (
@@ -36,10 +60,17 @@ export function WorkOrderChecklists({ workOrderId }: { workOrderId: string }) {
 
   return (
     <div className="space-y-6">
+      {!isEditable && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          <Lock className="h-4 w-4" />
+          <span>Checklist items can only be completed when the work order is <strong>In Progress</strong>.</span>
+        </div>
+      )}
       {checklists.map((checklist) => (
         <ChecklistCard 
           key={checklist.id} 
           checklist={checklist} 
+          isEditable={isEditable}
           onToggle={(itemId, isCompleted) => toggleItemMutation.mutate({ checklistId: checklist.id, itemId, is_completed: isCompleted })}
           isToggling={toggleItemMutation.isPending}
         />
@@ -48,7 +79,7 @@ export function WorkOrderChecklists({ workOrderId }: { workOrderId: string }) {
   );
 }
 
-function ChecklistCard({ checklist, onToggle, isToggling }: { checklist: Checklist, onToggle: (itemId: string, isCompleted: boolean) => void, isToggling: boolean }) {
+function ChecklistCard({ checklist, isEditable, onToggle, isToggling }: { checklist: Checklist; isEditable: boolean; onToggle: (itemId: string, isCompleted: boolean) => void; isToggling: boolean }) {
   const items = checklist.items || [];
   const completedCount = items.filter(item => item.is_completed).length;
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
@@ -86,13 +117,13 @@ function ChecklistCard({ checklist, onToggle, isToggling }: { checklist: Checkli
                 id={`item-${item.id}`} 
                 checked={item.is_completed} 
                 onCheckedChange={(checked) => onToggle(item.id, checked as boolean)}
-                disabled={isToggling}
+                disabled={isToggling || !isEditable}
                 className="mt-1"
               />
               <div className="flex-1 space-y-1">
                 <label 
                   htmlFor={`item-${item.id}`} 
-                  className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${item.is_completed ? 'line-through text-gray-400' : 'text-gray-900 cursor-pointer'}`}
+                  className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${item.is_completed ? 'line-through text-gray-400' : isEditable ? 'text-gray-900 cursor-pointer' : 'text-gray-600'}`}
                 >
                   {item.description}
                 </label>

@@ -129,7 +129,12 @@ Asset.init({
     ]
 });
 
-class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; public site_id?: string | null; }
+class WorkOrder extends Model { 
+    public id!: string; 
+    public deleted_at?: Date | null; 
+    public site_id?: string | null;
+    public status!: 'new' | 'open' | 'in_progress' | 'on_hold' | 'pending_review' | 'completed' | 'cancelled';
+}
 WorkOrder.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },

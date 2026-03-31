@@ -88,7 +88,15 @@ export const updateChecklistItem = async (req: Request, res: Response, next: Nex
 export const toggleChecklistItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { is_completed } = req.body;
-        const checklist = await checklistService.toggleChecklistItem(req.params.id as string, req.params.itemId as string, req.user!.org_id, req.user!.id, is_completed);
+        const io = req.app.get('io');
+        const checklist = await checklistService.toggleChecklistItem(
+            req.params.id as string, 
+            req.params.itemId as string, 
+            req.user!.org_id, 
+            req.user!.id, 
+            is_completed,
+            io
+        );
         res.status(200).json(checklist);
     } catch (error) {
         next(error);

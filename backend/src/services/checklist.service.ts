@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import checklistRepository from '../repositories/checklist.repository';
 import { NotFoundError, BadRequestError } from '../errors/AppError';
-import { sequelize } from '../models';
+import { sequelize, WorkOrder } from '../models';
 
 class ChecklistService {
     async createChecklist(orgId: string, userId: string, data: any) {
@@ -124,8 +124,17 @@ class ChecklistService {
         return this.getChecklistById(checklistId, orgId);
     }
 
-    async toggleChecklistItem(checklistId: string, itemId: string, orgId: string, userId: string, isCompleted: boolean) {
+    async toggleChecklistItem(checklistId: string, itemId: string, orgId: string, userId: string, isCompleted: boolean, io?: any) {
         const checklist = await this.getChecklistById(checklistId, orgId);
+        
+        // Check work order status if checklist is linked to a work order
+        if (checklist.work_order_id) {
+            const workOrder = await WorkOrder.findByPk(checklist.work_order_id);
+            if (workOrder && workOrder.status !== 'in_progress') {
+                throw new BadRequestError('Work order must be in progress to complete checklist items');
+            }
+        }
+        
         const item = await checklistRepository.findItemById(itemId, checklist.id);
         if (!item) throw new NotFoundError('Checklist item not found');
 
@@ -134,6 +143,16 @@ class ChecklistService {
             completed_by: isCompleted ? userId : null,
             completed_at: isCompleted ? new Date() : null
         });
+
+        // Emit socket event for real-time update
+        if (io && checklist.work_order_id) {
+            io.to(`wo_${checklist.work_order_id}`).emit('checklist_item_toggled', {
+                checklistId,
+                itemId,
+                is_completed: isCompleted,
+                workOrderId: checklist.work_order_id
+            });
+        }
 
         return this.getChecklistById(checklistId, orgId);
     }

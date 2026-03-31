@@ -577,7 +577,7 @@ const WorkOrderDetailPage = () => {
             </TabsContent>
 
             <TabsContent value="checklists">
-              <WorkOrderChecklists workOrderId={id as string} />
+              <WorkOrderChecklists workOrderId={id as string} workOrderStatus={workOrder.status} />
             </TabsContent>
 
             <TabsContent value="activity">
