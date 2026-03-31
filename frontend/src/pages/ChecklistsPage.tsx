@@ -162,7 +162,7 @@ export default function ChecklistsPage() {
                 <TableHead className="min-w-[100px]">Tasks</TableHead>
                 <TableHead className="min-w-[120px]">Requirement</TableHead>
                 <TableHead className="min-w-[150px]">Created Date</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead className="w-[100px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -215,15 +215,6 @@ export default function ChecklistsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/checklists/${template.id}`); }}
-                          title="Edit template"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
                         {recordStatus === 'inactive' && (
                           <Button
                             variant="ghost"
