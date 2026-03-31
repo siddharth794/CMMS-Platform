@@ -1,19 +1,21 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { useCreateChecklist } from '@/hooks/api/useChecklists';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Loader2, Plus, Trash2, GripVertical } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useCreateChecklist } from '../hooks/api/useChecklists';
+import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Switch } from '../components/ui/switch';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save } from 'lucide-react';
 
 export default function CreateChecklistPage() {
   const { isManager } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotification();
   const createMutation = useCreateChecklist();
 
   const [name, setName] = useState('');
@@ -47,7 +49,7 @@ export default function CreateChecklistPage() {
     }));
 
     if (validItems.length === 0) {
-      alert('Please add at least one task to the checklist.');
+      addNotification('error', 'Please add at least one task to the checklist.');
       return;
     }
 
@@ -59,69 +61,94 @@ export default function CreateChecklistPage() {
       items: validItems
     }, {
       onSuccess: () => {
+        // useCreateChecklist already fires a success toast, but we navigate
         navigate('/checklists');
       }
     });
   };
 
+  const isSaving = createMutation.isPending;
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/checklists')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Create Template</h1>
-          <p className="text-muted-foreground">Define a new standard operating procedure.</p>
+    <div className="space-y-6">
+      {/* Page Header (Matches other Create pages) */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/checklists')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Create Checklist Template</h1>
+            <p className="text-muted-foreground">Define a new standard operating procedure.</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={() => navigate('/checklists')}>
+            Cancel
+          </Button>
+          <Button type="submit" form="checklist-form" disabled={!name.trim() || isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Template
+          </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
+      <div className="grid gap-6 md:grid-cols-4">
+        <Card className="md:col-span-4 space-y-6">
           <CardHeader>
             <CardTitle>Template Details</CardTitle>
             <CardDescription>Provide a clear name and description for technicians.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Template Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Weekly Forklift Inspection"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Guidelines or context for this checklist..."
-                rows={3}
-              />
-            </div>
+          <CardContent>
+            <form id="checklist-form" onSubmit={handleSubmit} className="space-y-6">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Template Name *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., Weekly Forklift Inspection"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Guidelines or context for this checklist..."
+                  rows={3}
+                />
+              </div>
 
-            <div className="flex items-center space-x-2 pt-2">
-              <Switch
-                id="is-required"
-                checked={isRequired}
-                onCheckedChange={setIsRequired}
-              />
-              <Label htmlFor="is-required" className="cursor-pointer">
-                Mandatory for Work Order Completion
-              </Label>
-            </div>
-            <p className="text-xs text-muted-foreground pl-11">
-              If enabled, technicians cannot mark a work order as "Pending Review" until every item is checked.
-            </p>
+              <div className="flex items-start space-x-3 pt-4 border-t">
+                <Switch
+                  id="is-required"
+                  checked={isRequired}
+                  onCheckedChange={setIsRequired}
+                  className="mt-1"
+                />
+                <div>
+                  <Label htmlFor="is-required" className="cursor-pointer font-medium text-base">
+                    Mandatory for Work Order Completion
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    If enabled, technicians cannot mark a work order as "Pending Review" until every item is checked.
+                  </p>
+                </div>
+              </div>
+
+            </form>
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        {/* Checklist Tasks Card */}
+        <Card className="md:col-span-4">
           <CardHeader>
             <CardTitle>Tasks ({items.filter(i => i.description.trim()).length})</CardTitle>
             <CardDescription>List the individual steps required for this checklist.</CardDescription>
@@ -158,17 +185,8 @@ export default function CreateChecklistPage() {
               <Plus className="mr-2 h-4 w-4" /> Add Task
             </Button>
           </CardContent>
-          <CardFooter className="flex justify-end gap-2 border-t pt-6 bg-gray-50/50">
-            <Button type="button" variant="outline" onClick={() => navigate('/checklists')}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim() || createMutation.isPending}>
-              {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Template
-            </Button>
-          </CardFooter>
         </Card>
-      </form>
+      </div>
     </div>
   );
 }
