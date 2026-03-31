@@ -1,8 +1,8 @@
 // @ts-nocheck
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useCreateChecklist } from '../hooks/api/useChecklists';
+import { useChecklist, useUpdateChecklist } from '../hooks/api/useChecklists';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,24 +11,51 @@ import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save } from 'lucide-react';
+import { checklistsApi } from '@/lib/api';
 
-export default function CreateChecklistPage() {
+export default function ChecklistDetailPage() {
   const { isManager } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams();
   const { addNotification } = useNotification();
-  const createMutation = useCreateChecklist();
+  
+  const { data: checklist, isLoading } = useChecklist(id as string);
+  const updateMutation = useUpdateChecklist();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isRequired, setIsRequired] = useState(false);
-  const [items, setItems] = useState([{ id: Date.now().toString(), description: '' }]);
+  const [items, setItems] = useState<any[]>([]);
+  const [itemsToDelete, setItemsToDelete] = useState<string[]>([]);
+  const [savingItems, setSavingItems] = useState(false);
+
+  useEffect(() => {
+    if (checklist) {
+      setName(checklist.name);
+      setDescription(checklist.description || '');
+      setIsRequired(checklist.is_required);
+      setItems(checklist.items?.map(i => ({ id: i.id, description: i.description, isNew: false })) || []);
+    }
+  }, [checklist]);
 
   if (!isManager()) {
     return <div className="p-12 text-center text-gray-500">You do not have permission.</div>;
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!checklist) {
+    return <div className="p-12 text-center text-gray-500">Template not found.</div>;
+  }
+
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), description: '' }]);
+    setItems([...items, { id: `new-${Date.now()}`, description: '', isNew: true }]);
   };
 
   const handleItemChange = (id: string, value: string) => {
@@ -36,50 +63,76 @@ export default function CreateChecklistPage() {
   };
 
   const handleRemoveItem = (id: string) => {
+    const itemToRemove = items.find(i => i.id === id);
+    if (itemToRemove && !itemToRemove.isNew) {
+      setItemsToDelete([...itemsToDelete, itemToRemove.id]);
+    }
     setItems(items.filter(item => item.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const validItems = items.filter(i => i.description.trim()).map((i, idx) => ({
-      description: i.description.trim(),
-      order_index: idx
-    }));
+    try {
+      setSavingItems(true);
+      
+      // 1. Update the Checklist Header
+      await updateMutation.mutateAsync({
+        id: checklist.id,
+        data: {
+          name: name.trim(),
+          description: description.trim(),
+          is_required: isRequired
+        }
+      });
 
-    if (validItems.length === 0) {
-      addNotification('error', 'Please add at least one task to the checklist.');
-      return;
-    }
-
-    createMutation.mutate({
-      name: name.trim(),
-      description: description.trim(),
-      is_required: isRequired,
-      is_template: true, // We are creating a master template here
-      items: validItems
-    }, {
-      onSuccess: () => {
-        // useCreateChecklist already fires a success toast, but we navigate
-        navigate('/checklists');
+      // 2. Handle Item deletions
+      for (const itemId of itemsToDelete) {
+        await checklistsApi.deleteItem(checklist.id, itemId);
       }
-    });
+
+      // 3. Handle Item additions and updates sequentially
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item.description.trim()) continue;
+
+        if (item.isNew) {
+          // Add new item
+          await checklistsApi.addItem(checklist.id, {
+            description: item.description.trim(),
+            order_index: i
+          });
+        } else {
+          // Update existing item
+          await checklistsApi.updateItem(checklist.id, item.id, {
+            description: item.description.trim(),
+            order_index: i
+          });
+        }
+      }
+
+      navigate('/checklists');
+    } catch (error: any) {
+      addNotification('error', error.response?.data?.message || 'Failed to save template updates');
+    } finally {
+      setSavingItems(false);
+    }
   };
 
-  const isSaving = createMutation.isPending;
+  const isSaving = updateMutation.isPending || savingItems;
 
   return (
     <div className="space-y-6">
-      {/* Page Header (Matches other Create pages) */}
+      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/checklists')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Create Checklist Template</h1>
-            <p className="text-muted-foreground">Define a new standard operating procedure.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Checklist Template</h1>
+            <p className="text-muted-foreground">Modify standard operating procedure.</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -88,7 +141,7 @@ export default function CreateChecklistPage() {
           </Button>
           <Button type="submit" form="checklist-form" disabled={!name.trim() || isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Template
+            Save Changes
           </Button>
         </div>
       </div>
