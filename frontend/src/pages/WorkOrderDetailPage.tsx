@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '../components/ui/input';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { WorkOrderChecklists } from '../components/checklist/WorkOrderChecklists';
 import {
   ArrowLeft,
   Clock,
@@ -483,8 +484,9 @@ const WorkOrderDetailPage = () => {
         {/* Main Content with Tabs */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="form" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
               <TabsTrigger value="form">General Form</TabsTrigger>
+              <TabsTrigger value="checklists">Checklists</TabsTrigger>
               <TabsTrigger value="activity">Activity & Parts</TabsTrigger>
               <TabsTrigger value="attachments">Images</TabsTrigger>
             </TabsList>
@@ -572,6 +574,10 @@ const WorkOrderDetailPage = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="checklists">
+              <WorkOrderChecklists workOrderId={id as string} workOrderStatus={workOrder.status} />
             </TabsContent>
 
             <TabsContent value="activity">

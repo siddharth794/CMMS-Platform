@@ -114,6 +114,39 @@ export interface Inventory {
   updated_at?: string;
 }
 
+export interface ChecklistItem {
+  id: string;
+  checklist_id: string;
+  description: string;
+  order_index: number;
+  is_completed: boolean;
+  completed_by?: string | null;
+  completed_at?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  completer?: User;
+}
+
+export interface Checklist {
+  id: string;
+  org_id: string;
+  work_order_id?: string | null;
+  asset_id?: string | null;
+  pm_schedule_id?: string | null;
+  name: string;
+  description?: string | null;
+  is_template: boolean;
+  is_required: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  items?: ChecklistItem[];
+  work_order?: WorkOrder;
+  asset?: Asset;
+  creator?: User;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;

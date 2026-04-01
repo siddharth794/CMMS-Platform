@@ -273,3 +273,34 @@ export interface SiteListQuery {
     search?: string;
     record_status?: string;
 }
+
+// ─── Checklist DTOs ───────────────────────────────────────────────
+export interface ChecklistItemDTO {
+    description: string;
+    order_index: number;
+}
+
+export interface CreateChecklistDTO {
+    name: string;
+    description?: string;
+    is_required?: boolean;
+    asset_id?: string;
+    pm_schedule_id?: string;
+    items?: ChecklistItemDTO[];
+}
+
+export interface UpdateChecklistDTO {
+    name?: string;
+    description?: string;
+    is_required?: boolean;
+}
+
+export interface ChecklistListQuery {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    asset_id?: string;
+    pm_schedule_id?: string;
+    work_order_id?: string;
+    is_template?: string; // 'true' or 'false'
+}
