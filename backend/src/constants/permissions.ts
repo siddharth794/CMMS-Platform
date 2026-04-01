@@ -41,7 +41,11 @@ export const PERMISSIONS = [
   { name: 'organization:update', module: 'Organization', description: 'Update organization settings' },
   
   // Analytics Module
-  { name: 'analytics:view', module: 'Analytics', description: 'View dashboards and reports' }
+  { name: 'analytics:view', module: 'Analytics', description: 'View dashboards and reports' },
+
+  // Checklists Module
+  { name: 'checklist:manage', module: 'Checklists', description: 'Create and edit checklist templates' },
+  { name: 'checklist:execute', module: 'Checklists', description: 'Check off items on work order checklists' }
 ];
 
 /**
@@ -56,7 +60,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'pm:view', 'pm:create', 'pm:update', 'pm:delete',
     'user:view', 'user:create', 'user:update', 'user:delete', 'rbac:manage',
     'organization:view', 'organization:update',
-    'analytics:view'
+    'analytics:view',
+    'checklist:manage', 'checklist:execute'
   ],
   Facility_Manager: [
     'work_order:view', 'work_order:create', 'work_order:update', 'work_order:delete', 'work_order:assign',
@@ -64,15 +69,18 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'inventory:view', 'inventory:create', 'inventory:update',
     'pm:view', 'pm:create', 'pm:update',
     'user:view',
-    'analytics:view'
+    'analytics:view',
+    'checklist:manage', 'checklist:execute'
   ],
   Technician: [
     'work_order:view', 'work_order:update',
     'asset:view',
-    'inventory:view', 'inventory:update'
+    'inventory:view', 'inventory:update',
+    'checklist:execute'
   ],
   Requestor: [
     'work_order:view', 'work_order:create',
-    'asset:view'
+    'asset:view',
+    'checklist:execute'
   ]
 };

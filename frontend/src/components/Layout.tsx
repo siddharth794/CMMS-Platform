@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
 import {
   LayoutDashboard, ClipboardList, Box, Calendar, BarChart3, Settings,
-  LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package, Shield, Lock, Users, MapPin
+  LogOut, Menu, Sun, Moon, Bell, Search, User, Building2, ChevronDown, Package, Shield, Lock, Users, MapPin, ClipboardCheck
 } from 'lucide-react';
 
 const Sidebar = ({ className = '' }) => {
@@ -24,6 +24,7 @@ const Sidebar = ({ className = '' }) => {
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true },
+    { name: 'Checklists', href: '/checklists', icon: ClipboardCheck, managerOnly: true },
     { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
     { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },

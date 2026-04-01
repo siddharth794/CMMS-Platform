@@ -2,6 +2,7 @@ import { Op, UniqueConstraintError } from 'sequelize';
 import { workOrderRepository } from '../repositories/workOrder.repository';
 import { auditService } from './audit.service';
 import { notificationService } from './notification.service';
+import checklistService from './checklist.service';
 import {
     CreateWorkOrderDTO, UpdateWorkOrderDTO, WorkOrderListQuery,
     StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
@@ -82,6 +83,9 @@ class WorkOrderService {
 
         const loaded = await workOrderRepository.findByPkFull(wo!.id);
 
+        // Auto-assign any checklist templates linked to the asset or PM schedule
+        await checklistService.autoAssignChecklistsToWorkOrder(loaded);
+
         auditService.log({ ...audit, entityType: 'WorkOrder', entityId: wo!.id, action: 'create', newValues: { wo_number: wo!.wo_number, title: wo!.title } });
         return loaded;
     }
@@ -130,6 +134,8 @@ class WorkOrderService {
 
         // 3. Mandatory Checklists/Fields
         if (dto.status === WO_STATUS.PENDING_REVIEW || dto.status === WO_STATUS.COMPLETED) {
+            await checklistService.checkRequiredChecklistsComplete(wo.id, wo.org_id);
+
             if (!dto.notes && !wo.resolution_notes) {
                 throw new BadRequestError('Resolution notes are required when completing or submitting for review.');
             }

@@ -129,7 +129,12 @@ Asset.init({
     ]
 });
 
-class WorkOrder extends Model { public id!: string; public deleted_at?: Date | null; public site_id?: string | null; }
+class WorkOrder extends Model { 
+    public id!: string; 
+    public deleted_at?: Date | null; 
+    public site_id?: string | null;
+    public status!: 'new' | 'open' | 'in_progress' | 'on_hold' | 'pending_review' | 'completed' | 'cancelled';
+}
 WorkOrder.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     org_id: { type: DataTypes.UUID, allowNull: false },
@@ -192,13 +197,6 @@ PMTemplate.init({
     estimated_hours: { type: DataTypes.INTEGER },
     assignee_id: { type: DataTypes.UUID },
 }, { sequelize, tableName: 'pm_templates', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
-
-class PMTask extends Model { public id!: string; public pm_schedule_id!: string; public description!: string; }
-PMTask.init({
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    pm_schedule_id: { type: DataTypes.UUID, allowNull: false },
-    description: { type: DataTypes.TEXT, allowNull: false },
-}, { sequelize, tableName: 'pm_tasks', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
 class PMPart extends Model { public id!: string; public pm_schedule_id!: string; public inventory_item_id!: string; public quantity_required!: number; }
 PMPart.init({
@@ -290,6 +288,54 @@ WOAttachment.init({
     file_path: { type: DataTypes.STRING, allowNull: false },
 }, { sequelize, tableName: 'wo_attachments', timestamps: true, createdAt: 'created_at', updatedAt: false, paranoid: true, deletedAt: 'deleted_at' });
 
+class Checklist extends Model {
+    public id!: string;
+    public org_id!: string;
+    public name!: string;
+    public description?: string;
+    public is_template!: boolean;
+    public is_required!: boolean;
+    public asset_id?: string;
+    public pm_schedule_id?: string;
+    public work_order_id?: string;
+    public created_by!: string;
+}
+
+Checklist.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    org_id: { type: DataTypes.UUID, allowNull: false },
+    name: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.TEXT },
+    is_template: { type: DataTypes.BOOLEAN, defaultValue: false },
+    is_required: { type: DataTypes.BOOLEAN, defaultValue: false },
+    asset_id: { type: DataTypes.UUID },
+    pm_schedule_id: { type: DataTypes.UUID },
+    work_order_id: { type: DataTypes.UUID },
+    created_by: { type: DataTypes.UUID, allowNull: false },
+}, { sequelize, tableName: 'checklists', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class ChecklistItem extends Model {
+    public id!: string;
+    public checklist_id!: string;
+    public description!: string;
+    public order_index!: number;
+    public is_completed!: boolean;
+    public completed_by?: string;
+    public completed_at?: Date;
+    public notes?: string;
+}
+
+ChecklistItem.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    checklist_id: { type: DataTypes.UUID, allowNull: false },
+    description: { type: DataTypes.STRING(500), allowNull: false },
+    order_index: { type: DataTypes.INTEGER, defaultValue: 0 },
+    is_completed: { type: DataTypes.BOOLEAN, defaultValue: false },
+    completed_by: { type: DataTypes.UUID },
+    completed_at: { type: DataTypes.DATE },
+    notes: { type: DataTypes.TEXT },
+}, { sequelize, tableName: 'checklist_items', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
 
 // Associations
 Organization.hasMany(User, { foreignKey: 'org_id' });
@@ -341,9 +387,6 @@ PMTrigger.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
 
 PMSchedule.hasOne(PMTemplate, { as: 'template', foreignKey: 'pm_schedule_id' });
 PMTemplate.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
-
-PMSchedule.hasMany(PMTask, { as: 'tasks', foreignKey: 'pm_schedule_id' });
-PMTask.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
 
 PMSchedule.hasMany(PMPart, { as: 'parts', foreignKey: 'pm_schedule_id' });
 PMPart.belongsTo(PMSchedule, { foreignKey: 'pm_schedule_id' });
@@ -410,6 +453,22 @@ PMSchedule.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 Organization.hasMany(PMSchedule, { foreignKey: 'org_id' });
 PMSchedule.belongsTo(Organization, { as: 'organization', foreignKey: 'org_id' });
 
+// Checklists Associations
+Checklist.hasMany(ChecklistItem, { as: 'items', foreignKey: 'checklist_id', onDelete: 'CASCADE' });
+ChecklistItem.belongsTo(Checklist, { as: 'checklist', foreignKey: 'checklist_id' });
+
+Asset.hasMany(Checklist, { as: 'checklists', foreignKey: 'asset_id' });
+Checklist.belongsTo(Asset, { as: 'asset', foreignKey: 'asset_id' });
+
+PMSchedule.hasMany(Checklist, { as: 'checklists', foreignKey: 'pm_schedule_id' });
+Checklist.belongsTo(PMSchedule, { as: 'pm_schedule', foreignKey: 'pm_schedule_id' });
+
+WorkOrder.hasMany(Checklist, { as: 'checklists', foreignKey: 'work_order_id' });
+Checklist.belongsTo(WorkOrder, { as: 'work_order', foreignKey: 'work_order_id' });
+
+Checklist.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
+ChecklistItem.belongsTo(User, { as: 'completer', foreignKey: 'completed_by' });
+
 
 export {
     Organization,
@@ -423,7 +482,6 @@ export {
     PMSchedule,
     PMTrigger,
     PMTemplate,
-    PMTask,
     PMPart,
     PMExecution,
     AuditLog,
@@ -432,5 +490,7 @@ export {
     Notification,
     WorkOrderInventoryItem,
     WOAttachment,
+    Checklist,
+    ChecklistItem,
     sequelize
 };

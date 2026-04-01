@@ -1,15 +1,17 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
 import { useNotification } from '../context/NotificationContext';
-import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, Save, ClipboardCheck, ExternalLink } from 'lucide-react';
 import { usePMSchedule, useUpdatePMSchedule, useDeletePMSchedule } from '../hooks/api/usePMSchedules';
+import { useChecklists } from '../hooks/api/useChecklists';
 import { useAssetsData } from '../hooks/api/useAssets';
 import { useAuth } from '../context/AuthContext';
 import { useOrganizations } from '../hooks/api/useOrganizations';
@@ -22,6 +24,8 @@ const PMScheduleDetailPage = () => {
   const { addNotification } = useNotification();
   const { data: pm, isLoading, isError } = usePMSchedule(id);
   const updateMutation = useUpdatePMSchedule();
+  const { data: checklistsData } = useChecklists({ pm_schedule_id: id, is_template: 'true' });
+  const pmChecklists = checklistsData?.data || [];
   
   const { hasRole, user: currentUser } = useAuth();
   const isSuperAdmin = hasRole(['super_admin']);
@@ -44,8 +48,7 @@ const PMScheduleDetailPage = () => {
     frequency: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
     priority: 'medium',
-    estimated_hours: '',
-    tasks: ['']
+    estimated_hours: ''
   });
 
 
@@ -110,8 +113,7 @@ const PMScheduleDetailPage = () => {
         frequency: freq,
         startDate: triggers?.[0]?.cron_expression ? getInitialDateFromCron(triggers[0].cron_expression, freq) : new Date().toISOString().split('T')[0],
         priority: (pm.template?.priority || pm.Template?.priority || (Array.isArray(pm.template) ? pm.template[0]?.priority : null) || (Array.isArray(pm.Template) ? pm.Template[0]?.priority : null) || 'medium'),
-        estimated_hours: (pm.template?.estimated_hours || pm.Template?.estimated_hours || (Array.isArray(pm.template) ? pm.template[0]?.estimated_hours : null) || (Array.isArray(pm.Template) ? pm.Template[0]?.estimated_hours : null))?.toString() || '',
-        tasks: (pm.tasks || pm.Tasks) && (pm.tasks || pm.Tasks).length > 0 ? (pm.tasks || pm.Tasks).map(t => t.description) : ['']
+        estimated_hours: (pm.template?.estimated_hours || pm.Template?.estimated_hours || (Array.isArray(pm.template) ? pm.template[0]?.estimated_hours : null) || (Array.isArray(pm.Template) ? pm.Template[0]?.estimated_hours : null))?.toString() || ''
       });
     }
   }, [pm]);
@@ -140,8 +142,7 @@ const PMScheduleDetailPage = () => {
         template: {
           priority: formData.priority,
           estimated_hours: formData.estimated_hours ? parseInt(formData.estimated_hours) : undefined
-        },
-        tasks: formData.tasks.filter(t => t.trim() !== '').map(t => ({ description: t }))
+        }
       };
 
       await updateMutation.mutateAsync({ id, data: payload });
@@ -329,44 +330,54 @@ const PMScheduleDetailPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Task Checklist (Optional)</CardTitle>
-            <CardDescription>Define step-by-step tasks for the generated Work Order.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5" />
+              Checklist Templates
+            </CardTitle>
+            <CardDescription>Link checklist templates to this PM schedule. When this PM triggers a work order, the checklists will be automatically attached.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {formData.tasks.map((task, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className="font-medium text-muted-foreground w-6">{idx + 1}.</span>
-                <Input 
-                  value={task} 
-                  onChange={(e) => {
-                    const newTasks = [...formData.tasks];
-                    newTasks[idx] = e.target.value;
-                    setFormData({ ...formData, tasks: newTasks });
-                  }} 
-                  placeholder="e.g., Inspect drive belts for wear and tear"
-                />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon"
-                  className="text-destructive shrink-0"
-                  onClick={() => {
-                    const newTasks = formData.tasks.filter((_, i) => i !== idx);
-                    setFormData({ ...formData, tasks: newTasks.length ? newTasks : [''] });
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
+            {pmChecklists.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <p className="mb-4">No checklist templates linked to this PM schedule.</p>
+                <Button asChild variant="outline">
+                  <Link to={`/checklists/new?pm_schedule_id=${id}`}>
+                    <Plus className="mr-2 h-4 w-4" /> Create Checklist for this PM
+                  </Link>
                 </Button>
               </div>
-            ))}
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={() => setFormData({ ...formData, tasks: [...formData.tasks, ''] })}
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Task Step
-            </Button>
+            ) : (
+              <div className="space-y-3">
+                {pmChecklists.map((checklist) => (
+                  <div key={checklist.id} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <ClipboardCheck className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">{checklist.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {checklist.items?.length || 0} items
+                          {checklist.is_required && (
+                            <Badge variant="destructive" className="ml-2 text-xs">Required</Badge>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to={`/checklists/${checklist.id}`}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button asChild variant="outline" className="w-full border-dashed">
+                  <Link to={`/checklists/new?pm_schedule_id=${id}`}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Another Checklist
+                  </Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </form>
