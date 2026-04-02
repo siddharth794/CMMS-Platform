@@ -7,12 +7,6 @@ async function seed() {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
 
-        // Ensure a clean sync
-        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0;');
-        await sequelize.query('DROP TABLE IF EXISTS user_roles, group_roles, role_accesses, accesses, pm_tasks, pm_schedules, checklist_items, checklists, work_order_inventory, work_order_logs, work_orders, users, roles, sites, inventory, `groups`, assets, organizations;');
-        await sequelize.sync({ force: true });
-        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1;');
-
         console.log('Seeding initial data...');
 
         // 1. Find or Create Default Organization
@@ -28,10 +22,6 @@ async function seed() {
 
         const orgId = org.id || org.dataValues.id;
         console.log(`Organization: ${org.name || org.dataValues.name} (ID: ${orgId})`);
-
-        // Force a raw query to check what is in roles table
-        const [existingRoles] = await sequelize.query('SELECT * FROM roles');
-        console.log('Existing roles before creating:', existingRoles);
 
         // 2. Create Accesses (Permissions)
         for (const perm of PERMISSIONS) {
@@ -52,14 +42,17 @@ async function seed() {
         ];
 
         for (const roleDef of roleData) {
-            console.log(`Creating role: ${roleDef.name}`);
-            const role = await Role.create({
-                name: roleDef.name,
-                org_id: orgId,
-                is_system_role: roleDef.is_system_role,
-                description: roleDef.description
+            console.log(`Ensuring role exists: ${roleDef.name}`);
+            const [role] = await Role.findOrCreate({
+                where: { name: roleDef.name, org_id: orgId },
+                defaults: {
+                    name: roleDef.name,
+                    org_id: orgId,
+                    is_system_role: roleDef.is_system_role,
+                    description: roleDef.description
+                }
             }).catch(e => {
-                console.error(`Error creating role ${roleDef.name}:`, e);
+                console.error(`Error ensuring role ${roleDef.name}:`, e);
                 throw e;
             });
             

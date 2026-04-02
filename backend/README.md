@@ -1,249 +1,123 @@
-# CMMS Platform — Backend
+# CMMS Platform - Backend API
 
-Node.js/Express REST API for the **Computerized Maintenance Management System (CMMS)** platform. Handles authentication, asset management, work orders, preventive maintenance scheduling, inventory tracking, analytics, and real-time notifications.
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Runtime | [Node.js](https://nodejs.org/) v18+ |
-| Framework | [Express.js](https://expressjs.com/) v5 |
-| Language | [TypeScript](https://www.typescriptlang.org/) |
-| Database | [MySQL 8.0](https://www.mysql.com/) |
-| ORM | [Sequelize](https://sequelize.org/) v6 |
-| Migrations | [Sequelize CLI](https://github.com/sequelize/cli) |
-| Auth | JSON Web Tokens (JWT) via `jsonwebtoken` |
-| Validation | [Zod](https://zod.dev/) |
-| Logging | [Pino](https://getpino.io/) (structured JSON) |
-| Security | [Helmet](https://helmetjs.github.io/) + [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) |
-| Real-time | [Socket.IO](https://socket.io/) v4 |
-| File Uploads | [Multer](https://github.com/expressjs/multer) |
+This repository contains the Node.js/TypeScript backend API for the CMMS (Computerized Maintenance Management System) Platform. It utilizes Express, Sequelize (MySQL), and Socket.IO.
 
 ## Prerequisites
 
-- Node.js v18+
-- npm
-- Docker & Docker Compose (for MySQL)
+Before setting up the backend, ensure you have the following installed on your machine:
+*   **Node.js:** Version `20.x` or higher (Recommended: `v24.x`).
+*   **MySQL:** A running MySQL server instance (Local or Cloud like AWS RDS).
 
-## Getting Started
+---
 
-### 1. Start the Database
+## 🚀 Setup Guide for a Brand New Database
 
+If you are setting up the project for the first time on a fresh database, follow these steps exactly:
+
+### 1. Install Dependencies
+Install all necessary packages, including development tools required for building the TypeScript code.
 ```bash
-# From the project root
-docker compose up -d
+npm install
 ```
 
-This spins up a MySQL 8.0 container on port `3306`.
-
 ### 2. Environment Variables
-
-Create a `.env` file in the `backend/` directory:
-
+Create a `.env` file in the root of the `backend` directory.
+```bash
+cp .env.example .env
+```
+Open the `.env` file and fill in your database credentials:
 ```env
 PORT=8000
-DB_HOST=localhost
+DB_HOST=your_mysql_host
 DB_PORT=3306
-DB_USER=cmms_user
-DB_PASSWORD=cmms_password
+DB_USER=your_mysql_user
+DB_PASSWORD=your_mysql_password
 DB_NAME=cmms_dev
 JWT_SECRET=your_super_secret_jwt_key
 ```
 
-### 3. Install Dependencies
-
+### 3. Build the Project
+Compile the TypeScript code into executable JavaScript inside the `dist/` folder.
 ```bash
-cd backend
-npm install
+npm run build
 ```
 
-### 4. Run Migrations
-
+### 4. Run Database Migrations
+Migrations define your database schema. Running this command will automatically create all the necessary tables (users, roles, work_orders, etc.) inside your blank database.
 ```bash
 npm run migrate
 ```
+*(If you ever make a mistake and want to undo all tables and start over, you can run `npx sequelize-cli db:migrate:undo:all`)*
 
-This creates all database tables using Sequelize migrations (no more `sequelize.sync()`).
-
-### 5. Seed the Database
-
+### 5. Seed Core System Data (Safe & Idempotent)
+The system requires core roles (Super Admin, Facility Manager, etc.) and permissions to function. 
+Run the seed script to safely insert this core data. This script is idempotent, meaning you can run it safely on production without overwriting existing data.
 ```bash
 npm run seed
 ```
+**What this does:**
+1. Creates the base "CMMS Demo Org" organization.
+2. Creates all system Access permissions.
+3. Creates default Roles (`Super_Admin`, `Org_Admin`, `Facility_Manager`, `Technician`, `Requestor`).
+4. Creates 5 default users attached to those roles (e.g., `admin@demo.com` with password `admin123`).
 
-Populates the DB with sample organizations, roles, users, assets, work orders, and inventory items.
+### 6. Seed Demo Data (Optional - For Development Only)
+If you want to populate your system with dummy Assets, Inventory Items, and Work Orders to test the UI, run:
+```bash
+npm run seed:demo
+```
 
-### 6. Run the Dev Server
-
+### 7. Start the Server
+Now that your database is fully structured and seeded, start the development server:
 ```bash
 npm run dev
 ```
+The server will start on `http://localhost:8000`. 
+*   **Health Check:** `http://localhost:8000/health`
+*   **Swagger API Docs:** `http://localhost:8000/api-docs`
 
-Server starts at **http://localhost:8000** with hot-reload via `nodemon`.
+---
 
-## Available Scripts
+## ☁️ Production Deployment Guide (Render)
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start dev server with `nodemon` + `ts-node` (hot-reload) |
-| `npm run build` | Compile TypeScript → `dist/` |
-| `npm start` | Run compiled JS from `dist/` |
-| `npm run seed` | Seed database with sample data |
-| `npm run migrate` | Run pending Sequelize migrations |
-| `npm run migrate:undo` | Revert the last migration |
+If you are deploying this backend to a cloud host like **Render**, follow these exact settings to ensure successful builds and deployments.
 
-## Architecture
+**Important Note on Vercel:** Do *not* deploy this application to Vercel. Vercel is a Serverless platform and does not support long-running processes or Socket.IO (WebSockets), which are essential for this application's real-time AI features. Use Render, Heroku, or an AWS EC2/ECS instance.
 
-The backend follows a strict **4-layer architecture** pattern:
+### Render Service Configuration:
+1.  **Environment:** `Node`
+2.  **Build Command:** 
+    ```bash
+    npm install && npm run build
+    ```
+    *(This ensures TypeScript and `@types` are installed before compiling, preventing `MODULE_NOT_FOUND` errors).*
+3.  **Start Command:**
+    ```bash
+    npm start
+    ```
+4.  **Health Check Path:** `/health`
+5.  **Environment Variables:** Add `NODE_ENV=production`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET`.
 
-```
-Request → Route → Controller → Service → Repository → Database
-```
+### Running Migrations in Production
+Once your app is successfully deployed to Render, you must initialize the live database:
+1. Go to your Render Web Service Dashboard.
+2. Click the **Shell** tab.
+3. Execute the migration and seed commands:
+    ```bash
+    npm run migrate
+    npm run seed
+    ```
 
-| Layer | Responsibility |
-|-------|---------------|
-| **Routes** (`src/routes/`) | Endpoint definitions, middleware wiring (auth, validation, rate limiting) |
-| **Controllers** (`src/controllers/`) | HTTP req/res handling, DTO extraction, status codes. **Zero business logic.** |
-| **Services** (`src/services/`) | All business logic, orchestration, transaction management. HTTP-agnostic. |
-| **Repositories** (`src/repositories/`) | Pure Sequelize model operations. No business rules. |
+---
 
-### Error Handling
+## Commands Reference
 
-A centralized `AppError` class hierarchy (`src/errors/AppError.ts`) enables clean error throwing from any layer:
-
-```typescript
-// In any service:
-throw new NotFoundError('Asset');        // → 404 { detail: "Asset not found" }
-throw new ForbiddenError();              // → 403 { detail: "Insufficient permissions" }
-throw new ConflictError('Email taken');  // → 409 { detail: "Email taken" }
-throw new BadRequestError('Invalid');    // → 400 { detail: "Invalid" }
-```
-
-The global `errorHandler` middleware catches and serializes all errors consistently.
-
-### Type Safety
-
-- **Express augmentation** (`src/types/express.d.ts`): `req.user` is globally typed — no `any` casts
-- **DTOs** (`src/types/dto.ts`): All request/response payloads use typed interfaces
-- **Zod validation** (`src/validators/`): Input validated at the route level before reaching controllers
-
-## API Endpoints
-
-All routes are prefixed with `/api`.
-
-| Route | Description |
-|-------|-------------|
-| `/api/auth` | Login, JWT token generation, current user |
-| `/api/users` | User CRUD, role assignment, bulk operations |
-| `/api/organizations` | Organization management with default role seeding |
-| `/api/roles` | Role definitions (Super Admin, Org Admin, Manager, Technician, Requestor) |
-| `/api/assets` | Asset CRUD, bulk import, bulk delete |
-| `/api/work-orders` | Work order lifecycle (create → assign → complete), comments, file attachments, parts used |
-| `/api/pm-schedules` | Preventive maintenance schedules |
-| `/api/inventory` | Inventory items, stock tracking, stats, categories |
-| `/api/analytics` | Dashboard analytics (admin + technician dashboards) |
-
-### Pagination
-
-List endpoints (`GET /api/work-orders`, `GET /api/assets`, `GET /api/inventory`) support server-side pagination:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `skip` | `0` | Number of records to skip |
-| `limit` | `100` | Number of records to return |
-
-Response format:
-```json
-{
-  "data": [...],
-  "total": 42,
-  "skip": 0,
-  "limit": 100
-}
-```
-
-### File Uploads
-
-Work order attachments are stored in `uploads/work-orders/` and served statically at `/uploads/`. Max 3 files per upload, 1 MB each.
-
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── server.ts              # Express app entry point + Socket.IO + graceful shutdown
-│   ├── config/
-│   │   ├── database.ts        # Sequelize instance + connection pool
-│   │   ├── config.js          # Sequelize CLI config (migrations)
-│   │   └── logger.ts          # Pino structured logger
-│   ├── constants/
-│   │   └── roles.ts           # Centralized RBAC role constants
-│   ├── errors/
-│   │   └── AppError.ts        # Error class hierarchy (NotFound, Forbidden, etc.)
-│   ├── types/
-│   │   ├── express.d.ts       # Global Express type augmentation (req.user typing)
-│   │   ├── common.dto.ts      # Shared DTOs (pagination, audit context, bulk ops)
-│   │   └── dto.ts             # Module-specific DTOs (User, Asset, WorkOrder, etc.)
-│   ├── middleware/
-│   │   ├── auth.ts            # JWT verification + RBAC middleware
-│   │   ├── errorHandler.ts    # Centralized error handler (AppError, Sequelize, JWT)
-│   │   ├── validate.ts        # Zod validation middleware
-│   │   ├── requestId.ts       # UUID per-request correlation
-│   │   └── requestLogger.ts   # Pino-based request/response logging
-│   ├── validators/            # Zod schemas for input validation
-│   ├── routes/                # Thin endpoint → controller mappings
-│   ├── controllers/           # HTTP layer (req/res/next), DTO extraction
-│   ├── services/              # Business logic, orchestration, transactions
-│   ├── repositories/          # Sequelize model operations (data access)
-│   ├── models/                # Sequelize model definitions & associations
-│   └── migrations/            # Sequelize CLI migration files
-├── uploads/                   # File upload storage
-├── seed.ts                    # Database seeding script
-├── .sequelizerc               # Sequelize CLI path configuration
-├── package.json
-├── tsconfig.json
-└── .env
-```
-
-## Security
-
-| Feature | Implementation |
-|---------|---------------|
-| **Authentication** | JWT tokens (24h expiry) |
-| **Authorization** | Role-based access control (RBAC) via middleware |
-| **Input Validation** | Zod schemas on all mutation endpoints |
-| **Rate Limiting** | Global (500 req/15min) + login-specific (15 req/15min) |
-| **Security Headers** | Helmet middleware (CSP, HSTS, X-Frame-Options, etc.) |
-| **Password Hashing** | bcryptjs with salt rounds |
-| **Request Tracing** | UUID correlation IDs on every request |
-| **Structured Logging** | Pino JSON logs with request context |
-
-## Role-Based Access Control
-
-| Role | Permissions |
-|------|------------|
-| **Super Admin** | Full system access across all organizations |
-| **Org Admin** | Full access within their organization |
-| **Facility Manager** | Create/edit assets, work orders, inventory, PM schedules; assign technicians |
-| **Technician** | View assigned work orders, update status, log parts used |
-| **Requestor** | Submit work order requests, view own requests |
-
-> **Note:** Org Admins are restricted from assigning Super Admin or Org Admin roles.
-
-## Health Check
-
-```bash
-curl http://localhost:8000/health
-```
-
-Returns server status, database connectivity, uptime, and memory usage:
-```json
-{
-  "status": "ok",
-  "checks": {
-    "database": "ok",
-    "uptime": "120s",
-    "memory": "85MB"
-  }
-}
-```
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Starts the server in watch mode using `nodemon`. |
+| `npm run build` | Compiles `.ts` files to `.js` in the `dist/` folder. |
+| `npm start` | Runs the compiled server directly (Production). |
+| `npm run migrate` | Runs Sequelize migrations to create tables. |
+| `npm run migrate:undo` | Reverts the last run migration. |
+| `npm run seed` | Seeds core organization, roles, permissions, and admin users. |
+| `npm run seed:demo` | Seeds dummy assets, inventory, and work orders. |
