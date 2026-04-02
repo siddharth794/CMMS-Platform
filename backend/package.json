@@ -8,7 +8,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "dev": "nodemon src/server.ts",
-    "build": "tsc",
+    "build": "NODE_OPTIONS='--max-old-space-size=460' tsc",
     "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:extra": "ts-node src/scripts/seed-extra-demo.ts",
@@ -23,7 +23,7 @@
   "license": "ISC",
   "type": "commonjs",
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
