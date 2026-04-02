@@ -6,14 +6,16 @@ async function seedDemoData() {
         console.log('Connection established successfully.');
 
         // Dynamically get the first organization
-        const organization: any = await Organization.findOne();
+        const [orgs]: any = await sequelize.query('SELECT id, name FROM organizations LIMIT 1');
+        const organization = orgs[0];
         if (!organization) {
             console.error('No organization found. Please run the base seed script first.');
             process.exit(1);
         }
         const ORG_ID = organization.id;
+        const orgName = organization.name;
 
-        console.log(`Seeding demo data for Organization: ${organization.name} (ID: ${ORG_ID})`);
+        console.log(`Seeding demo data for Organization: ${orgName} (ID: ${ORG_ID})`);
 
         // Get a user to act as requester and assignee (if available)
         const users: any = await User.findAll({ where: { org_id: ORG_ID }, limit: 2 });
@@ -163,8 +165,8 @@ async function seedDemoData() {
         // Link Inventory to the first Work Order (HVAC Maintenance)
         if (createdWO.length > 0 && createdInventory.length > 0) {
             await WorkOrderInventoryItem.create({
-                work_order_id: createdWO[0].id,
-                inventory_item_id: createdInventory[0].id,
+                work_order_id: createdWO[0].dataValues ? createdWO[0].dataValues.id : createdWO[0].id,
+                inventory_item_id: createdInventory[0].dataValues ? createdInventory[0].dataValues.id : createdInventory[0].id,
                 quantity_used: 2
             });
             console.log('Linked inventory items to work order.');

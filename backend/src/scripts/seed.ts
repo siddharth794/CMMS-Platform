@@ -7,8 +7,11 @@ async function seed() {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
 
-        // Force true only if you want to drop and recreate tables, let's keep it safe with alter: true or just rely on existing schema sync
+        // Ensure a clean sync
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0;');
+        await sequelize.query('DROP TABLE IF EXISTS user_roles, group_roles, role_accesses, accesses, pm_tasks, pm_schedules, checklist_items, checklists, work_order_inventory, work_order_logs, work_orders, users, roles, sites, inventory, `groups`, assets, organizations;');
         await sequelize.sync({ force: true });
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1;');
 
         console.log('Seeding initial data...');
 
@@ -23,7 +26,12 @@ async function seed() {
             }
         });
 
-        console.log(`Organization: ${org.name} (ID: ${org.id})`);
+        const orgId = org.id || org.dataValues.id;
+        console.log(`Organization: ${org.name || org.dataValues.name} (ID: ${orgId})`);
+
+        // Force a raw query to check what is in roles table
+        const [existingRoles] = await sequelize.query('SELECT * FROM roles');
+        console.log('Existing roles before creating:', existingRoles);
 
         // 2. Create Accesses (Permissions)
         for (const perm of PERMISSIONS) {
@@ -44,11 +52,17 @@ async function seed() {
         ];
 
         for (const roleDef of roleData) {
-            const [role] = await Role.findOrCreate({
-                where: { name: roleDef.name, is_system_role: true },
-                defaults: { org_id: null, ...roleDef }
+            console.log(`Creating role: ${roleDef.name}`);
+            const role = await Role.create({
+                name: roleDef.name,
+                org_id: orgId,
+                is_system_role: roleDef.is_system_role,
+                description: roleDef.description
+            }).catch(e => {
+                console.error(`Error creating role ${roleDef.name}:`, e);
+                throw e;
             });
-
+            
             // Map permissions to role
             const allowedPerms = DEFAULT_ROLE_PERMISSIONS[role.name as keyof typeof DEFAULT_ROLE_PERMISSIONS] || [];
             
@@ -87,7 +101,7 @@ async function seed() {
             const [user, created]: any = await User.findOrCreate({
                 where: { email: demoDef.email },
                 defaults: {
-                    org_id: org.id,
+                    org_id: orgId,
                     username: demoDef.username,
                     first_name: demoDef.firstName,
                     last_name: demoDef.lastName,
