@@ -53,26 +53,28 @@ const PMScheduleDetailPage = () => {
 
 
 
-  const getInitialDateFromCron = (cron, freq) => {
-    // Reverse engineer a safe date string for the picker
-    // Default to today if we can't parse perfectly, but we extract what we can
-    const parts = cron.split(' ');
-    const now = new Date();
-    let d = now.getDate();
-    let m = now.getMonth();
-    
-    if (parts.length >= 5) {
-      if (freq === 'monthly' || freq === 'quarterly' || freq === 'semi_annual') {
-        d = parseInt(parts[2]) || d;
-      } else if (freq === 'annual') {
-        d = parseInt(parts[2]) || d;
-        m = (parseInt(parts[3]) - 1) || m;
-      }
-    }
-    
-    const date = new Date(now.getFullYear(), m, d);
-    return date.toISOString().split('T')[0];
-  };
+   const getInitialDateFromCron = (cron, freq) => {
+     // Reverse engineer a safe date string for the picker
+     // Default to today if we can't parse perfectly, but we extract what we can
+     const parts = cron.split(' ');
+     const now = new Date();
+     let d = now.getDate();
+     let m = now.getMonth();
+     let y = now.getFullYear();
+     
+     if (parts.length >= 5) {
+       if (freq === 'monthly' || freq === 'quarterly' || freq === 'semi_annual') {
+         d = parseInt(parts[2]) || d;
+       } else if (freq === 'annual') {
+         d = parseInt(parts[2]) || d;
+         m = (parseInt(parts[3]) - 1) || m;
+       }
+     }
+     
+     // Create date in UTC to avoid timezone shifts
+     const date = new Date(Date.UTC(y, m, d));
+     return date.toISOString().split('T')[0];
+   };
 
   const getFrequencyFromCron = (cron) => {
     if (cron === '0 0 * * *') return 'daily';
@@ -83,21 +85,21 @@ const PMScheduleDetailPage = () => {
     return 'monthly';
   };
 
-  const getCronFromFrequency = (freq, startDateStr) => {
-    const date = new Date(startDateStr);
-    const dayOfMonth = date.getDate();
-    const dayOfWeek = date.getDay();
+   const getCronFromFrequency = (freq, startDateStr) => {
+     const date = new Date(startDateStr + 'T00:00:00');
+     const dayOfMonth = date.getDate();
+     const dayOfWeek = date.getDay();
 
-    switch(freq) {
-      case 'daily': return '0 0 * * *';
-      case 'weekly': return `0 0 * * ${dayOfWeek}`;
-      case 'monthly': return `0 0 ${dayOfMonth} * *`;
-      case 'quarterly': return `0 0 ${dayOfMonth} */3 *`;
-      case 'semi_annual': return `0 0 ${dayOfMonth} */6 *`;
-      case 'annual': return `0 0 ${dayOfMonth} ${date.getMonth() + 1} *`;
-      default: return '0 0 1 * *';
-    }
-  };
+     switch(freq) {
+       case 'daily': return '0 0 * * *';
+       case 'weekly': return `0 0 * * ${dayOfWeek}`;
+       case 'monthly': return `0 0 ${dayOfMonth} * *`;
+       case 'quarterly': return `0 0 ${dayOfMonth} */3 *`;
+       case 'semi_annual': return `0 0 ${dayOfMonth} */6 *`;
+       case 'annual': return `0 0 ${dayOfMonth} ${date.getMonth() + 1} *`;
+       default: return '0 0 1 * *';
+     }
+   };
 
   useEffect(() => {
     if (pm) {
