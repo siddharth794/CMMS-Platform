@@ -61,6 +61,12 @@ npm run seed
 3. Creates default Roles (`Super_Admin`, `Org_Admin`, `Facility_Manager`, `Technician`, `Requestor`).
 4. Creates 5 default users attached to those roles (e.g., `admin@demo.com` with password `admin123`).
 
+### Upgrading an Existing Installation
+If you already have a running database seeded prior to the introduction of Checklists, you will need to add Checklist permissions to your existing roles without destroying any custom permissions you may have set. To safely patch these permissions:
+```bash
+npm run seed:checklists
+```
+
 ### 6. Seed Demo Data (Optional - For Development Only)
 If you want to populate your system with dummy Assets, Inventory Items, and Work Orders to test the UI, run:
 ```bash
@@ -120,4 +126,5 @@ Once your app is successfully deployed to Render, you must initialize the live d
 | `npm run migrate` | Runs Sequelize migrations to create tables. |
 | `npm run migrate:undo` | Reverts the last run migration. |
 | `npm run seed` | Seeds core organization, roles, permissions, and admin users. |
+| `npm run seed:checklists` | Safely grants checklist permissions to existing admin and manager roles. |
 | `npm run seed:demo` | Seeds dummy assets, inventory, and work orders. |
