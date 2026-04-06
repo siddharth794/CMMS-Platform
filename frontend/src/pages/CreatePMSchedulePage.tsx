@@ -70,21 +70,21 @@ const CreatePMSchedulePage = () => {
     }
   }, [user, isSuperAdmin, isFacilityManager]);
 
-  const getCronFromFrequency = (freq, startDateStr) => {
-    const date = new Date(startDateStr);
-    const dayOfMonth = date.getDate();
-    const dayOfWeek = date.getDay(); // 0 is Sunday, 1 is Monday...
+   const getCronFromFrequency = (freq, startDateStr) => {
+     const date = new Date(startDateStr + 'T00:00:00');
+     const dayOfMonth = date.getDate();
+     const dayOfWeek = date.getDay(); // 0 is Sunday, 1 is Monday...
 
-    switch(freq) {
-      case 'daily': return '0 0 * * *';
-      case 'weekly': return `0 0 * * ${dayOfWeek}`;
-      case 'monthly': return `0 0 ${dayOfMonth} * *`;
-      case 'quarterly': return `0 0 ${dayOfMonth} */3 *`;
-      case 'semi_annual': return `0 0 ${dayOfMonth} */6 *`;
-      case 'annual': return `0 0 ${dayOfMonth} ${date.getMonth() + 1} *`;
-      default: return '0 0 1 * *';
-    }
-  };
+     switch(freq) {
+       case 'daily': return '0 0 * * *';
+       case 'weekly': return `0 0 * * ${dayOfWeek}`;
+       case 'monthly': return `0 0 ${dayOfMonth} * *`;
+       case 'quarterly': return `0 0 ${dayOfMonth} */3 *`;
+       case 'semi_annual': return `0 0 ${dayOfMonth} */6 *`;
+       case 'annual': return `0 0 ${dayOfMonth} ${date.getMonth() + 1} *`;
+       default: return '0 0 1 * *';
+     }
+   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -309,17 +309,17 @@ const CreatePMSchedulePage = () => {
                         !formData.startDate && "text-muted-foreground"
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate ? format(new Date(formData.startDate), "PPP") : <span>Pick a date</span>}
+                       <CalendarIcon className="mr-2 h-4 w-4" />
+                       {formData.startDate ? format(new Date(formData.startDate + 'T00:00:00'), "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.startDate ? new Date(formData.startDate) : undefined}
-                      onSelect={(date) => setFormData({ ...formData, startDate: date ? date.toISOString().split('T')[0] : '' })}
-                      initialFocus
-                    />
+                       <Calendar
+                       mode="single"
+                       selected={formData.startDate ? new Date(formData.startDate + 'T00:00:00') : undefined}
+                       onSelect={(date) => setFormData({ ...formData, startDate: date ? date.toISOString().split('T')[0] : '' })}
+                       initialFocus
+                     />
                   </PopoverContent>
                 </Popover>
                 <p className="text-xs text-muted-foreground mt-1">
