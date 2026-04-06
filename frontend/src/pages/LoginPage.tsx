@@ -17,13 +17,20 @@ const BrandLogo = ({ isDark, size = "large" }) => {
   const iconSize = size === "large" ? "h-40 lg:h-48 xl:h-64 w-auto max-w-full object-contain" : "h-24 w-auto max-w-full object-contain";
   
   return (
-    <div className="flex -ml-8 items-center gap-4 group/logo cursor-pointer">
-      <div className="relative flex items-center justify-center">
+    <div className="flex items-center gap-4 group/logo cursor-pointer -ml-8 mt-8">
+      <div className="relative flex items-center justify-center p-4">
+        {/* Subtle hover glow effect */}
         <div className={`absolute inset-0 blur-3xl rounded-full opacity-0 group-hover/logo:opacity-50 transition-opacity duration-300 ${isDark ? 'bg-rose-500/40' : 'bg-blue-500/30'}`} />
+        
+        {/* Light background pill specifically for Dark Mode visibility */}
+        {isDark && (
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-xl rounded-[2.5rem] shadow-[0_0_30px_rgba(255,255,255,0.15)] z-0 transition-all duration-300 group-hover/logo:scale-105" />
+        )}
+
         <img 
           src={sfmLogo} 
           alt="SFM Spartans Facility Management" 
-          className={`${iconSize} relative z-10 transition-transform duration-300 group-hover/logo:scale-105 drop-shadow-2xl`} 
+          className={`${iconSize} relative z-10 transition-transform duration-300 group-hover/logo:scale-105 ${!isDark ? 'drop-shadow-2xl' : ''}`} 
         />
       </div>
     </div>
