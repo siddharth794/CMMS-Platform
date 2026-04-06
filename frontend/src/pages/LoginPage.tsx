@@ -11,42 +11,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Sun, Moon, Loader2, ArrowRight, Cpu, BarChart3, Wrench, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import vigyaniLogo from '../../assets/vigyani-logo.png';
-
-/* ── Inline SVG Logo (Crystal clear, fully transparent, scalable) ── */
-const SfmLogoIcon = ({ className = "h-16 w-16" }) => (
-  <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M24 4L6 12V26C6 36.5 13.5 43.5 24 46C34.5 43.5 42 36.5 42 26V12L24 4Z" fill="url(#sfmGradMain)"/>
-    <path d="M24 4V46C34.5 43.5 42 36.5 42 26V12L24 4Z" fill="white" fillOpacity="0.15"/>
-    <path d="M16 22H32C33.1046 22 34 22.8954 34 24V32C34 33.1046 33.1046 34 32 34H16C14.8954 34 14 33.1046 14 32V24C14 22.8954 14.8954 22 16 22Z" fill="white" fillOpacity="0.95"/>
-    <path d="M19 16C19 13.2386 21.2386 11 24 11C26.7614 11 29 13.2386 29 16V22H19V16Z" fill="white" fillOpacity="0.95"/>
-    <rect x="22" y="26" width="4" height="4" rx="2" fill="#2563EB"/>
-    <defs>
-      <linearGradient id="sfmGradMain" x1="6" y1="4" x2="42" y2="46" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#e11d48" /> {/* Rose/Red to represent spartan */}
-        <stop offset="1" stopColor="#1e3a8a" /> {/* Deep blue */}
-      </linearGradient>
-    </defs>
-  </svg>
-);
+import sfmLogo from '../../assets/SFM-logo-updated-transparent.png';
 
 const BrandLogo = ({ isDark, size = "large" }) => {
-  const iconSize = size === "large" ? "h-16 w-16 xl:h-20 xl:w-20" : "h-12 w-12";
-  const titleSize = size === "large" ? "text-4xl xl:text-5xl" : "text-3xl";
-  const subSize = size === "large" ? "text-sm xl:text-base" : "text-xs";
+  const iconSize = size === "large" ? "h-40 lg:h-48 xl:h-64 w-auto max-w-full object-contain" : "h-24 w-auto max-w-full object-contain";
   
   return (
-    <div className="flex items-center gap-4 group/logo cursor-pointer">
-      <div className="relative">
-        <div className={`absolute inset-0 blur-2xl rounded-full opacity-0 group-hover/logo:opacity-50 transition-opacity duration-300 ${isDark ? 'bg-rose-500/40' : 'bg-blue-500/30'}`} />
-        <SfmLogoIcon className={`${iconSize} relative z-10 transition-transform duration-300 group-hover/logo:scale-105 drop-shadow-xl`} />
-      </div>
-      <div className="flex flex-col">
-        <span className={`${titleSize} font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          SFM
-        </span>
-        <span className={`${subSize} font-bold tracking-widest uppercase text-rose-600`}>
-          Spartans
-        </span>
+    <div className="flex -ml-8 items-center gap-4 group/logo cursor-pointer">
+      <div className="relative flex items-center justify-center">
+        <div className={`absolute inset-0 blur-3xl rounded-full opacity-0 group-hover/logo:opacity-50 transition-opacity duration-300 ${isDark ? 'bg-rose-500/40' : 'bg-blue-500/30'}`} />
+        <img 
+          src={sfmLogo} 
+          alt="SFM Spartans Facility Management" 
+          className={`${iconSize} relative z-10 transition-transform duration-300 group-hover/logo:scale-105 drop-shadow-2xl`} 
+        />
       </div>
     </div>
   );
@@ -147,7 +125,7 @@ const LoginPage = () => {
           </motion.div>
 
           {/* ── Middle: Hero copy + Features ── */}
-          <div className="flex flex-col gap-12 xl:gap-14 mt-12">
+          <div className="flex flex-col gap-12 xl:gap-14 mt-4">
             {/* Hero text */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
