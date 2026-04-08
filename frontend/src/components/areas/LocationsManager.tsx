@@ -48,8 +48,6 @@ export function LocationsManager({ siteId, orgId }: { siteId: string, orgId: str
     }
   };
 
-  const floorsList = Array.isArray(floors) ? floors : (floors?.data || []);
-
   if (isLoading) return <div>Loading locations...</div>;
 
   return (

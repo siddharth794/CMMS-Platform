@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAreaExecutions } from '../hooks/api/useAreas';
 import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Clock, MapPin, QrCode, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -25,42 +26,47 @@ export default function AreaTasksPage() {
       </div>
 
       {(!executions || executions.length === 0) ? (
-        <Card className="bg-muted/50 border-dashed">
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
             <h3 className="text-xl font-medium">All Caught Up!</h3>
-            <p className="text-muted-foreground">There are no pending area tasks right now.</p>
+            <p className="text-muted-foreground mt-2">There are no pending area tasks right now.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {executions.map((exec: any) => (
-            <Card 
-              key={exec.id} 
-              className={`cursor-pointer transition-shadow hover:shadow-md ${exec.status === 'IN_PROGRESS' ? 'border-primary ring-1 ring-primary' : ''}`}
-              onClick={() => navigate(`/area-tasks/${exec.id}`)}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span className="font-semibold">{exec.area?.name}</span>
-                    <Badge variant={exec.status === 'IN_PROGRESS' ? "default" : "outline"}>
-                      {exec.status === 'IN_PROGRESS' ? 'In Progress' : 'Pending'}
-                    </Badge>
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {executions.map((exec: any) => (
+                <div 
+                  key={exec.id} 
+                  className={`cursor-pointer transition-colors hover:bg-slate-50 flex items-center justify-between p-6 ${exec.status === 'IN_PROGRESS' ? 'bg-primary/5' : ''}`}
+                  onClick={() => navigate(`/area-tasks/${exec.id}`)}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-lg">{exec.area?.name}</span>
+                      <Badge variant={exec.status === 'IN_PROGRESS' ? "default" : "outline"} className="ml-2">
+                        {exec.status === 'IN_PROGRESS' ? 'In Progress' : 'Pending'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground gap-2">
+                      <Clock className="w-4 h-4" />
+                      Due: {format(new Date(exec.scheduled_for), 'h:mm a, MMM d')}
+                    </div>
                   </div>
-                  <div className="flex items-center text-sm text-muted-foreground gap-1">
-                    <Clock className="w-3 h-3" />
-                    Due: {format(new Date(exec.scheduled_for), 'h:mm a, MMM d')}
+                  <div>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <QrCode className="w-4 h-4" />
+                      Scan to Unlock
+                    </Button>
                   </div>
                 </div>
-                <div>
-                  <QrCode className="w-8 h-8 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

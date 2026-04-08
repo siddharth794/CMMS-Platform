@@ -75,7 +75,8 @@ export default function AreaDetailsPage() {
           </div>
 
           <Card>
-            <Table>
+            <CardContent className="p-0">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Checklist Template</TableHead>
@@ -117,16 +118,18 @@ export default function AreaDetailsPage() {
                 )}
               </TableBody>
             </Table>
+            </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="border-b">
               <CardTitle>Execution Log</CardTitle>
               <CardDescription>History of generated tasks and their completion status.</CardDescription>
             </CardHeader>
-            <Table>
+            <CardContent className="p-0">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Scheduled For</TableHead>
@@ -163,6 +166,7 @@ export default function AreaDetailsPage() {
                 )}
               </TableBody>
             </Table>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
