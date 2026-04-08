@@ -32,6 +32,16 @@ export const updateFloor = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+export const deleteFloor = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user!.org_id;
+    await areaService.deleteFloor(req.params.id as string, orgId);
+    res.json({ message: 'Floor deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAreas = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const floorId = req.params.floorId as string;
@@ -73,6 +83,16 @@ export const updateArea = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+export const deleteArea = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user!.org_id;
+    await areaService.deleteArea(req.params.id as string, orgId);
+    res.json({ message: 'Area deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAreaQrCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user!.org_id;
@@ -108,6 +128,16 @@ export const updateSchedule = async (req: Request, res: Response, next: NextFunc
     const orgId = req.user!.org_id;
     const schedule = await areaService.updateSchedule(req.params.id as string, orgId, req.body);
     res.json({ message: 'Schedule updated successfully', data: schedule });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSchedule = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user!.org_id;
+    await areaService.deleteSchedule(req.params.id as string, orgId);
+    res.json({ message: 'Schedule deleted successfully' });
   } catch (error) {
     next(error);
   }

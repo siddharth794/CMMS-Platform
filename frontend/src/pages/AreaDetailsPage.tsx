@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 // @ts-nocheck
-import { useAreaDetails, useAreaSchedules, useAreaExecutions } from '../hooks/api/useAreas';
+import { useAreaDetails, useAreaSchedules, useAreaExecutions, useMutateAreaTask } from '../hooks/api/useAreas';
 import { useChecklists } from '../hooks/api/useChecklists';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -31,6 +31,19 @@ export default function AreaDetailsPage() {
   // Get executions for this area specifically
   const { data: executionsResponse } = useAreaExecutions({ area_id: id });
   const executions = Array.isArray(executionsResponse) ? executionsResponse : (executionsResponse?.data || []);
+
+  const { deleteScheduleMutation } = useMutateAreaTask();
+  const { addNotification } = useNotification();
+  
+  const handleDeleteSchedule = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this schedule?")) return;
+    try {
+      await deleteScheduleMutation.mutateAsync(id);
+      addNotification("success", "Schedule deleted");
+    } catch (err: any) {
+      addNotification("error", err.response?.data?.error || "Failed to delete schedule");
+    }
+  };
 
   if (isLoading) return <div className="p-8">Loading Area...</div>;
   if (!area) return <div className="p-8">Area not found.</div>;
@@ -68,12 +81,13 @@ export default function AreaDetailsPage() {
                   <TableHead>Checklist Template</TableHead>
                   <TableHead>Schedule (Cron)</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(!schedules || schedules.length === 0) ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       No schedules attached. Add a checklist template to automatically generate tasks.
                     </TableCell>
                   </TableRow>
@@ -86,6 +100,17 @@ export default function AreaDetailsPage() {
                         <Badge variant={schedule.is_active ? "default" : "secondary"}>
                           {schedule.is_active ? 'Active' : 'Paused'}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDeleteSchedule(schedule.id)}
+                          title="Delete Schedule"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

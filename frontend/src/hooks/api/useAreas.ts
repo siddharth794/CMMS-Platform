@@ -76,5 +76,26 @@ export function useMutateAreaTask() {
     },
   });
 
-  return { verifyQrMutation, completeTaskMutation };
+  const deleteFloorMutation = useMutation({
+    mutationFn: (id: string) => areasApi.deleteFloor(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['floors'] });
+    },
+  });
+
+  const deleteAreaMutation = useMutation({
+    mutationFn: (id: string) => areasApi.deleteArea(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['areas'] });
+    },
+  });
+
+  const deleteScheduleMutation = useMutation({
+    mutationFn: (id: string) => areasApi.deleteSchedule(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['area_schedules'] });
+    },
+  });
+
+  return { verifyQrMutation, completeTaskMutation, deleteFloorMutation, deleteAreaMutation, deleteScheduleMutation };
 }

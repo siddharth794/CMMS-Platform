@@ -17,6 +17,12 @@ class AreaService {
     return areaRepository.updateFloor(id, orgId, data);
   }
 
+  async deleteFloor(id: string, orgId: string) {
+    const floor = await areaRepository.getFloorById(id, orgId);
+    if (!floor) throw new NotFoundError('Floor not found');
+    return areaRepository.deleteFloor(id, orgId);
+  }
+
   async getAreas(floorId: string, orgId: string) {
     return areaRepository.getAreasByFloorId(floorId, orgId);
   }
@@ -35,6 +41,12 @@ class AreaService {
     const area = await areaRepository.getAreaById(id, orgId);
     if (!area) throw new NotFoundError('Area not found');
     return areaRepository.updateArea(id, orgId, data);
+  }
+
+  async deleteArea(id: string, orgId: string) {
+    const area = await areaRepository.getAreaById(id, orgId);
+    if (!area) throw new NotFoundError('Area not found');
+    return areaRepository.deleteArea(id, orgId);
   }
 
   async generateAreaQrCode(id: string, orgId: string) {
@@ -58,6 +70,12 @@ class AreaService {
     const schedule = await areaRepository.getScheduleById(id, orgId);
     if (!schedule) throw new NotFoundError('Schedule not found');
     return areaRepository.updateSchedule(id, orgId, data);
+  }
+
+  async deleteSchedule(id: string, orgId: string) {
+    const schedule = await areaRepository.getScheduleById(id, orgId);
+    if (!schedule) throw new NotFoundError('Schedule not found');
+    return areaRepository.deleteSchedule(id, orgId);
   }
 
   async getExecutions(orgId: string, filters: any = {}) {

@@ -18,6 +18,10 @@ class AreaRepository {
     return this.getFloorById(id, orgId);
   }
 
+  async deleteFloor(id: string, orgId: string) {
+    return Floor.destroy({ where: { id, org_id: orgId } });
+  }
+
   async getAreasByFloorId(floorId: string, orgId: string) {
     return Area.findAll({ where: { floor_id: floorId, org_id: orgId } });
   }
@@ -39,6 +43,10 @@ class AreaRepository {
     return this.getAreaById(id, orgId);
   }
 
+  async deleteArea(id: string, orgId: string) {
+    return Area.destroy({ where: { id, org_id: orgId } });
+  }
+
   async getSchedulesByAreaId(areaId: string, orgId: string) {
     return AreaChecklistSchedule.findAll({ 
       where: { area_id: areaId, org_id: orgId },
@@ -57,6 +65,10 @@ class AreaRepository {
   async updateSchedule(id: string, orgId: string, data: any) {
     await AreaChecklistSchedule.update(data, { where: { id, org_id: orgId } });
     return this.getScheduleById(id, orgId);
+  }
+
+  async deleteSchedule(id: string, orgId: string) {
+    return AreaChecklistSchedule.destroy({ where: { id, org_id: orgId } });
   }
 
   async getExecutions(orgId: string, filters: any = {}) {

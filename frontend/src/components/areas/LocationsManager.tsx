@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState } from 'react';
-import { useFloors, useAreas } from '../../hooks/api/useAreas';
+import { useFloors, useAreas, useMutateAreaTask } from '../../hooks/api/useAreas';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -13,14 +13,40 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotification } from '../../context/NotificationContext';
 import QRCode from 'react-qr-code';
+import { Trash2 } from 'lucide-react';
 
 export function LocationsManager({ siteId, orgId }: { siteId: string, orgId: string }) {
   const { data: floors = [], isLoading } = useFloors(siteId);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
 
   const { data: areas = [] } = useAreas(selectedFloor || undefined);
+  const { deleteFloorMutation, deleteAreaMutation } = useMutateAreaTask();
+  const { addNotification } = useNotification();
 
+  const floorsList = Array.isArray(floors) ? floors : (floors?.data || []);
   const areasList = Array.isArray(areas) ? areas : (areas?.data || []);
+
+  const handleDeleteFloor = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this floor and all its areas?")) return;
+    try {
+      await deleteFloorMutation.mutateAsync(id);
+      addNotification("success", "Floor deleted");
+      if (selectedFloor === id) setSelectedFloor(null);
+    } catch (err: any) {
+      addNotification("error", err.response?.data?.error || "Failed to delete floor");
+    }
+  };
+
+  const handleDeleteArea = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this area?")) return;
+    try {
+      await deleteAreaMutation.mutateAsync(id);
+      addNotification("success", "Area deleted");
+    } catch (err: any) {
+      addNotification("error", err.response?.data?.error || "Failed to delete area");
+    }
+  };
 
   const floorsList = Array.isArray(floors) ? floors : (floors?.data || []);
 
@@ -42,10 +68,21 @@ export function LocationsManager({ siteId, orgId }: { siteId: string, orgId: str
               <div
                 key={floor.id}
                 onClick={() => setSelectedFloor(floor.id)}
-                className={`p-3 rounded-md border cursor-pointer hover:bg-slate-50 transition-colors ${selectedFloor === floor.id ? 'border-primary bg-slate-50 ring-1 ring-primary' : ''}`}
+                className={`group p-3 rounded-md border cursor-pointer hover:bg-slate-50 transition-colors flex justify-between items-center ${selectedFloor === floor.id ? 'border-primary bg-slate-50 ring-1 ring-primary' : ''}`}
               >
-                <div className="font-medium">{floor.name}</div>
-                {floor.level !== undefined && <div className="text-xs text-gray-500">Level {floor.level}</div>}
+                <div>
+                  <div className="font-medium">{floor.name}</div>
+                  {floor.level !== undefined && <div className="text-xs text-gray-500">Level {floor.level}</div>}
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" 
+                  onClick={(e) => handleDeleteFloor(floor.id, e)}
+                  title="Delete Floor"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             ))
           )}
@@ -89,6 +126,15 @@ export function LocationsManager({ siteId, orgId }: { siteId: string, orgId: str
                           <Link to={`/areas/${area.id}`}>Manage</Link>
                         </Button>
                         <PrintQrDialog area={area} />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDeleteArea(area.id)}
+                          title="Delete Area"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
