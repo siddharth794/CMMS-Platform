@@ -60,10 +60,19 @@ class AreaRepository {
   }
 
   async getExecutions(orgId: string, filters: any = {}) {
+    const where: any = { org_id: orgId };
+
+    if (filters.status) {
+      where.status = filters.status.split(',');
+    }
+    if (filters.area_id) {
+      where.area_id = filters.area_id;
+    }
+
     return AreaChecklistExecution.findAll({
-      where: { org_id: orgId, ...filters },
+      where,
       include: [
-        { model: Area, as: 'area', include: [{ model: Floor, as: 'floor' }] },
+        { model: Area, as: 'area', include: [{ model: Floor }] },
         { model: Checklist, as: 'checklist_instance' },
         { model: User, as: 'completer', attributes: ['id', 'first_name', 'last_name', 'email'] }
       ],

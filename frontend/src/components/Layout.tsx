@@ -23,27 +23,28 @@ const Sidebar = ({ className = '' }) => {
 
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true },
+    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true, hideFromCleaner: true },
     { name: 'Area Tasks', href: '/area-tasks', icon: MapPin, staffOnly: true },
     { name: 'Checklists', href: '/checklists', icon: ClipboardCheck, managerOnly: true },
-    { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
-    { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
+    { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true, hideFromCleaner: true },
+    { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true, hideFromCleaner: true },
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     
     { name: 'Organizations', href: '/organizations', icon: Building2, superAdminOnly: true },
-    { name: 'Sites', href: '/sites', icon: MapPin, adminOnly: true },
+    { name: 'Sites', href: '/sites', icon: MapPin, managerOnly: true },
     { name: 'Roles', href: '/roles', icon: Shield, adminOnly: true },
     { name: 'Groups', href: '/groups', icon: Users, adminOnly: true },
     { name: 'Accesses', href: '/accesses', icon: Lock, superAdminOnly: true },
     { name: 'Users', href: '/users', icon: User, adminOnly: true },
 
-    { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3, hideFromRequester: true },
+    { name: isTech ? 'My Analytics' : 'Analytics', href: '/analytics', icon: BarChart3, hideFromRequester: true, hideFromCleaner: true },
     { name: 'Profile', href: '/profile', icon: User },
   ].filter(item => {
     if (item.superAdminOnly && !hasRole(['super_admin'])) return false;
     if (item.adminOnly && !isAdmin()) return false;
     if (item.managerOnly && isRestricted) return false;
     if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
+    if (item.hideFromCleaner && hasRole(['cleaning_staff'])) return false;
     if (item.staffOnly && !hasRole(['cleaning_staff', 'super_admin', 'org_admin', 'facility_manager'])) return false;
     return true;
   });

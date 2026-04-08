@@ -179,8 +179,8 @@ const AppRoutes = () => {
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
-          <Route path="sites" element={<AdminRoute><SitesList /></AdminRoute>} />
-          <Route path="sites/:id" element={<AdminRoute><SiteDetails /></AdminRoute>} />
+          <Route path="sites" element={<ManagerRoute><SitesList /></ManagerRoute>} />
+          <Route path="sites/:id" element={<ManagerRoute><SiteDetails /></ManagerRoute>} />
           <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
           <Route path="users/new" element={<AdminRoute><CreateUserPage /></AdminRoute>} />
           <Route path="users/:id" element={<AdminRoute><UserDetailPage /></AdminRoute>} />
