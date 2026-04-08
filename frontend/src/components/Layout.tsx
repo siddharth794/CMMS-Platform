@@ -19,7 +19,7 @@ const Sidebar = ({ className = '' }) => {
   const location = useLocation();
   const { user, isTechnician, hasRole, isAdmin } = useAuth();
   const isTech = isTechnician();
-  const isRestricted = hasRole(['technician', 'requestor']);
+    const isRestricted = hasRole(['technician', 'requestor', 'cleaning_staff']);
 
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
