@@ -81,14 +81,16 @@ export default function AreaTaskExecutionPage() {
   const allChecked = items.length > 0 && items.every((i: any) => i.is_completed);
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/area-tasks')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-bold">{execution.area?.name}</h1>
-          <p className="text-sm text-muted-foreground">Area Checklist</p>
+    <div className="space-y-6" data-testid="area-task-execution-page">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/area-tasks')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{execution.area?.name}</h1>
+            <p className="text-muted-foreground">Area Checklist</p>
+          </div>
         </div>
       </div>
 

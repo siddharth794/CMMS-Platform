@@ -16,13 +16,15 @@ export default function AreaTasksPage() {
   if (isLoading) return <div className="p-4 text-center">Loading your tasks...</div>;
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Area Cleaning Tasks</h1>
-        <p className="text-muted-foreground">Scan QR codes at locations to unlock and complete your assigned checklists.</p>
+    <div className="space-y-6" data-testid="area-tasks-page">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Area Tasks</h1>
+          <p className="text-muted-foreground">Scan QR codes at locations to unlock and complete your assigned checklists</p>
+        </div>
       </div>
 
-          {(!executions || executions.length === 0) ? (
+      {(!executions || executions.length === 0) ? (
         <Card className="bg-muted/50 border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <CheckCircle className="w-12 h-12 text-green-500 mb-4" />

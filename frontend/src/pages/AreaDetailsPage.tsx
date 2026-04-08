@@ -35,18 +35,20 @@ export default function AreaDetailsPage() {
   if (!area) return <div className="p-8">Area not found.</div>;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{area.name}</h1>
-          <p className="text-muted-foreground capitalize">{area.type?.replace('_', ' ')} Area</p>
+    <div className="space-y-6" data-testid="area-details-page">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{area.name}</h1>
+            <p className="text-muted-foreground capitalize">{area.type?.replace('_', ' ')} Area</p>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="schedules">
+      <Tabs defaultValue="schedules" className="space-y-6">
         <TabsList>
           <TabsTrigger value="schedules">Scheduled Checklists</TabsTrigger>
           <TabsTrigger value="history">Execution History</TabsTrigger>
@@ -147,7 +149,7 @@ function CreateScheduleDialog({ areaId }: { areaId: string }) {
   const [templateId, setTemplateId] = useState('');
   const [cronExp, setCronExp] = useState('0 */2 * * *');
   
-  const { data: checklistsData } = useChecklists({ is_template: 'true' });
+  const { data: checklistsData } = useChecklists({ is_template: 'true', standalone_only: 'true', limit: 100 });
   const templates = checklistsData?.data || [];
   
   const queryClient = useQueryClient();
