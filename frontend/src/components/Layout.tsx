@@ -24,6 +24,7 @@ const Sidebar = ({ className = '' }) => {
   const navigation = [
     { name: isTech ? 'My Dashboard' : 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, hideFromRequester: true },
+    { name: 'Area Tasks', href: '/area-tasks', icon: MapPin, staffOnly: true },
     { name: 'Checklists', href: '/checklists', icon: ClipboardCheck, managerOnly: true },
     { name: 'Assets', href: '/assets', icon: Box, hideFromRequester: true },
     { name: 'Inventory', href: '/inventory', icon: Package, hideFromRequester: true },
@@ -43,6 +44,7 @@ const Sidebar = ({ className = '' }) => {
     if (item.adminOnly && !isAdmin()) return false;
     if (item.managerOnly && isRestricted) return false;
     if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
+    if (item.staffOnly && !hasRole(['cleaning_staff', 'super_admin', 'org_admin', 'facility_manager'])) return false;
     return true;
   });
 

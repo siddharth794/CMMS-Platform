@@ -1,0 +1,135 @@
+Feature Name: Digital Restroom Cleaning Checklist with QR-Based Tracking
+
+Objective:
+Enhance the existing Facility Management System (FMS) by adding a digital checklist system for tracking cleaning and maintenance activities in restrooms and other facility locations using QR/NFC-based validation.
+
+---
+
+Core Requirements:
+
+1. Location Management
+   - Add ability to create and manage locations (e.g., “Toilet A – Ground Floor”).
+   - Each location must have a unique QR code or NFC identifier.
+   - Store metadata such as floor, zone, and description.
+
+---
+
+2. Checklist Templates
+   - Create reusable checklist templates (e.g., “Restroom Cleaning”).
+   - Each template contains multiple checklist items:
+     - Example: Clean floor, Refill soap, Check odor.
+   - Support mandatory/optional flags.
+
+---
+
+3. Task Scheduling
+   - Allow scheduling of cleaning tasks:
+     - Time-based (e.g., every 30 minutes)
+     - Manual assignment by supervisor
+   - Assign tasks to specific staff users.
+   - Track task status: pending, completed, missed.
+
+---
+
+4. QR/NFC-Based Execution
+   - Staff must scan a QR/NFC tag at the location to start a task.
+   - Validate presence using scan (mandatory step).
+   - On scan:
+     - Fetch assigned task + checklist template
+     - Display checklist items in mobile interface
+
+---
+
+5. Checklist Submission
+   - Staff can:
+     - Mark items as completed/incomplete
+     - Add remarks
+     - Upload images (optional)
+   - Capture metadata automatically:
+     - Timestamp
+     - User ID
+     - Location ID
+     - GPS coordinates (if available)
+
+---
+
+6. Task Logs & Audit Trail
+   - Store every checklist submission as a log entry.
+   - Maintain history of:
+     - Who performed the task
+     - When it was completed
+     - What items were missed
+   - Prevent duplicate submissions for the same task.
+
+---
+
+7. Issue Reporting
+   - Allow staff to report issues during checklist submission:
+     - Description
+     - Image upload
+   - Track issue status: open, in progress, resolved.
+
+---
+
+8. Supervisor Dashboard
+   - Display real-time status of all locations:
+     - Last cleaned time
+     - Upcoming tasks
+     - Missed tasks (highlighted)
+   - Filters:
+     - Location, floor, staff, time range
+   - Visual indicators (green/yellow/red status)
+
+---
+
+9. Notifications & Alerts
+   - Send alerts for:
+     - Missed tasks
+     - Delayed cleaning
+     - Reported issues
+   - Escalate to supervisors if tasks remain incomplete.
+
+---
+
+10. Reports & Analytics
+
+- Generate reports on:
+  - Cleaning frequency per location
+  - Staff performance
+  - Task completion rates
+  - Issue trends
+- Export data (CSV/PDF).
+
+---
+
+Technical Requirements:
+
+- Backend: Extend existing API to support new entities:
+  - locations, checklists, checklist_items, tasks, task_logs, checklist_responses, issues
+- Ensure relational integrity between entities.
+- Add indexing for performance on frequently queried fields (location_id, scheduled_time).
+- Ensure mobile-first API responses for fast checklist loading.
+- Secure endpoints with role-based access (staff vs supervisor).
+
+---
+
+Optional Enhancements:
+
+- Integrate IoT sensors (footfall, supply levels) to auto-trigger tasks.
+- Offline mode for mobile app with sync capability.
+- Geo-fencing validation for scan authenticity.
+
+---
+
+Acceptance Criteria:
+
+- Staff cannot submit a checklist without scanning QR/NFC.
+- Supervisors can view real-time cleaning status.
+- Missed tasks are automatically flagged.
+- Full audit trail is available for all submissions.
+- System performs efficiently at scale (multiple locations & concurrent users).
+
+---
+
+Outcome:
+A fully digital, auditable, and real-time restroom cleaning tracking system integrated into the existing FMS, replacing manual paper-based checklists.

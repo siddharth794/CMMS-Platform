@@ -16,6 +16,7 @@ import { useUsers } from '../../hooks/api/useUsers';
 import { useOrganizations } from '../../hooks/api/useOrganizations';
 import { useAuth } from '../../context/AuthContext';
 import { Site, User } from '../../types/models';
+import { LocationsManager } from '../../components/areas/LocationsManager';
 
 export default function SiteDetails() {
   const { id } = useParams();
@@ -209,6 +210,12 @@ export default function SiteDetails() {
             <span className="font-medium">Details & Settings</span>
           </TabsTrigger>
           {!isNew && (
+            <TabsTrigger value="locations" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              <MapPin className="h-4 w-4" />
+              <span className="font-medium">Locations & Areas</span>
+            </TabsTrigger>
+          )}
+          {!isNew && (
             <TabsTrigger value="users" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               <Users className="h-4 w-4" />
               <span className="font-medium">Team Management</span>
@@ -311,6 +318,20 @@ export default function SiteDetails() {
             </Card>
           </div>
         </TabsContent>
+
+        {!isNew && (
+          <TabsContent value="locations">
+            <Card>
+              <CardHeader>
+                <CardTitle>Floors & Areas</CardTitle>
+                <CardDescription>Manage physical locations and QR codes for area checklists.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <LocationsManager siteId={site?.id} orgId={site?.org_id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {!isNew && (
           <TabsContent value="users">

@@ -43,6 +43,9 @@ const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const ChecklistsPage = React.lazy(() => import('./pages/ChecklistsPage'));
 const CreateChecklistPage = React.lazy(() => import('./pages/CreateChecklistPage'));
 const ChecklistDetailPage = React.lazy(() => import('./pages/ChecklistDetailPage'));
+const AreaDetailsPage = React.lazy(() => import('./pages/AreaDetailsPage'));
+const AreaTasksPage = React.lazy(() => import('./pages/AreaTasksPage'));
+const AreaTaskExecutionPage = React.lazy(() => import('./pages/AreaTaskExecutionPage'));
 
 const queryClient = new QueryClient();
 
@@ -185,6 +188,10 @@ const AppRoutes = () => {
           <Route path="checklists" element={<ManagerRoute><ChecklistsPage /></ManagerRoute>} />
           <Route path="checklists/new" element={<ManagerRoute><CreateChecklistPage /></ManagerRoute>} />
           <Route path="checklists/:id" element={<ManagerRoute><ChecklistDetailPage /></ManagerRoute>} />
+          <Route path="areas/:id" element={<ManagerRoute><AreaDetailsPage /></ManagerRoute>} />
+          
+          <Route path="area-tasks" element={<ProtectedRoute><AreaTasksPage /></ProtectedRoute>} />
+          <Route path="area-tasks/:id" element={<ProtectedRoute><AreaTaskExecutionPage /></ProtectedRoute>} />
 
           <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
           <Route path="groups" element={<AdminRoute><GroupsPage /></AdminRoute>} />

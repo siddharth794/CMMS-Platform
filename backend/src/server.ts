@@ -136,9 +136,16 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
 });
 
 // ─── Background Workers ────────────────────────────────────────────
+import { AreaChecklistWorker } from './workers/areaChecklist.worker';
 const pmWorker = new PMGeneratorWorker();
+const areaWorker = new AreaChecklistWorker();
+
 cron.schedule('0 * * * *', () => { // Runs every hour
     pmWorker.evaluateAllActivePMs();
+});
+
+cron.schedule('*/15 * * * *', () => { // Runs every 15 minutes
+    areaWorker.evaluateAllActiveSchedules();
 });
 
 // ─── Global Error Handler ─────────────────────────────────────────

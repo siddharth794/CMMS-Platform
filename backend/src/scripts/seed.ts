@@ -38,7 +38,8 @@ async function seed() {
             { name: "Org_Admin", description: "Organization administrator", is_system_role: true },
             { name: "Facility_Manager", description: "Manages facilities and work orders", is_system_role: true },
             { name: "Technician", description: "Executes work orders", is_system_role: true },
-            { name: "Requestor", description: "Creates and tracks work orders", is_system_role: true }
+            { name: "Requestor", description: "Creates and tracks work orders", is_system_role: true },
+            { name: "Cleaning_Staff", description: "Executes area-based checklists", is_system_role: true }
         ];
 
         for (const roleDef of roleData) {
@@ -79,6 +80,7 @@ async function seed() {
             { email: 'manager@demo.com', roleName: 'Facility_Manager', username: 'manager', firstName: 'Facility', lastName: 'Manager', password: 'manager123' },
             { email: 'tech@demo.com', roleName: 'Technician', username: 'tech', firstName: 'Tech', lastName: 'User', password: 'tech123' },
             { email: 'requestor@demo.com', roleName: 'Requestor', username: 'requestor', firstName: 'Staff', lastName: 'Requestor', password: 'requestor123' },
+            { email: 'cleaner@demo.com', roleName: 'Cleaning_Staff', username: 'cleaner', firstName: 'Demo', lastName: 'Cleaner', password: 'cleaner123' },
         ];
 
         console.log(`\nSeed Complete! Demo users:`);
