@@ -79,8 +79,9 @@ export class PMGeneratorWorker {
 
     const newWO = await WorkOrder.create({
       org_id: schedule.org_id,
+      site_id: schedule.site_id,
       asset_id: schedule.asset_id,
-      title: `PM: ${schedule.name}`,
+      title: `${schedule.name} (created through PM Schedule)`,
       description: schedule.description || 'Auto-generated Preventive Maintenance',
       wo_number: woNumber,
       status: 'new',
