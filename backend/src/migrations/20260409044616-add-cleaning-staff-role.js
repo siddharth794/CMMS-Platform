@@ -14,7 +14,6 @@ module.exports = {
         { id: uuidv4(), name: 'area_tasks:execute', module: 'Areas', description: 'Verify area QR codes and complete area checklists', created_at: new Date(), updated_at: new Date() }
       ];
 
-      // Use INSERT IGNORE/ON DUPLICATE KEY equivalent to avoid crashes if they exist
       for (const access of newAccesses) {
         await queryInterface.sequelize.query(
           `INSERT INTO accesses (id, name, module, description, created_at, updated_at) 
@@ -28,7 +27,7 @@ module.exports = {
         );
       }
 
-      // 2. We need to create the new "Cleaning_Staff" role for the system.
+      // 2. Create the "Cleaning_Staff" role for each organization.
       const orgs = await queryInterface.sequelize.query(
         `SELECT id FROM organizations;`,
         { type: queryInterface.sequelize.QueryTypes.SELECT, transaction }
@@ -39,53 +38,60 @@ module.exports = {
         return;
       }
 
-      const cleaningStaffRoles = [];
-      
+      // roles.id is INTEGER AUTO_INCREMENT — do NOT specify id, let MySQL handle it
+      const insertedRoleIds = [];
+
       for (const org of orgs) {
-        // Check if role already exists for this org
         const existingRole = await queryInterface.sequelize.query(
           `SELECT id FROM roles WHERE org_id = :orgId AND name = 'Cleaning_Staff';`,
           { replacements: { orgId: org.id }, type: queryInterface.sequelize.QueryTypes.SELECT, transaction }
         );
 
         if (existingRole.length === 0) {
-          const roleId = uuidv4();
-          cleaningStaffRoles.push({
-            id: roleId,
-            org_id: org.id,
-            name: 'Cleaning_Staff',
-            description: 'Executes area-based checklists',
-            is_system_role: true,
-            created_at: new Date()
-          });
+          await queryInterface.sequelize.query(
+            `INSERT INTO roles (org_id, name, description, is_system_role, is_active, created_at)
+             VALUES (:org_id, :name, :description, :is_system_role, :is_active, :created_at);`,
+            {
+              replacements: {
+                org_id: org.id,
+                name: 'Cleaning_Staff',
+                description: 'Executes area-based checklists',
+                is_system_role: true,
+                is_active: true,
+                created_at: new Date()
+              },
+              type: queryInterface.sequelize.QueryTypes.INSERT,
+              transaction
+            }
+          );
+
+          // Query back the auto-incremented id
+          const [inserted] = await queryInterface.sequelize.query(
+            `SELECT id FROM roles WHERE org_id = :orgId AND name = 'Cleaning_Staff';`,
+            { replacements: { orgId: org.id }, type: queryInterface.sequelize.QueryTypes.SELECT, transaction }
+          );
+          if (inserted) {
+            insertedRoleIds.push(inserted.id);
+          }
         }
       }
 
-      if (cleaningStaffRoles.length > 0) {
-        await queryInterface.bulkInsert('roles', cleaningStaffRoles, { transaction });
-
-        // 3. Map Accesses to the new role
-        const roleAccesses = [];
+      // 3. Map Accesses to the new roles
+      if (insertedRoleIds.length > 0) {
         const accessRows = await queryInterface.sequelize.query(
           `SELECT id, name FROM accesses WHERE name IN ('area:view', 'area_tasks:execute', 'checklist:execute');`,
           { type: queryInterface.sequelize.QueryTypes.SELECT, transaction }
         );
 
-        for (const role of cleaningStaffRoles) {
+        for (const roleId of insertedRoleIds) {
           for (const access of accessRows) {
-            roleAccesses.push({
-              role_id: role.id,
-              access_id: access.id,
-              created_at: new Date()
-            });
-          }
-        }
-
-        if (roleAccesses.length > 0) {
-          for (const ra of roleAccesses) {
-             await queryInterface.sequelize.query(
-              `INSERT IGNORE INTO role_accesses (role_id, access_id, created_at) VALUES (:role_id, :access_id, :created_at)`,
-              { replacements: ra, type: queryInterface.sequelize.QueryTypes.INSERT, transaction }
+            await queryInterface.sequelize.query(
+              `INSERT IGNORE INTO role_accesses (role_id, access_id, created_at, updated_at) VALUES (:role_id, :access_id, :created_at, :updated_at)`,
+              {
+                replacements: { role_id: roleId, access_id: access.id, created_at: new Date(), updated_at: new Date() },
+                type: queryInterface.sequelize.QueryTypes.INSERT,
+                transaction
+              }
             );
           }
         }
@@ -102,7 +108,15 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      // Delete the accesses from accesses table
+      // Delete role_accesses for Cleaning_Staff roles first
+      await queryInterface.sequelize.query(
+        `DELETE ra FROM role_accesses ra
+         INNER JOIN roles r ON ra.role_id = r.id
+         WHERE r.name = 'Cleaning_Staff' AND r.is_system_role = true;`,
+        { transaction }
+      );
+
+      // Delete the accesses
       await queryInterface.bulkDelete('accesses', {
         name: ['area:view', 'area:manage', 'area_tasks:execute']
       }, { transaction });
