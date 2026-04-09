@@ -47,6 +47,10 @@ export const PERMISSIONS = [
   { name: 'checklist:manage', module: 'Checklists', description: 'Create and edit checklist templates' },
   { name: 'checklist:execute', module: 'Checklists', description: 'Check off items on work order checklists' },
 
+  // Sites Module
+  { name: 'site:view', module: 'Sites', description: 'View site details, floors, and areas' },
+  { name: 'site:manage', module: 'Sites', description: 'Create and edit floors, areas, and site configurations' },
+
   // Areas & Locations Module
   { name: 'area:view', module: 'Areas', description: 'View locations, areas, and schedules' },
   { name: 'area:manage', module: 'Areas', description: 'Create and edit floors, areas, and area schedules' },
@@ -67,6 +71,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'organization:view', 'organization:update',
     'analytics:view',
     'checklist:manage', 'checklist:execute',
+    'site:view', 'site:manage',
     'area:view', 'area:manage', 'area_tasks:execute'
   ],
   Facility_Manager: [
@@ -77,6 +82,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'user:view',
     'analytics:view',
     'checklist:manage', 'checklist:execute',
+    'site:view', 'site:manage',
     'area:view', 'area:manage'
   ],
   Technician: [
