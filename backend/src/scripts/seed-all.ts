@@ -19,7 +19,7 @@
 
 import bcrypt from 'bcryptjs';
 import {
-  Organization, Site, Role, Access, User, Asset, InventoryItem, WorkOrder, sequelize
+  Organization, Site, Role, Access, User, Asset, InventoryItem, WorkOrder, Floor, Area, sequelize
 } from '../models';
 import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from '../constants/permissions';
 
@@ -157,6 +157,32 @@ async function seedAll() {
       },
     });
     log(`Site "${site.name}"`);
+
+    // ── 5.1 Demo Floor & Area ───────────────────────────────────────────────
+    header('5.1 · Demo Floor & Area');
+    const [floor]: any = await Floor.findOrCreate({
+      where: { name: 'Ground Floor', site_id: site.id, org_id: ORG_ID },
+      defaults: {
+        org_id: ORG_ID,
+        site_id: site.id,
+        name: 'Ground Floor',
+        level: 0,
+        description: 'Main lobby and entrance floor'
+      }
+    });
+    log(`Floor "${floor.name}"`);
+
+    const [area]: any = await Area.findOrCreate({
+      where: { name: 'Main Lobby', floor_id: floor.id, org_id: ORG_ID },
+      defaults: {
+        org_id: ORG_ID,
+        floor_id: floor.id,
+        name: 'Main Lobby',
+        type: 'other',
+        description: 'Public reception area'
+      }
+    });
+    log(`Area "${area.name}"`);
 
     // ── 6. Demo Assets (50) ─────────────────────────────────────────────────
 
