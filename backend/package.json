@@ -12,6 +12,8 @@
     "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:extra": "ts-node src/scripts/seed-extra-demo.ts",
+    "seed:all": "ts-node src/scripts/seed-all.ts",
+    "setup": "sequelize-cli db:migrate && ts-node src/scripts/seed-all.ts",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed:demo": "ts-node src/scripts/seed-demo-data.ts",
