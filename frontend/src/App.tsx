@@ -34,6 +34,7 @@ const CreateUserPage = React.lazy(() => import('./pages/CreateUserPage'));
 const UserDetailPage = React.lazy(() => import('./pages/UserDetailPage'));
 const SitesList = React.lazy(() => import('./pages/Sites/SitesList'));
 const SiteDetails = React.lazy(() => import('./pages/Sites/SiteDetails'));
+const MySitePage = React.lazy(() => import('./pages/MySitePage'));
 
 const RolesPage = React.lazy(() => import('./pages/RolesPage'));
 const GroupsPage = React.lazy(() => import('./pages/GroupsPage'));
@@ -137,6 +138,14 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+const FacilityManagerRoute = ({ children }) => {
+  const { hasRole } = useAuth();
+  if (!hasRole(['facility_manager'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 const SuspenseFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -179,8 +188,9 @@ const AppRoutes = () => {
           <Route path="analytics" element={<HideFromRequesterRoute><RoleBasedAnalytics /></HideFromRequesterRoute>} />
           <Route path="organizations" element={<SuperAdminRoute><OrganizationsPage /></SuperAdminRoute>} />
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
-          <Route path="sites" element={<ManagerRoute><SitesList /></ManagerRoute>} />
-          <Route path="sites/:id" element={<ManagerRoute><SiteDetails /></ManagerRoute>} />
+          <Route path="sites" element={<AdminRoute><SitesList /></AdminRoute>} />
+          <Route path="sites/:id" element={<AdminRoute><SiteDetails /></AdminRoute>} />
+          <Route path="my-site" element={<FacilityManagerRoute><MySitePage /></FacilityManagerRoute>} />
           <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
           <Route path="users/new" element={<AdminRoute><CreateUserPage /></AdminRoute>} />
           <Route path="users/:id" element={<AdminRoute><UserDetailPage /></AdminRoute>} />

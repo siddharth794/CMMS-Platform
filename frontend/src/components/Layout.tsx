@@ -31,7 +31,8 @@ const Sidebar = ({ className = '' }) => {
     { name: 'PM Schedules', href: '/pm-schedules', icon: Calendar, managerOnly: true },
     
     { name: 'Organizations', href: '/organizations', icon: Building2, superAdminOnly: true },
-    { name: 'Sites', href: '/sites', icon: MapPin, managerOnly: true },
+    { name: 'Sites', href: '/sites', icon: MapPin, adminOnly: true },
+    { name: 'My Site', href: '/my-site', icon: Building2, facilityManagerOnly: true },
     { name: 'Roles', href: '/roles', icon: Shield, adminOnly: true },
     { name: 'Groups', href: '/groups', icon: Users, adminOnly: true },
     { name: 'Accesses', href: '/accesses', icon: Lock, superAdminOnly: true },
@@ -42,6 +43,7 @@ const Sidebar = ({ className = '' }) => {
   ].filter(item => {
     if (item.superAdminOnly && !hasRole(['super_admin'])) return false;
     if (item.adminOnly && !isAdmin()) return false;
+    if (item.facilityManagerOnly && !hasRole(['facility_manager'])) return false;
     if (item.managerOnly && isRestricted) return false;
     if (item.hideFromRequester && hasRole(['requestor', 'requester'])) return false;
     if (item.hideFromCleaner && hasRole(['cleaning_staff'])) return false;
