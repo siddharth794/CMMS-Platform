@@ -18,13 +18,55 @@ globs: backend/src/models/*, backend/src/repositories/*, backend/migrations/*
 - Only junction tables (`user_roles`, `role_accesses`, `user_groups`, `group_roles`) should use hard deletes.
 - Dual mechanism: `paranoid: true` (soft delete) + `is_active: boolean` (deactivation). Some queries filter by `is_active: true`, others by `deleted_at: null`.
 
-## Migrations
+## Migrations — CRITICAL RULES
 
-- **Never modify the database schema directly.** Always generate a migration.
-- Command: `npx sequelize-cli migration:generate --name descriptive_name`.
-- Write both `up` (apply) and `down` (revert) logic using `queryInterface`.
-- Use `queryInterface.addColumn`, `queryInterface.changeColumn`, `queryInterface.sequelize.query()` for complex changes.
-- Migration files live in `backend/migrations/` with timestamp prefix.
+### ⛔ NEVER USE `sequelize.sync()`, `Model.sync()`, or `sequelize.sync({ alter: true })`
+These methods bypass migration history, cause schema drift between environments, and create tables that migrations don't know about. This has caused production failures in this project before. **ANY use of `.sync()` is strictly forbidden.**
+
+### ✅ Every schema change MUST go through a migration file
+This applies to ALL of the following:
+- Creating a new table
+- Adding/removing/renaming a column
+- Changing a column type or constraints
+- Adding/removing indexes or unique constraints
+- Adding/removing foreign key constraints
+- Modifying ENUM values
+- Creating junction tables for many-to-many associations
+
+### Mandatory workflow for any database change:
+
+**Step 1: Generate migration file**
+```bash
+npx sequelize-cli migration:generate --name descriptive-name
+```
+Migration files live in `src/migrations/` with timestamp prefix.
+
+**Step 2: Write both `up` AND `down` logic**
+- `up`: applies the change using `queryInterface` methods
+- `down`: fully reverts the change
+- Use `queryInterface.createTable`, `queryInterface.addColumn`, `queryInterface.changeColumn`, `queryInterface.removeColumn`, `queryInterface.addIndex`, etc.
+- Use `queryInterface.sequelize.query()` for complex raw SQL changes (e.g., ENUM modifications in MySQL).
+- Wrap multi-table changes in a transaction.
+
+**Step 3: Update the model in `src/models/index.ts`**
+- Add/modify the model class and `Model.init()` definition to match the migration exactly.
+- If creating a new table, add the model class, init call, associations, and export.
+
+**Step 4: Update `src/scripts/seed-all.ts` if the new table/column needs demo data**
+
+**Step 5: Run and verify**
+```bash
+npm run migrate
+```
+
+### Migration file naming
+Use descriptive kebab-case names: `create-sites-table`, `add-site-id-to-users`, `update-pm-schedules-columns`.
+
+### Foreign key ordering
+When creating multiple related tables in one migration, create them in dependency order (parent tables first). Drop them in reverse order in `down`.
+
+### Circular FK dependencies
+If Table A references Table B and Table B references Table A, create one FK as a plain column (no `references` clause) and add the constraint later or leave it as an application-level association only.
 
 ## Model Definitions
 
