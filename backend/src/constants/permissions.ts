@@ -83,7 +83,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'analytics:view',
     'checklist:manage', 'checklist:execute',
     'site:view', 'site:manage',
-    'area:view', 'area:manage'
+    'area:view', 'area:manage', 'area_tasks:execute'
   ],
   Technician: [
     'work_order:view', 'work_order:update',
