@@ -58,10 +58,13 @@ async function seedAll() {
     header('2 · Permissions');
     let permCreated = 0;
     for (const perm of PERMISSIONS) {
-      const [, created] = await Access.findOrCreate({
+      const [access, created] = await Access.findOrCreate({
         where: { name: perm.name },
         defaults: { ...perm, is_system: true, org_id: null },
       });
+      if (!created && !access.is_system) {
+        await access.update({ is_system: true });
+      }
       if (created) permCreated++;
     }
     log(`${PERMISSIONS.length} total permissions (${permCreated} newly created)`);

@@ -25,10 +25,13 @@ async function seed() {
 
         // 2. Create Accesses (Permissions)
         for (const perm of PERMISSIONS) {
-            await Access.findOrCreate({
+            const [access, created] = await Access.findOrCreate({
                 where: { name: perm.name },
                 defaults: { ...perm, is_system: true, org_id: null }
             });
+            if (!created && !access.is_system) {
+                await access.update({ is_system: true });
+            }
         }
         console.log('System Accesses (Permissions) ready.');
 
