@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAreaExecutions } from '../hooks/api/useAreas';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -10,9 +11,19 @@ import { format } from 'date-fns';
 
 export default function AreaTasksPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
   // Fetch pending and in_progress tasks
   const { data: executionsResponse, isLoading } = useAreaExecutions({ status: 'PENDING,IN_PROGRESS' });
-  const executions = Array.isArray(executionsResponse) ? executionsResponse : (executionsResponse?.data || []);
+  const rawExecutions = Array.isArray(executionsResponse) ? executionsResponse : (executionsResponse?.data || []);
+
+  // Only show tasks that belong to the cleaner's assigned site, unless they are a Super Admin
+  const executions = user?.site_id 
+    ? rawExecutions.filter((exec: any) => {
+        const siteId = exec.area?.Floor?.site_id || exec.area?.floor?.site_id || exec.area?.site_id;
+        return siteId === user.site_id;
+      }) 
+    : rawExecutions;
 
   if (isLoading) return <div className="p-4 text-center">Loading your tasks...</div>;
 
