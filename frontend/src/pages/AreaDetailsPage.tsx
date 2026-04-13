@@ -143,10 +143,7 @@ export default function AreaDetailsPage() {
         </TabsList>
 
         <TabsContent value="schedules" className="space-y-4">
-          <div className="flex justify-between items-center mt-4">
-            <h3 className="text-lg font-medium">Active Schedules</h3>
-            <CreateScheduleDialog areaId={area.id} />
-          </div>
+          <div className="flex justify-end items-center mt-4 mb-4"><CreateScheduleDialog areaId={area.id} /></div>
 
           <Card>
             <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
@@ -232,9 +229,7 @@ export default function AreaDetailsPage() {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          <div className="flex justify-between items-center mt-4">
-            <h3 className="text-lg font-medium">Execution Log</h3>
-          </div>
+          
           <Card>
             <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
               <div className="flex flex-wrap items-center gap-4 w-full">
