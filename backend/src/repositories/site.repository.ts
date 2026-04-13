@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Site, User, sequelize, Organization } from '../models';
+import { Site, User, sequelize, Organization, Role } from '../models';
 
 class SiteRepository {
     async findAll(orgId: string | null, skip: number, limit: number, filters: any, paranoid: boolean = true): Promise<{ rows: any[]; count: number }> {
@@ -14,7 +14,7 @@ class SiteRepository {
                 {
                     model: User,
                     as: 'manager',
-                    attributes: ['id', 'first_name', 'last_name', 'email']
+                    attributes: ['id', 'first_name', 'last_name', 'email', 'phone']
                 },
                 {
                     model: Organization,
@@ -39,12 +39,13 @@ class SiteRepository {
                 {
                     model: User,
                     as: 'manager',
-                    attributes: ['id', 'first_name', 'last_name', 'email']
+                    attributes: ['id', 'first_name', 'last_name', 'email', 'phone']
                 },
                 {
                     model: User,
                     as: 'technicians',
-                    attributes: ['id', 'first_name', 'last_name', 'email']
+                    attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+                    include: [{ model: Role, attributes: ['name'] }]
                 },
                 {
                     model: Organization,

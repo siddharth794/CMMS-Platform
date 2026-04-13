@@ -24,6 +24,12 @@ export function LocationsManager({ siteId, orgId }: { siteId: string, orgId: str
   const { addNotification } = useNotification();
 
   const floorsList = Array.isArray(floors) ? floors : (floors?.data || []);
+
+  React.useEffect(() => {
+    if (floorsList.length > 0 && !selectedFloor) {
+      setSelectedFloor(floorsList[0].id);
+    }
+  }, [floorsList, selectedFloor]);
   const areasList = Array.isArray(areas) ? areas : (areas?.data || []);
 
   const handleDeleteFloor = async (id: string, e: React.MouseEvent) => {

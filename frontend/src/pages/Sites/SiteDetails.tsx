@@ -62,6 +62,7 @@ export default function SiteDetails() {
 
   const [selectedManager, setSelectedManager] = useState<string>('none');
   const [selectedTechnician, setSelectedTechnician] = useState<string>('');
+  const [selectedCleaner, setSelectedCleaner] = useState<string>('');
 
   useEffect(() => {
     if (site && !isNew) {
@@ -140,6 +141,21 @@ export default function SiteDetails() {
     }
   };
 
+  const handleAssignCleaner = async () => {
+    if (!selectedCleaner) return;
+    try {
+      // Re-using the same mutation logic since both are users attached to the site.
+      await assignTechnicianMutation.mutateAsync({
+        id: id as string,
+        userId: selectedCleaner,
+      });
+      addNotification('success', 'Cleaner assigned successfully');
+      setSelectedCleaner('');
+    } catch (error: any) {
+      addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to assign cleaner');
+    }
+  };
+
   const handleRemoveTechnician = async (userId: string) => {
     if (window.confirm('Are you sure you want to remove this technician from the site?')) {
       try {
@@ -150,6 +166,20 @@ export default function SiteDetails() {
         addNotification('success', 'Technician removed successfully');
       } catch (error: any) {
         addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to remove technician');
+      }
+    }
+  };
+
+  const handleRemoveCleaner = async (userId: string) => {
+    if (window.confirm('Are you sure you want to remove this cleaner from the site?')) {
+      try {
+        await removeTechnicianMutation.mutateAsync({
+          id: id as string,
+          userId,
+        });
+        addNotification('success', 'Cleaner removed successfully');
+      } catch (error: any) {
+        addNotification('error', error.response?.data?.detail || error.response?.data?.error || 'Failed to remove cleaner');
       }
     }
   };
@@ -173,13 +203,18 @@ export default function SiteDetails() {
 
   // Filter users by role
   const facilityManagers = allUsers.filter((u: User) => {
-    const roleName = u.Role?.name || u.role?.name || '';
+    const roleName = u.Role?.name || u.role?.name || (u as any).role_name || '';
     const roleNameLower = roleName.toLowerCase();
     return roleNameLower === 'facility manager' || roleNameLower === 'facility_manager';
   });
+  const getRoleName = (u: any) => (u.Role?.name || u.role?.name || u.role_name || u.Roles?.[0]?.name || '').toLowerCase();
+
   const technicians = allUsers.filter((u: User) => {
-    const roleName = u.Role?.name || u.role?.name || '';
-    return roleName.toLowerCase() === 'technician';
+    return getRoleName(u) === 'technician';
+  });
+
+  const cleaners = allUsers.filter((u: User) => {
+    return getRoleName(u) === 'cleaning_staff';
   });
 
   return (
@@ -218,7 +253,13 @@ export default function SiteDetails() {
           {!isNew && (
             <TabsTrigger value="users" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               <Users className="h-4 w-4" />
-              <span className="font-medium">Team Management</span>
+              <span className="font-medium">Technicians</span>
+            </TabsTrigger>
+          )}
+          {!isNew && (
+            <TabsTrigger value="cleaners" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              <Users className="h-4 w-4" />
+              <span className="font-medium">Cleaners</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -371,8 +412,8 @@ export default function SiteDetails() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {site?.technicians && site.technicians.length > 0 ? (
-                      site.technicians.map((tech: User) => (
+                    {site?.technicians && site.technicians.filter((u: User) => getRoleName(u) === 'technician').length > 0 ? (
+                      site.technicians.filter((u: User) => getRoleName(u) === 'technician').map((tech: User) => (
                         <TableRow key={tech.id}>
                           <TableCell className="font-medium">{tech.first_name} {tech.last_name}</TableCell>
                           <TableCell>{tech.email}</TableCell>
@@ -394,6 +435,77 @@ export default function SiteDetails() {
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                           No technicians currently assigned to this site.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {!isNew && (
+          <TabsContent value="cleaners">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                  <CardTitle>Assigned Cleaners</CardTitle>
+                  <CardDescription>Manage cleaners assigned to this site.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedCleaner} onValueChange={setSelectedCleaner}>
+                    <SelectTrigger className="w-[250px]">
+                      <SelectValue placeholder="Select a cleaner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cleaners.filter((c: User) => c.site_id !== site?.id).map((c: User) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.first_name} {c.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleAssignCleaner} disabled={!selectedCleaner || assignTechnicianMutation.isPending}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Assign
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {site?.technicians && site.technicians.filter((u: User) => getRoleName(u) === 'cleaning_staff').length > 0 ? (
+                      site.technicians.filter((u: User) => getRoleName(u) === 'cleaning_staff').map((cleaner: User) => (
+                        <TableRow key={cleaner.id}>
+                          <TableCell className="font-medium">{cleaner.first_name} {cleaner.last_name}</TableCell>
+                          <TableCell>{cleaner.email}</TableCell>
+                          <TableCell>{cleaner.phone || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => handleRemoveCleaner(cleaner.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Remove
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          No cleaners currently assigned to this site.
                         </TableCell>
                       </TableRow>
                     )}

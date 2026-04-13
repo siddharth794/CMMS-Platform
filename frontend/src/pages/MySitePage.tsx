@@ -1,14 +1,17 @@
 // @ts-nocheck
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Building2, MapPin, Users, Phone } from 'lucide-react';
+import { Loader2, Building2, MapPin, Users, Phone, Mail, Globe, Copy, Check, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSites, useSite } from '../hooks/api/useSites';
 import { LocationsManager } from '../components/areas/LocationsManager';
 
 export default function MySitePage() {
+  const [copiedAddress, setCopiedAddress] = React.useState(false);
+  const [copiedPhone, setCopiedPhone] = React.useState(false);
   const { user } = useAuth();
 
   // Step 1: Fetch all sites for the org to find the manager's site
@@ -55,6 +58,22 @@ export default function MySitePage() {
 
   const location = [mySite.city, mySite.state, mySite.country].filter(Boolean).join(', ');
 
+  const handleCopy = (text: string, type: 'address' | 'phone') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'address') {
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } else {
+      setCopiedPhone(true);
+      setTimeout(() => setCopiedPhone(false), 2000);
+    }
+  };
+
+  const getRoleName = (u: any) => (u.Role?.name || u.role?.name || u.role_name || u.Roles?.[0]?.name || '').toLowerCase();
+  
+  const technicians = mySite?.technicians?.filter((u: any) => getRoleName(u) === 'technician') || [];
+  const cleaners = mySite?.technicians?.filter((u: any) => getRoleName(u) === 'cleaning_staff') || [];
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -82,80 +101,107 @@ export default function MySitePage() {
             <Users className="h-4 w-4" />
             <span className="font-medium">Technicians</span>
           </TabsTrigger>
+          <TabsTrigger value="cleaners" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <Users className="h-4 w-4" />
+            <span className="font-medium">Cleaners</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Site Information Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
-                  Site Details
+            <Card className="overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-xl relative z-10">
+                  <div className="p-2 bg-primary/10 rounded-md">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  Site Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Site Name</p>
-                    <p className="text-base font-semibold">{mySite.name}</p>
+              <CardContent className="space-y-5 relative z-10">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Building2 className="h-4 w-4" /> Name
+                  </p>
+                  <p className="text-lg font-semibold">{mySite.name}</p>
+                </div>
+                {mySite.description && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> Description
+                    </p>
+                    <p className="text-base leading-relaxed bg-muted/30 p-3 rounded-md border">{mySite.description}</p>
                   </div>
-                  {mySite.description && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Description</p>
-                      <p className="text-base">{mySite.description}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${mySite.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
-                      {mySite.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
+                )}
+                <div className="flex items-center gap-3 pt-2">
+                  <p className="text-sm font-medium text-muted-foreground">Operational Status</p>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${mySite.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${mySite.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                    {mySite.is_active ? 'Active & Running' : 'Inactive'}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Location Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Location
+            <Card className="overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-xl relative z-10">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-md">
+                    <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  Location & Contact
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  {mySite.address && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Address</p>
-                      <p className="text-base">{mySite.address}</p>
-                    </div>
-                  )}
-                  {location && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">City / State / Country</p>
-                      <p className="text-base">{location}</p>
-                    </div>
-                  )}
-                  {mySite.zip_code && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">ZIP / Postal Code</p>
-                      <p className="text-base">{mySite.zip_code}</p>
-                    </div>
-                  )}
-                  {mySite.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                        <p className="text-base">{mySite.phone}</p>
+              <CardContent className="space-y-5 relative z-10">
+                <div className="grid grid-cols-1 gap-4">
+                  {(mySite.address || location) && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors group/item">
+                      <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-muted-foreground">Primary Address</p>
+                        <p className="text-base font-medium">{mySite.address}</p>
+                        <p className="text-sm text-muted-foreground">{location} {mySite.zip_code}</p>
                       </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover/item:opacity-100 h-8 w-8 transition-opacity" 
+                        onClick={() => handleCopy(`${mySite.address || ''} ${location} ${mySite.zip_code || ''}`.trim(), 'address')}
+                      >
+                        {copiedAddress ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
                     </div>
                   )}
+                  
+                  {mySite.phone && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors group/item">
+                      <Phone className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-muted-foreground">Contact Phone</p>
+                        <a href={`tel:${mySite.phone}`} className="text-base font-medium hover:text-primary transition-colors">{mySite.phone}</a>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover/item:opacity-100 h-8 w-8 transition-opacity"
+                        onClick={() => handleCopy(mySite.phone, 'phone')}
+                      >
+                        {copiedPhone ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
+                  )}
+
                   {!mySite.address && !location && !mySite.zip_code && !mySite.phone && (
-                    <p className="text-muted-foreground text-sm">No location details available.</p>
+                    <div className="flex flex-col items-center justify-center p-6 border border-dashed rounded-lg text-center">
+                      <Globe className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                      <p className="text-muted-foreground text-sm font-medium">No location details available.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Contact your administrator to add address details.</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -163,42 +209,55 @@ export default function MySitePage() {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="hover:border-primary/50 transition-colors">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                     <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Technicians</p>
-                    <p className="text-2xl font-bold">{mySite.technicians?.length || 0}</p>
+                    <p className="text-sm text-muted-foreground font-medium">Technicians</p>
+                    <p className="text-2xl font-bold">{technicians.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Cleaners</p>
+                    <p className="text-2xl font-bold">{cleaners.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/50 transition-colors">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                     <Building2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Organization</p>
-                    <p className="text-lg font-semibold truncate">{mySite.Organization?.name || '-'}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground font-medium">Organization</p>
+                    <p className="text-lg font-semibold truncate" title={mySite.Organization?.name}>{mySite.Organization?.name || '-'}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="hover:border-primary/50 transition-colors">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                     <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Location</p>
-                    <p className="text-lg font-semibold truncate">{mySite.city || mySite.state || 'N/A'}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground font-medium">Location</p>
+                    <p className="text-lg font-semibold truncate" title={mySite.city || mySite.state || 'N/A'}>{mySite.city || mySite.state || 'N/A'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -236,8 +295,8 @@ export default function MySitePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mySite.technicians && mySite.technicians.length > 0 ? (
-                    mySite.technicians.map((tech: any) => (
+                  {technicians.length > 0 ? (
+                    technicians.map((tech: any) => (
                       <TableRow key={tech.id}>
                         <TableCell className="font-medium">{tech.first_name} {tech.last_name}</TableCell>
                         <TableCell>{tech.email}</TableCell>
@@ -248,6 +307,44 @@ export default function MySitePage() {
                     <TableRow>
                       <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                         No technicians currently assigned to your site.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Cleaners Tab */}
+        <TabsContent value="cleaners">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Cleaners</CardTitle>
+              <CardDescription>Cleaning staff currently assigned to your site.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cleaners.length > 0 ? (
+                    cleaners.map((cleaner: any) => (
+                      <TableRow key={cleaner.id}>
+                        <TableCell className="font-medium">{cleaner.first_name} {cleaner.last_name}</TableCell>
+                        <TableCell>{cleaner.email}</TableCell>
+                        <TableCell>{cleaner.phone || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                        No cleaners currently assigned to your site.
                       </TableCell>
                     </TableRow>
                   )}
