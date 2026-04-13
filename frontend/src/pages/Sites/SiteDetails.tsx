@@ -203,18 +203,18 @@ export default function SiteDetails() {
 
   // Filter users by role
   const facilityManagers = allUsers.filter((u: User) => {
-    const roleName = u.Role?.name || u.role?.name || '';
+    const roleName = u.Role?.name || u.role?.name || (u as any).role_name || '';
     const roleNameLower = roleName.toLowerCase();
     return roleNameLower === 'facility manager' || roleNameLower === 'facility_manager';
   });
+  const getRoleName = (u: any) => (u.Role?.name || u.role?.name || u.role_name || u.Roles?.[0]?.name || '').toLowerCase();
+
   const technicians = allUsers.filter((u: User) => {
-    const roleName = u.Role?.name || u.role?.name || '';
-    return roleName.toLowerCase() === 'technician';
+    return getRoleName(u) === 'technician';
   });
 
   const cleaners = allUsers.filter((u: User) => {
-    const roleName = u.Role?.name || u.role?.name || '';
-    return roleName.toLowerCase() === 'cleaning_staff';
+    return getRoleName(u) === 'cleaning_staff';
   });
 
   return (
@@ -412,8 +412,8 @@ export default function SiteDetails() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {site?.technicians && site.technicians.filter((u: User) => (u.Role?.name || u.role?.name || '').toLowerCase() === 'technician').length > 0 ? (
-                      site.technicians.filter((u: User) => (u.Role?.name || u.role?.name || '').toLowerCase() === 'technician').map((tech: User) => (
+                    {site?.technicians && site.technicians.filter((u: User) => getRoleName(u) === 'technician').length > 0 ? (
+                      site.technicians.filter((u: User) => getRoleName(u) === 'technician').map((tech: User) => (
                         <TableRow key={tech.id}>
                           <TableCell className="font-medium">{tech.first_name} {tech.last_name}</TableCell>
                           <TableCell>{tech.email}</TableCell>
@@ -483,8 +483,8 @@ export default function SiteDetails() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {site?.technicians && site.technicians.filter((u: User) => (u.Role?.name || u.role?.name || '').toLowerCase() === 'cleaning_staff').length > 0 ? (
-                      site.technicians.filter((u: User) => (u.Role?.name || u.role?.name || '').toLowerCase() === 'cleaning_staff').map((cleaner: User) => (
+                    {site?.technicians && site.technicians.filter((u: User) => getRoleName(u) === 'cleaning_staff').length > 0 ? (
+                      site.technicians.filter((u: User) => getRoleName(u) === 'cleaning_staff').map((cleaner: User) => (
                         <TableRow key={cleaner.id}>
                           <TableCell className="font-medium">{cleaner.first_name} {cleaner.last_name}</TableCell>
                           <TableCell>{cleaner.email}</TableCell>
