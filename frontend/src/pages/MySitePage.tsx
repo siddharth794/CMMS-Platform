@@ -55,6 +55,11 @@ export default function MySitePage() {
 
   const location = [mySite.city, mySite.state, mySite.country].filter(Boolean).join(', ');
 
+  const getRoleName = (u: any) => (u.Role?.name || u.role?.name || u.role_name || u.Roles?.[0]?.name || '').toLowerCase();
+  
+  const technicians = mySite?.technicians?.filter((u: any) => getRoleName(u) === 'technician') || [];
+  const cleaners = mySite?.technicians?.filter((u: any) => getRoleName(u) === 'cleaning_staff') || [];
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -81,6 +86,10 @@ export default function MySitePage() {
           <TabsTrigger value="team" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
             <Users className="h-4 w-4" />
             <span className="font-medium">Technicians</span>
+          </TabsTrigger>
+          <TabsTrigger value="cleaners" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <Users className="h-4 w-4" />
+            <span className="font-medium">Cleaners</span>
           </TabsTrigger>
         </TabsList>
 
@@ -172,7 +181,7 @@ export default function MySitePage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Technicians</p>
-                    <p className="text-2xl font-bold">{mySite.technicians?.length || 0}</p>
+                    <p className="text-2xl font-bold">{technicians.length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -236,8 +245,8 @@ export default function MySitePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mySite.technicians && mySite.technicians.length > 0 ? (
-                    mySite.technicians.map((tech: any) => (
+                  {technicians.length > 0 ? (
+                    technicians.map((tech: any) => (
                       <TableRow key={tech.id}>
                         <TableCell className="font-medium">{tech.first_name} {tech.last_name}</TableCell>
                         <TableCell>{tech.email}</TableCell>
@@ -248,6 +257,44 @@ export default function MySitePage() {
                     <TableRow>
                       <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                         No technicians currently assigned to your site.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Cleaners Tab */}
+        <TabsContent value="cleaners">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Cleaners</CardTitle>
+              <CardDescription>Cleaning staff currently assigned to your site.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cleaners.length > 0 ? (
+                    cleaners.map((cleaner: any) => (
+                      <TableRow key={cleaner.id}>
+                        <TableCell className="font-medium">{cleaner.first_name} {cleaner.last_name}</TableCell>
+                        <TableCell>{cleaner.email}</TableCell>
+                        <TableCell>{cleaner.phone || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                        No cleaners currently assigned to your site.
                       </TableCell>
                     </TableRow>
                   )}
