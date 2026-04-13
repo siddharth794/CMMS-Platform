@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -18,6 +18,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNotification } from '../context/NotificationContext';
 import { Badge } from '../components/ui/badge';
 import { format } from 'date-fns';
+import { Pagination } from '../components/ui/pagination';
+import { Checkbox } from '../components/ui/checkbox';
 
 export default function AreaDetailsPage() {
   const { id } = useParams();
@@ -28,25 +30,91 @@ export default function AreaDetailsPage() {
   const { data: schedulesResponse } = useAreaSchedules(id);
   const schedules = Array.isArray(schedulesResponse) ? schedulesResponse : (schedulesResponse?.data || []);
   
+  // States for Schedules Tab
+  const [scheduleSearch, setScheduleSearch] = useState('');
+  const [schedulePage, setSchedulePage] = useState(1);
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
+
+  // States for History Tab
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyStatus, setHistoryStatus] = useState('all');
+
   // Get executions for this area specifically
-  const { data: executionsResponse } = useAreaExecutions({ area_id: id });
-  const executions = Array.isArray(executionsResponse) ? executionsResponse : (executionsResponse?.data || []);
+  const { data: executionsResponse, isLoading: isLoadingExecutions } = useAreaExecutions({ 
+    area_id: id,
+    skip: (historyPage - 1) * 10,
+    limit: 10,
+    search: historySearch,
+    status: historyStatus !== 'all' ? historyStatus : undefined
+  });
+    const rawExecutions = Array.isArray(executionsResponse) ? executionsResponse : (executionsResponse?.data || []);
+  const isServerPaginated = executionsResponse && typeof executionsResponse.total === 'number';
+  
+  let filteredExecutions = rawExecutions;
+  if (!isServerPaginated) {
+    if (historySearch) {
+      filteredExecutions = filteredExecutions.filter((e: any) => 
+        e.completer?.first_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
+        e.completer?.last_name?.toLowerCase().includes(historySearch.toLowerCase())
+      );
+    }
+    if (historyStatus !== 'all') {
+      filteredExecutions = filteredExecutions.filter((e: any) => e.status === historyStatus);
+    }
+  }
+
+  const totalExecutions = isServerPaginated ? executionsResponse.total : filteredExecutions.length;
+  const executions = isServerPaginated ? rawExecutions : filteredExecutions.slice((historyPage - 1) * 10, historyPage * 10);
 
   const { deleteScheduleMutation } = useMutateAreaTask();
   const { addNotification } = useNotification();
   
-  const handleDeleteSchedule = async (id: string) => {
+  const handleDeleteSchedule = async (scheduleId: string) => {
     if (!window.confirm("Are you sure you want to delete this schedule?")) return;
     try {
-      await deleteScheduleMutation.mutateAsync(id);
+      await deleteScheduleMutation.mutateAsync(scheduleId);
       addNotification("success", "Schedule deleted");
+      setSelectedScheduleIds((prev) => prev.filter((id) => id !== scheduleId));
     } catch (err: any) {
       addNotification("error", err.response?.data?.error || "Failed to delete schedule");
     }
   };
 
+  const handleBulkDeleteSchedules = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedScheduleIds.length} schedules?`)) return;
+    try {
+      for (const scheduleId of selectedScheduleIds) {
+        await deleteScheduleMutation.mutateAsync(scheduleId);
+      }
+      addNotification("success", `${selectedScheduleIds.length} schedules deleted`);
+      setSelectedScheduleIds([]);
+    } catch (err: any) {
+      addNotification("error", err.response?.data?.error || "Failed to delete some schedules");
+    }
+  };
+
   if (isLoading) return <div className="p-8">Loading Area...</div>;
   if (!area) return <div className="p-8">Area not found.</div>;
+
+  const filteredSchedules = schedules.filter((s: any) => 
+    !scheduleSearch || s.template?.name?.toLowerCase().includes(scheduleSearch.toLowerCase())
+  );
+  const paginatedSchedules = filteredSchedules.slice((schedulePage - 1) * 10, schedulePage * 10);
+
+  const toggleSelectAllSchedules = () => {
+    if (selectedScheduleIds.length === paginatedSchedules.length && paginatedSchedules.length > 0) {
+      setSelectedScheduleIds([]);
+    } else {
+      setSelectedScheduleIds(paginatedSchedules.map((s: any) => s.id));
+    }
+  };
+
+  const toggleSelectSchedule = (scheduleId: string) => {
+    setSelectedScheduleIds((prev) => 
+      prev.includes(scheduleId) ? prev.filter((id) => id !== scheduleId) : [...prev, scheduleId]
+    );
+  };
 
   return (
     <div className="space-y-6" data-testid="area-details-page">
@@ -75,97 +143,168 @@ export default function AreaDetailsPage() {
           </div>
 
           <Card>
-            <CardContent className="p-0">
+            <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+              <div className="flex flex-wrap items-center gap-4 w-full">
+                <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search schedules by template name..."
+                    value={scheduleSearch}
+                    onChange={(e) => { setScheduleSearch(e.target.value); setSchedulePage(1); }}
+                  />
+                </div>
+                {selectedScheduleIds.length > 0 && (
+                  <Button variant="destructive" onClick={handleBulkDeleteSchedules}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete ({selectedScheduleIds.length})
+                  </Button>
+                )}
+              </div>
+            </div>
+            <CardContent className="pt-6">
               <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Checklist Template</TableHead>
-                  <TableHead>Schedule (Cron)</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(!schedules || schedules.length === 0) ? (
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No schedules attached. Add a checklist template to automatically generate tasks.
-                    </TableCell>
+                    <TableHead className="w-[40px]">
+                      <Checkbox 
+                        checked={paginatedSchedules.length > 0 && selectedScheduleIds.length === paginatedSchedules.length}
+                        onCheckedChange={toggleSelectAllSchedules}
+                      />
+                    </TableHead>
+                    <TableHead>Checklist Template</TableHead>
+                    <TableHead>Schedule (Cron)</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  schedules.map((schedule: any) => (
-                    <TableRow key={schedule.id}>
-                      <TableCell className="font-medium">{schedule.template?.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{schedule.cron_expression}</TableCell>
-                      <TableCell>
-                        <Badge variant={schedule.is_active ? "default" : "secondary"}>
-                          {schedule.is_active ? 'Active' : 'Paused'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDeleteSchedule(schedule.id)}
-                          title="Delete Schedule"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {paginatedSchedules.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        {scheduleSearch ? 'No schedules match your search.' : 'No schedules attached. Add a checklist template to automatically generate tasks.'}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    paginatedSchedules.map((schedule: any) => (
+                      <TableRow key={schedule.id}>
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedScheduleIds.includes(schedule.id)}
+                            onCheckedChange={() => toggleSelectSchedule(schedule.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{schedule.template?.name}</TableCell>
+                        <TableCell className="font-mono text-sm">{schedule.cron_expression}</TableCell>
+                        <TableCell>
+                          <Badge variant={schedule.is_active ? "default" : "secondary"}>
+                            {schedule.is_active ? 'Active' : 'Paused'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleDeleteSchedule(schedule.id)}
+                            title="Delete Schedule"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              <Pagination
+                currentPage={schedulePage}
+                totalItems={filteredSchedules.length}
+                onPageChange={setSchedulePage}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
+          <div className="flex justify-between items-center mt-4">
+            <h3 className="text-lg font-medium">Execution Log</h3>
+          </div>
           <Card>
-            <CardHeader className="border-b">
-              <CardTitle>Execution Log</CardTitle>
-              <CardDescription>History of generated tasks and their completion status.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
+            <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
+              <div className="flex flex-wrap items-center gap-4 w-full">
+                <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search executions..."
+                    value={historySearch}
+                    onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                  />
+                </div>
+                <div className="w-[180px]">
+                  <Select value={historyStatus} onValueChange={(v) => { setHistoryStatus(v); setHistoryPage(1); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                      <SelectItem value="MISSED">Missed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <CardContent className="pt-6">
               <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Scheduled For</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Completed By</TableHead>
-                  <TableHead>Completed At</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(!executions || executions.length === 0) ? (
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No execution history.
-                    </TableCell>
+                    <TableHead>Scheduled For</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Completed By</TableHead>
+                    <TableHead>Completed At</TableHead>
                   </TableRow>
-                ) : (
-                  executions.map((exec: any) => (
-                    <TableRow key={exec.id}>
-                      <TableCell>{format(new Date(exec.scheduled_for), 'MMM d, yyyy HH:mm')}</TableCell>
-                      <TableCell>
-                        {exec.status === 'COMPLETED' && <Badge variant="success" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1"/> Completed</Badge>}
-                        {exec.status === 'MISSED' && <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1"/> Missed</Badge>}
-                        {exec.status === 'PENDING' && <Badge variant="outline"><Clock className="w-3 h-3 mr-1"/> Pending</Badge>}
-                        {exec.status === 'IN_PROGRESS' && <Badge variant="secondary"><AlertCircle className="w-3 h-3 mr-1"/> In Progress</Badge>}
-                      </TableCell>
-                      <TableCell>
-                        {exec.completer ? `${exec.completer.first_name} ${exec.completer.last_name}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {exec.completed_at ? format(new Date(exec.completed_at), 'MMM d, yyyy HH:mm') : '-'}
+                </TableHeader>
+                <TableBody>
+                  {isLoadingExecutions ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">
+                        Loading executions...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (!executions || executions.length === 0) ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        {historySearch || historyStatus !== 'all' ? 'No executions match your filters.' : 'No execution history.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    executions.map((exec: any) => (
+                      <TableRow key={exec.id}>
+                        <TableCell>{format(new Date(exec.scheduled_for), 'MMM d, yyyy HH:mm')}</TableCell>
+                        <TableCell>
+                          {exec.status === 'COMPLETED' && <Badge variant="success" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1"/> Completed</Badge>}
+                          {exec.status === 'MISSED' && <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1"/> Missed</Badge>}
+                          {exec.status === 'PENDING' && <Badge variant="outline"><Clock className="w-3 h-3 mr-1"/> Pending</Badge>}
+                          {exec.status === 'IN_PROGRESS' && <Badge variant="secondary"><AlertCircle className="w-3 h-3 mr-1"/> In Progress</Badge>}
+                        </TableCell>
+                        <TableCell>
+                          {exec.completer ? `${exec.completer.first_name} ${exec.completer.last_name}` : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {exec.completed_at ? format(new Date(exec.completed_at), 'MMM d, yyyy HH:mm') : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              <Pagination
+                currentPage={historyPage}
+                totalItems={totalExecutions}
+                onPageChange={setHistoryPage}
+              />
             </CardContent>
           </Card>
         </TabsContent>

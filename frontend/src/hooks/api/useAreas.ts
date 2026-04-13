@@ -31,7 +31,7 @@ export function useAreaDetails(areaId: string | undefined) {
     queryFn: async () => {
       if (!areaId) return null;
       const { data } = await areasApi.getArea(areaId);
-      return data.data;
+      return data;
     },
     enabled: !!areaId,
   });
@@ -43,7 +43,7 @@ export function useAreaSchedules(areaId: string | undefined) {
     queryFn: async () => {
       if (!areaId) return { data: [] };
       const { data } = await areasApi.getSchedules(areaId);
-      return data.data;
+      return data;
     },
     enabled: !!areaId,
   });
@@ -54,7 +54,7 @@ export function useAreaExecutions(filters?: any) {
     queryKey: ['area_executions', filters],
     queryFn: async () => {
       const { data } = await areasApi.getExecutions(filters);
-      return data.data;
+      return data;
     },
   });
 }
