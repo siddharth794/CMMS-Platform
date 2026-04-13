@@ -14,7 +14,7 @@ import { Input } from '../components/ui/input';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { WorkOrderChecklists } from '../components/checklist/WorkOrderChecklists';
-import {
+import { 
   ArrowLeft,
   Clock,
   User,
@@ -35,7 +35,7 @@ import {
   Pause,
   RotateCcw,
   XCircle
-} from 'lucide-react';
+, FileText, ListChecks, Activity, Image } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -484,11 +484,23 @@ const WorkOrderDetailPage = () => {
         {/* Main Content with Tabs */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="form" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4">
-              <TabsTrigger value="form">General Form</TabsTrigger>
-              <TabsTrigger value="checklists">Checklists</TabsTrigger>
-              <TabsTrigger value="activity">Activity & Parts</TabsTrigger>
-              <TabsTrigger value="attachments">Images</TabsTrigger>
+            <TabsList className="flex w-full justify-start h-auto p-0 bg-transparent border-b rounded-none gap-6 mb-4 overflow-x-auto">
+              <TabsTrigger value="form" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                <FileText className="h-4 w-4" />
+                <span className="font-medium whitespace-nowrap">General Form</span>
+              </TabsTrigger>
+              <TabsTrigger value="checklists" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                <ListChecks className="h-4 w-4" />
+                <span className="font-medium whitespace-nowrap">Checklists</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                <Activity className="h-4 w-4" />
+                <span className="font-medium whitespace-nowrap">Activity & Parts</span>
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                <Image className="h-4 w-4" />
+                <span className="font-medium whitespace-nowrap">Images</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="form">

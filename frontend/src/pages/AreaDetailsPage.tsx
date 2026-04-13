@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2, Search } from 'lucide-react';
+import {  ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2, Search , CalendarClock, History } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -131,9 +131,15 @@ export default function AreaDetailsPage() {
       </div>
 
       <Tabs defaultValue="schedules" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="schedules">Scheduled Checklists</TabsTrigger>
-          <TabsTrigger value="history">Execution History</TabsTrigger>
+        <TabsList className="flex w-full justify-start h-auto p-0 bg-transparent border-b rounded-none gap-6">
+          <TabsTrigger value="schedules" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <CalendarClock className="h-4 w-4" />
+            <span className="font-medium">Scheduled Checklists</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <History className="h-4 w-4" />
+            <span className="font-medium">Execution History</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="schedules" className="space-y-4">
