@@ -27,14 +27,14 @@ export default function AreaDetailsPage() {
   const { data: areaResponse, isLoading } = useAreaDetails(id);
   const area = areaResponse?.data || areaResponse;
   
-  const { data: schedulesResponse } = useAreaSchedules(id, scheduleRecordStatus);
-  const schedules = Array.isArray(schedulesResponse) ? schedulesResponse : (schedulesResponse?.data || []);
-  
   // States for Schedules Tab
   const [scheduleRecordStatus, setScheduleRecordStatus] = useState('active');
   const [scheduleSearch, setScheduleSearch] = useState('');
   const [schedulePage, setSchedulePage] = useState(1);
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
+
+  const { data: schedulesResponse } = useAreaSchedules(id, scheduleRecordStatus);
+  const schedules = Array.isArray(schedulesResponse) ? schedulesResponse : (schedulesResponse?.data || []);
 
   // States for History Tab
   const [historySearch, setHistorySearch] = useState('');
