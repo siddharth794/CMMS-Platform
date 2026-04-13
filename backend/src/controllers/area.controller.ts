@@ -106,7 +106,8 @@ export const getAreaQrCode = async (req: Request, res: Response, next: NextFunct
 export const getSchedules = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user!.org_id;
-    const schedules = await areaService.getSchedules(req.params.areaId as string, orgId);
+    const recordStatus = (req.query.record_status as string) || 'active';
+    const schedules = await areaService.getSchedules(req.params.areaId as string, orgId, recordStatus);
     res.json({ data: schedules });
   } catch (error) {
     next(error);
@@ -136,8 +137,19 @@ export const updateSchedule = async (req: Request, res: Response, next: NextFunc
 export const deleteSchedule = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user!.org_id;
-    await areaService.deleteSchedule(req.params.id as string, orgId);
+    const force = req.query.force === 'true';
+    await areaService.deleteSchedule(req.params.id as string, orgId, force);
     res.json({ message: 'Schedule deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const restoreSchedule = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user!.org_id;
+    const result = await areaService.restoreSchedule(req.params.id as string, orgId);
+    res.json(result);
   } catch (error) {
     next(error);
   }

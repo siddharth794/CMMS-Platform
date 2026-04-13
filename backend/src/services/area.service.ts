@@ -56,8 +56,8 @@ class AreaService {
     return { area, qrImage };
   }
 
-  async getSchedules(areaId: string, orgId: string) {
-    return areaRepository.getSchedulesByAreaId(areaId, orgId);
+  async getSchedules(areaId: string, orgId: string, recordStatus: string = 'active') {
+    return areaRepository.getSchedulesByAreaId(areaId, orgId, recordStatus);
   }
 
   async createSchedule(areaId: string, orgId: string, data: any) {
@@ -72,10 +72,16 @@ class AreaService {
     return areaRepository.updateSchedule(id, orgId, data);
   }
 
-  async deleteSchedule(id: string, orgId: string) {
+  async deleteSchedule(id: string, orgId: string, force: boolean = false) {
     const schedule = await areaRepository.getScheduleById(id, orgId);
-    if (!schedule) throw new NotFoundError('Schedule not found');
-    return areaRepository.deleteSchedule(id, orgId);
+    if (!schedule && !force) throw new NotFoundError('Schedule not found'); // Ignore if forced and not found (e.g. bulk deleting inactive)
+    return areaRepository.deleteSchedule(id, orgId, force);
+  }
+
+  async restoreSchedule(id: string, orgId: string) {
+    const success = await areaRepository.restoreSchedule(id, orgId);
+    if (!success) throw new NotFoundError('Schedule not found');
+    return { message: 'Schedule restored successfully' };
   }
 
   async getExecutions(orgId: string, filters: any = {}) {

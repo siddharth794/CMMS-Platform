@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import {  ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2, Search , CalendarClock, History } from 'lucide-react';
+import {  ArrowLeft, Plus, Clock, CheckCircle, XCircle, AlertCircle, Trash2, Search , CalendarClock, History, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -27,10 +27,11 @@ export default function AreaDetailsPage() {
   const { data: areaResponse, isLoading } = useAreaDetails(id);
   const area = areaResponse?.data || areaResponse;
   
-  const { data: schedulesResponse } = useAreaSchedules(id);
+  const { data: schedulesResponse } = useAreaSchedules(id, scheduleRecordStatus);
   const schedules = Array.isArray(schedulesResponse) ? schedulesResponse : (schedulesResponse?.data || []);
   
   // States for Schedules Tab
+  const [scheduleRecordStatus, setScheduleRecordStatus] = useState('active');
   const [scheduleSearch, setScheduleSearch] = useState('');
   const [schedulePage, setSchedulePage] = useState(1);
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
@@ -67,14 +68,14 @@ export default function AreaDetailsPage() {
   const totalExecutions = isServerPaginated ? executionsResponse.total : filteredExecutions.length;
   const executions = isServerPaginated ? rawExecutions : filteredExecutions.slice((historyPage - 1) * 10, historyPage * 10);
 
-  const { deleteScheduleMutation } = useMutateAreaTask();
+  const { deleteScheduleMutation, restoreScheduleMutation } = useMutateAreaTask();
   const { addNotification } = useNotification();
   
   const handleDeleteSchedule = async (scheduleId: string) => {
-    if (!window.confirm("Are you sure you want to delete this schedule?")) return;
+    if (!window.confirm(scheduleRecordStatus === 'active' ? "Are you sure you want to delete this schedule?" : "Are you sure you want to permanently delete this schedule?")) return;
     try {
-      await deleteScheduleMutation.mutateAsync(scheduleId);
-      addNotification("success", "Schedule deleted");
+      await deleteScheduleMutation.mutateAsync({ id: scheduleId, force: scheduleRecordStatus === 'inactive' });
+      addNotification("success", scheduleRecordStatus === 'active' ? "Schedule deleted" : "Schedule permanently deleted");
       setSelectedScheduleIds((prev) => prev.filter((id) => id !== scheduleId));
     } catch (err: any) {
       addNotification("error", err.response?.data?.error || "Failed to delete schedule");
@@ -82,15 +83,25 @@ export default function AreaDetailsPage() {
   };
 
   const handleBulkDeleteSchedules = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedScheduleIds.length} schedules?`)) return;
+    if (!window.confirm(scheduleRecordStatus === 'active' ? `Are you sure you want to delete ${selectedScheduleIds.length} schedules?` : `Are you sure you want to permanently delete ${selectedScheduleIds.length} schedules?`)) return;
     try {
       for (const scheduleId of selectedScheduleIds) {
-        await deleteScheduleMutation.mutateAsync(scheduleId);
+        await deleteScheduleMutation.mutateAsync({ id: scheduleId, force: scheduleRecordStatus === 'inactive' });
       }
-      addNotification("success", `${selectedScheduleIds.length} schedules deleted`);
+      addNotification("success", `${selectedScheduleIds.length} schedules ${scheduleRecordStatus === 'active' ? 'deleted' : 'permanently deleted'}`);
       setSelectedScheduleIds([]);
     } catch (err: any) {
       addNotification("error", err.response?.data?.error || "Failed to delete some schedules");
+    }
+  };
+
+  const handleRestoreSchedule = async (scheduleId: string) => {
+    try {
+      await restoreScheduleMutation.mutateAsync(scheduleId);
+      addNotification("success", "Schedule restored");
+      setSelectedScheduleIds((prev) => prev.filter((id) => id !== scheduleId));
+    } catch (err: any) {
+      addNotification("error", err.response?.data?.error || "Failed to restore schedule");
     }
   };
 
@@ -156,6 +167,17 @@ export default function AreaDetailsPage() {
                     onChange={(e) => { setScheduleSearch(e.target.value); setSchedulePage(1); }}
                   />
                 </div>
+                <div className="w-[180px]">
+                  <Select value={scheduleRecordStatus} onValueChange={(v) => { setScheduleRecordStatus(v); setSchedulePage(1); setSelectedScheduleIds([]); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Record Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {selectedScheduleIds.length > 0 && (
                   <Button variant="destructive" onClick={handleBulkDeleteSchedules}>
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -204,15 +226,28 @@ export default function AreaDetailsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => handleDeleteSchedule(schedule.id)}
-                            title="Delete Schedule"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            {scheduleRecordStatus === 'inactive' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-primary h-8 w-8"
+                                onClick={() => handleRestoreSchedule(schedule.id)}
+                                title="Restore schedule"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive h-8 w-8"
+                              onClick={() => handleDeleteSchedule(schedule.id)}
+                              title={scheduleRecordStatus === 'inactive' ? 'Permanently delete schedule' : 'Delete schedule'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

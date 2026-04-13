@@ -16,6 +16,7 @@ import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  restoreSchedule,
   getExecutions,
   verifyQr,
   completeTask
@@ -53,6 +54,7 @@ router.get('/areas/:areaId/schedules', requirePermission('area:view'), getSchedu
 router.post('/areas/:areaId/schedules', requirePermission('area:manage'), validate(createAreaChecklistScheduleSchema), createSchedule);
 router.put('/area-schedules/:id', requirePermission('area:manage'), validate(updateAreaChecklistScheduleSchema), updateSchedule);
 router.delete('/area-schedules/:id', requirePermission('area:manage'), deleteSchedule);
+router.put('/area-schedules/:id/restore', requirePermission('area:manage'), restoreSchedule);
 
 // --- Area Executions (Tasks) ---
 router.get('/area-executions', requirePermission('area:view'), getExecutions);

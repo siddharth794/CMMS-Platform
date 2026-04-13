@@ -37,12 +37,12 @@ export function useAreaDetails(areaId: string | undefined) {
   });
 }
 
-export function useAreaSchedules(areaId: string | undefined) {
+export function useAreaSchedules(areaId: string | undefined, recordStatus: string = 'active') {
   return useQuery({
-    queryKey: ['area_schedules', areaId],
+    queryKey: ['area_schedules', areaId, recordStatus],
     queryFn: async () => {
       if (!areaId) return { data: [] };
-      const { data } = await areasApi.getSchedules(areaId);
+      const { data } = await areasApi.getSchedules(areaId, { record_status: recordStatus });
       return data;
     },
     enabled: !!areaId,
@@ -91,11 +91,18 @@ export function useMutateAreaTask() {
   });
 
   const deleteScheduleMutation = useMutation({
-    mutationFn: (id: string) => areasApi.deleteSchedule(id),
+    mutationFn: ({ id, force }: { id: string; force?: boolean }) => areasApi.deleteSchedule(id, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['area_schedules'] });
     },
   });
 
-  return { verifyQrMutation, completeTaskMutation, deleteFloorMutation, deleteAreaMutation, deleteScheduleMutation };
+  const restoreScheduleMutation = useMutation({
+    mutationFn: (id: string) => areasApi.restoreSchedule(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['area_schedules'] });
+    },
+  });
+
+  return { verifyQrMutation, completeTaskMutation, deleteFloorMutation, deleteAreaMutation, deleteScheduleMutation, restoreScheduleMutation };
 }

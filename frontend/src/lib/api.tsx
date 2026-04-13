@@ -225,10 +225,11 @@ export const areasApi = {
   deleteArea: (id: string) => api.delete(`/areas/${id}`),
   getQrCode: (id: string) => api.get(`/areas/${id}/qr-code`),
 
-  getSchedules: (areaId: string) => api.get(`/areas/${areaId}/schedules`),
+  getSchedules: (areaId: string, params?: any) => api.get(`/areas/${areaId}/schedules`, { params }),
   createSchedule: (areaId: string, data: any) => api.post(`/areas/${areaId}/schedules`, data),
   updateSchedule: (id: string, data: any) => api.put(`/area-schedules/${id}`, data),
-  deleteSchedule: (id: string) => api.delete(`/area-schedules/${id}`),
+  deleteSchedule: (id: string, force?: boolean) => api.delete(`/area-schedules/${id}${force ? '?force=true' : ''}`),
+  restoreSchedule: (id: string) => api.put(`/area-schedules/${id}/restore`),
 
   getExecutions: (params?: any) => api.get('/area-executions', { params }),
   verifyQr: (id: string, qr_code_hash: string) => api.post(`/area-executions/${id}/verify-qr`, { qr_code_hash }),

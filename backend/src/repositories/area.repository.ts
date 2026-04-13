@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { Floor, Area, AreaChecklistSchedule, AreaChecklistExecution, Checklist, User } from '../models';
 
 class AreaRepository {
@@ -47,10 +48,19 @@ class AreaRepository {
     return Area.destroy({ where: { id, org_id: orgId } });
   }
 
-  async getSchedulesByAreaId(areaId: string, orgId: string) {
+  async getSchedulesByAreaId(areaId: string, orgId: string, recordStatus: string = 'active') {
+    const where: any = { area_id: areaId, org_id: orgId };
+    let paranoid = true;
+    
+    if (recordStatus === 'inactive') {
+      paranoid = false;
+      where.deleted_at = { [Op.not]: null };
+    }
+
     return AreaChecklistSchedule.findAll({ 
-      where: { area_id: areaId, org_id: orgId },
-      include: [{ model: Checklist, as: 'template' }]
+      where,
+      paranoid,
+      include: [{ model: Checklist, as: 'template', paranoid: false }]
     });
   }
 
@@ -67,8 +77,17 @@ class AreaRepository {
     return this.getScheduleById(id, orgId);
   }
 
-  async deleteSchedule(id: string, orgId: string) {
-    return AreaChecklistSchedule.destroy({ where: { id, org_id: orgId } });
+  async deleteSchedule(id: string, orgId: string, force: boolean = false) {
+    return AreaChecklistSchedule.destroy({ where: { id, org_id: orgId }, force });
+  }
+
+  async restoreSchedule(id: string, orgId: string) {
+    const schedule = await AreaChecklistSchedule.findOne({ where: { id, org_id: orgId }, paranoid: false });
+    if (schedule) {
+      await schedule.restore();
+      return true;
+    }
+    return false;
   }
 
   async getExecutions(orgId: string, filters: any = {}) {
