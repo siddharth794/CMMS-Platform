@@ -13,6 +13,7 @@ import analyticsRoutes from './analytics';
 import siteRoutes from './sites';
 import aiAgentRoutes from './aiAgent.routes';
 import checklistRoutes from './checklists';
+import areaRoutes from './areas';
 
 const router = Router();
 
@@ -31,5 +32,6 @@ router.use('/analytics', analyticsRoutes);
 router.use('/sites', siteRoutes);
 router.use('/ai-agent', aiAgentRoutes);
 router.use('/checklists', checklistRoutes);
+router.use('/', areaRoutes);
 
 export default router;

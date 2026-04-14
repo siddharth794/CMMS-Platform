@@ -211,6 +211,31 @@ export const checklistsApi = {
   bulkDelete: (data: any) => api.post('/checklists/bulk-delete', data),
 };
 
+// ─── Areas API ───────────────────────────────────────────────────
+export const areasApi = {
+  getFloors: (siteId: string) => api.get(`/sites/${siteId}/floors`),
+  createFloor: (data: any) => api.post('/floors', data),
+  updateFloor: (id: string, data: any) => api.put(`/floors/${id}`, data),
+  deleteFloor: (id: string) => api.delete(`/floors/${id}`),
+  
+  getAreas: (floorId: string) => api.get(`/floors/${floorId}/areas`),
+  getArea: (id: string) => api.get(`/areas/${id}`),
+  createArea: (data: any) => api.post('/areas', data),
+  updateArea: (id: string, data: any) => api.put(`/areas/${id}`, data),
+  deleteArea: (id: string) => api.delete(`/areas/${id}`),
+  getQrCode: (id: string) => api.get(`/areas/${id}/qr-code`),
+
+  getSchedules: (areaId: string, params?: any) => api.get(`/areas/${areaId}/schedules`, { params }),
+  createSchedule: (areaId: string, data: any) => api.post(`/areas/${areaId}/schedules`, data),
+  updateSchedule: (id: string, data: any) => api.put(`/area-schedules/${id}`, data),
+  deleteSchedule: (id: string, force?: boolean) => api.delete(`/area-schedules/${id}${force ? '?force=true' : ''}`),
+  restoreSchedule: (id: string) => api.put(`/area-schedules/${id}/restore`),
+
+  getExecutions: (params?: any) => api.get('/area-executions', { params }),
+  verifyQr: (id: string, qr_code_hash: string) => api.post(`/area-executions/${id}/verify-qr`, { qr_code_hash }),
+  completeTask: (id: string) => api.patch(`/area-executions/${id}/complete`),
+};
+
 // Seed Demo Data
 export const seedDemoData = () => api.post('/seed-demo-data');
 

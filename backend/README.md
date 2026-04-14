@@ -1,130 +1,124 @@
-# CMMS Platform - Backend API
+# CMMS Platform Backend API
 
-This repository contains the Node.js/TypeScript backend API for the CMMS (Computerized Maintenance Management System) Platform. It utilizes Express, Sequelize (MySQL), and Socket.IO.
+This is the backend service for the CMMS (Computerized Maintenance Management System) Platform. It provides a robust, scalable REST API built with Node.js, Express, TypeScript, Sequelize (MySQL/PostgreSQL), and Socket.IO for real-time capabilities.
 
-## Prerequisites
+## 🚀 Technology Stack
 
-Before setting up the backend, ensure you have the following installed on your machine:
-*   **Node.js:** Version `20.x` or higher (Recommended: `v24.x`).
-*   **MySQL:** A running MySQL server instance (Local or Cloud like AWS RDS).
+* **Runtime**: Node.js (v20.x recommended)
+* **Framework**: Express.js
+* **Language**: TypeScript
+* **ORM**: Sequelize
+* **Database**: MySQL / PostgreSQL (Configurable)
+* **Real-time**: Socket.IO
+* **Authentication**: JWT (JSON Web Tokens)
+* **Logging**: Pino & Pino-Pretty
+* **Documentation**: Swagger UI
 
----
+## 📋 Prerequisites
 
-## 🚀 Setup Guide for a Brand New Database
+Before you begin, ensure you have met the following requirements:
+* [Node.js](https://nodejs.org/en/) (v20.x or higher)
+* [npm](https://www.npmjs.com/) (v10.x or higher)
+* A running MySQL or PostgreSQL database instance.
 
-If you are setting up the project for the first time on a fresh database, follow these steps exactly:
+## ⚙️ Installation & Setup
 
-### 1. Install Dependencies
-Install all necessary packages, including development tools required for building the TypeScript code.
+1. **Clone the repository and navigate to the backend directory**
+```bash
+cd backend
+```
+
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-### 2. Environment Variables
-Create a `.env` file in the root of the `backend` directory.
-```bash
-cp .env.example .env
-```
-Open the `.env` file and fill in your database credentials:
+3. **Environment Configuration**
+   Create a `.env` file in the root of the `backend` directory and configure your environment variables. You can copy the structure below:
 ```env
+# Server Configuration
 PORT=8000
-DB_HOST=your_mysql_host
+HOST=0.0.0.0
+
+# Database Configuration
+DB_HOST=localhost
 DB_PORT=3306
-DB_USER=your_mysql_user
-DB_PASSWORD=your_mysql_password
+DB_USER=root
+DB_PASSWORD=your_secure_password
 DB_NAME=cmms_dev
-JWT_SECRET=your_super_secret_jwt_key
+
+# Security
+JWT_SECRET=your_super_secret_jwt_key_here
 ```
 
-### 3. Build the Project
-Compile the TypeScript code into executable JavaScript inside the `dist/` folder.
-```bash
-npm run build
-```
+## 🗄️ Database Management (Migrations & Seeding)
 
-### 4. Run Database Migrations
-Migrations define your database schema. Running this command will automatically create all the necessary tables (users, roles, work_orders, etc.) inside your blank database.
+The application uses Sequelize CLI to manage database schemas and populate initial data.
+
+1. **Run Migrations**
+   To execute all pending migrations and build your database schema:
 ```bash
 npm run migrate
 ```
-*(If you ever make a mistake and want to undo all tables and start over, you can run `npx sequelize-cli db:migrate:undo:all`)*
 
-### 5. Seed Core System Data (Safe & Idempotent)
-The system requires core roles (Super Admin, Facility Manager, etc.) and permissions to function. 
-Run the seed script to safely insert this core data. This script is idempotent, meaning you can run it safely on production without overwriting existing data.
+2. **Undo Migrations**
+   If you need to rollback the most recent migration:
 ```bash
-npm run seed
-```
-**What this does:**
-1. Creates the base "CMMS Demo Org" organization.
-2. Creates all system Access permissions.
-3. Creates default Roles (`Super_Admin`, `Org_Admin`, `Facility_Manager`, `Technician`, `Requestor`).
-4. Creates 5 default users attached to those roles (e.g., `admin@demo.com` with password `admin123`).
-
-### Upgrading an Existing Installation
-If you already have a running database seeded prior to the introduction of Checklists, you will need to add Checklist permissions to your existing roles without destroying any custom permissions you may have set. To safely patch these permissions:
-```bash
-npm run seed:checklists
+npm run migrate:undo
 ```
 
-### 6. Seed Demo Data (Optional - For Development Only)
-If you want to populate your system with dummy Assets, Inventory Items, and Work Orders to test the UI, run:
+3. **Seed Initial/Demo Data**
+   To populate the database with default roles, a super admin, and comprehensive demo data across all modules (Sites, Areas, Assets, Checklists, PM Schedules, Inventory, etc.):
 ```bash
-npm run seed:demo
+npm run seed:all
+```
+   *(Alternatively, use `npm run seed` for minimal required bootstrapping like system roles).*
+
+4. **All-in-One Setup Command**
+   If you are setting up the project from scratch for the first time, you can run the setup script which migrates and seeds the database automatically:
+```bash
+npm run setup
 ```
 
-### 7. Start the Server
-Now that your database is fully structured and seeded, start the development server:
+## 🏃‍♂️ Running the Server
+
+**Development Mode (with hot-reloading)**
 ```bash
 npm run dev
 ```
-The server will start on `http://localhost:8000`. 
-*   **Health Check:** `http://localhost:8000/health`
-*   **Swagger API Docs:** `http://localhost:8000/api-docs`
 
----
+**Production Mode**
+1. Build the TypeScript source code:
+```bash
+npm run build
+```
+2. Start the compiled server:
+```bash
+npm run start
+```
 
-## ☁️ Production Deployment Guide (Render)
+## 📚 API Documentation
 
-If you are deploying this backend to a cloud host like **Render**, follow these exact settings to ensure successful builds and deployments.
+Once the server is running, you can access the interactive Swagger UI documentation. By default, it is available at:
+```text
+http://localhost:8000/api-docs
+```
 
-**Important Note on Vercel:** Do *not* deploy this application to Vercel. Vercel is a Serverless platform and does not support long-running processes or Socket.IO (WebSockets), which are essential for this application's real-time AI features. Use Render, Heroku, or an AWS EC2/ECS instance.
+## 🛠️ Additional Scripts
 
-### Render Service Configuration:
-1.  **Environment:** `Node`
-2.  **Build Command:** 
-    ```bash
-    npm install && npm run build
-    ```
-    *(This ensures TypeScript and `@types` are installed before compiling, preventing `MODULE_NOT_FOUND` errors).*
-3.  **Start Command:**
-    ```bash
-    npm start
-    ```
-4.  **Health Check Path:** `/health`
-5.  **Environment Variables:** Add `NODE_ENV=production`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET`.
+* **Run Tests**: `npm run test`
+* **Test Coverage**: `npm run test:coverage`
+* **Trigger PM Schedules**: `npm run pm:trigger` (Manually triggers the cron-job script that generates preventive maintenance work orders based on schedules)
 
-### Running Migrations in Production
-Once your app is successfully deployed to Render, you must initialize the live database:
-1. Go to your Render Web Service Dashboard.
-2. Click the **Shell** tab.
-3. Execute the migration and seed commands:
-    ```bash
-    npm run migrate
-    npm run seed
-    ```
+## 📁 Project Structure
 
----
-
-## Commands Reference
-
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | Starts the server in watch mode using `nodemon`. |
-| `npm run build` | Compiles `.ts` files to `.js` in the `dist/` folder. |
-| `npm start` | Runs the compiled server directly (Production). |
-| `npm run migrate` | Runs Sequelize migrations to create tables. |
-| `npm run migrate:undo` | Reverts the last run migration. |
-| `npm run seed` | Seeds core organization, roles, permissions, and admin users. |
-| `npm run seed:checklists` | Safely grants checklist permissions to existing admin and manager roles. |
-| `npm run seed:demo` | Seeds dummy assets, inventory, and work orders. |
+* `src/config/` - Global configurations (DB, Logger, Swagger)
+* `src/controllers/` - Route handlers processing incoming requests
+* `src/middleware/` - Express middlewares (Auth, Validation, Error Handling, Rate Limiting)
+* `src/migrations/` - Sequelize migration files
+* `src/models/` - Sequelize models representing database tables
+* `src/repositories/` - Data Access Layer (DB query abstraction)
+* `src/routes/` - Express API routing definitions
+* `src/scripts/` - Seeding and cron execution scripts
+* `src/services/` - Core business logic
+* `src/validators/` - Zod schema definitions for request validation

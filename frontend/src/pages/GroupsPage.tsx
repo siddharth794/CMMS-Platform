@@ -220,9 +220,15 @@ export default function GroupsPage() {
               
               <Tabs defaultValue="members" className="flex-1 flex flex-col">
                 <div className="px-6 pt-4">
-                  <TabsList className="grid w-[400px] grid-cols-2">
-                    <TabsTrigger value="members">Members ({localUsers.size})</TabsTrigger>
-                    <TabsTrigger value="roles">Assigned Roles ({localRoles.size})</TabsTrigger>
+                  <TabsList className="flex w-full justify-start h-auto p-0 bg-transparent border-b rounded-none gap-6 mb-4 overflow-x-auto">
+                    <TabsTrigger value="members" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                      <Users className="h-4 w-4" />
+                      <span className="font-medium whitespace-nowrap">Members ({localUsers.size})</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="roles" className="flex items-center gap-2 px-1 py-3 bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                      <Shield className="h-4 w-4" />
+                      <span className="font-medium whitespace-nowrap">Assigned Roles ({localRoles.size})</span>
+                    </TabsTrigger>
                   </TabsList>
                 </div>
                 

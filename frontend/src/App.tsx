@@ -34,6 +34,7 @@ const CreateUserPage = React.lazy(() => import('./pages/CreateUserPage'));
 const UserDetailPage = React.lazy(() => import('./pages/UserDetailPage'));
 const SitesList = React.lazy(() => import('./pages/Sites/SitesList'));
 const SiteDetails = React.lazy(() => import('./pages/Sites/SiteDetails'));
+const MySitePage = React.lazy(() => import('./pages/MySitePage'));
 
 const RolesPage = React.lazy(() => import('./pages/RolesPage'));
 const GroupsPage = React.lazy(() => import('./pages/GroupsPage'));
@@ -43,6 +44,9 @@ const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const ChecklistsPage = React.lazy(() => import('./pages/ChecklistsPage'));
 const CreateChecklistPage = React.lazy(() => import('./pages/CreateChecklistPage'));
 const ChecklistDetailPage = React.lazy(() => import('./pages/ChecklistDetailPage'));
+const AreaDetailsPage = React.lazy(() => import('./pages/AreaDetailsPage'));
+const AreaTasksPage = React.lazy(() => import('./pages/AreaTasksPage'));
+const AreaTaskExecutionPage = React.lazy(() => import('./pages/AreaTaskExecutionPage'));
 
 const queryClient = new QueryClient();
 
@@ -134,6 +138,14 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+const FacilityManagerRoute = ({ children }) => {
+  const { hasRole } = useAuth();
+  if (!hasRole(['facility_manager'])) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 const SuspenseFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -178,6 +190,7 @@ const AppRoutes = () => {
           <Route path="organizations/:id" element={<SuperAdminRoute><OrganizationDetailPage /></SuperAdminRoute>} />
           <Route path="sites" element={<AdminRoute><SitesList /></AdminRoute>} />
           <Route path="sites/:id" element={<AdminRoute><SiteDetails /></AdminRoute>} />
+          <Route path="my-site" element={<FacilityManagerRoute><MySitePage /></FacilityManagerRoute>} />
           <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
           <Route path="users/new" element={<AdminRoute><CreateUserPage /></AdminRoute>} />
           <Route path="users/:id" element={<AdminRoute><UserDetailPage /></AdminRoute>} />
@@ -185,6 +198,10 @@ const AppRoutes = () => {
           <Route path="checklists" element={<ManagerRoute><ChecklistsPage /></ManagerRoute>} />
           <Route path="checklists/new" element={<ManagerRoute><CreateChecklistPage /></ManagerRoute>} />
           <Route path="checklists/:id" element={<ManagerRoute><ChecklistDetailPage /></ManagerRoute>} />
+          <Route path="areas/:id" element={<ManagerRoute><AreaDetailsPage /></ManagerRoute>} />
+          
+          <Route path="area-tasks" element={<ProtectedRoute><AreaTasksPage /></ProtectedRoute>} />
+          <Route path="area-tasks/:id" element={<ProtectedRoute><AreaTaskExecutionPage /></ProtectedRoute>} />
 
           <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
           <Route path="groups" element={<AdminRoute><GroupsPage /></AdminRoute>} />

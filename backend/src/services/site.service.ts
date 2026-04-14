@@ -207,8 +207,8 @@ export class SiteService {
 
         // Check user role
         const roleName = user.Role?.name || user.Roles?.[0]?.name || user.role?.name;
-        if (!roleName || roleName.toLowerCase() !== 'technician') {
-            throw new BadRequestError('User is not a Technician');
+        if (!roleName || (roleName.toLowerCase() !== 'technician' && roleName.toLowerCase() !== 'cleaning_staff')) {
+            throw new BadRequestError('User must be a Technician or Cleaning Staff');
         }
 
         await siteRepository.assignTechnician(siteId, userId, orgId);

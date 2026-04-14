@@ -38,7 +38,7 @@ class ChecklistService {
     }
 
     async getChecklists(orgId: string, query: any) {
-        const { skip = 0, limit = 10, search, asset_id, pm_schedule_id, work_order_id, is_template, record_status } = query;
+        const { skip = 0, limit = 10, search, asset_id, pm_schedule_id, work_order_id, is_template, record_status, standalone_only } = query;
         
         const where: any = { org_id: orgId };
         if (search) where.name = { [Op.like]: `%${search}%` };
@@ -46,6 +46,13 @@ class ChecklistService {
         if (pm_schedule_id) where.pm_schedule_id = pm_schedule_id;
         if (work_order_id) where.work_order_id = work_order_id;
         if (is_template !== undefined) where.is_template = is_template === 'true';
+        
+        if (standalone_only === 'true') {
+            where.asset_id = null;
+            where.pm_schedule_id = null;
+            where.work_order_id = null;
+            where.area_id = null;
+        }
 
         let paranoid = true;
         if (record_status === 'inactive') {

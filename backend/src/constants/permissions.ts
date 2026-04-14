@@ -45,7 +45,16 @@ export const PERMISSIONS = [
 
   // Checklists Module
   { name: 'checklist:manage', module: 'Checklists', description: 'Create and edit checklist templates' },
-  { name: 'checklist:execute', module: 'Checklists', description: 'Check off items on work order checklists' }
+  { name: 'checklist:execute', module: 'Checklists', description: 'Check off items on work order checklists' },
+
+  // Sites Module
+  { name: 'site:view', module: 'Sites', description: 'View site details, floors, and areas' },
+  { name: 'site:manage', module: 'Sites', description: 'Create and edit floors, areas, and site configurations' },
+
+  // Areas & Locations Module
+  { name: 'area:view', module: 'Areas', description: 'View locations, areas, and schedules' },
+  { name: 'area:manage', module: 'Areas', description: 'Create and edit floors, areas, and area schedules' },
+  { name: 'area_tasks:execute', module: 'Areas', description: 'Verify area QR codes and complete area checklists' }
 ];
 
 /**
@@ -61,7 +70,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'user:view', 'user:create', 'user:update', 'user:delete', 'rbac:manage',
     'organization:view', 'organization:update',
     'analytics:view',
-    'checklist:manage', 'checklist:execute'
+    'checklist:manage', 'checklist:execute',
+    'site:view', 'site:manage',
+    'area:view', 'area:manage', 'area_tasks:execute'
   ],
   Facility_Manager: [
     'work_order:view', 'work_order:create', 'work_order:update', 'work_order:delete', 'work_order:assign',
@@ -70,7 +81,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'pm:view', 'pm:create', 'pm:update',
     'user:view',
     'analytics:view',
-    'checklist:manage', 'checklist:execute'
+    'checklist:manage', 'checklist:execute',
+    'site:view', 'site:manage',
+    'area:view', 'area:manage', 'area_tasks:execute'
   ],
   Technician: [
     'work_order:view', 'work_order:update',
@@ -82,5 +95,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'work_order:view', 'work_order:create',
     'asset:view',
     'checklist:execute'
+  ],
+  Cleaning_Staff: [
+    'area:view', 'area_tasks:execute', 'checklist:execute'
   ]
 };

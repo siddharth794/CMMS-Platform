@@ -35,6 +35,42 @@ Site.init({
   manager_id:  { type: DataTypes.UUID, allowNull: true },
 }, { sequelize, tableName: 'sites', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
+class Floor extends Model {
+  public id!: string;
+  public org_id!: string;
+  public site_id!: string;
+  public name!: string;
+  public level!: number;
+  public description?: string;
+}
+Floor.init({
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  org_id: { type: DataTypes.UUID, allowNull: false },
+  site_id: { type: DataTypes.UUID, allowNull: false },
+  name: { type: DataTypes.STRING, allowNull: false },
+  level: { type: DataTypes.INTEGER, defaultValue: 0 },
+  description: { type: DataTypes.TEXT },
+}, { sequelize, tableName: 'floors', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class Area extends Model {
+  public id!: string;
+  public org_id!: string;
+  public floor_id!: string;
+  public name!: string;
+  public type!: string;
+  public qr_code_hash!: string;
+  public description?: string;
+}
+Area.init({
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  org_id: { type: DataTypes.UUID, allowNull: false },
+  floor_id: { type: DataTypes.UUID, allowNull: false },
+  name: { type: DataTypes.STRING, allowNull: false },
+  type: { type: DataTypes.ENUM('washroom', 'food_court', 'corridor', 'parking', 'other'), defaultValue: 'other' },
+  qr_code_hash: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, unique: true },
+  description: { type: DataTypes.TEXT },
+}, { sequelize, tableName: 'areas', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
 class Role extends Model { public id!: number; public name!: string; public org_id?: string; public is_system_role!: boolean; }
 Role.init({
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -298,6 +334,8 @@ class Checklist extends Model {
     public asset_id?: string;
     public pm_schedule_id?: string;
     public work_order_id?: string;
+    public area_id?: string;
+    public area_execution_id?: string;
     public created_by!: string;
 }
 
@@ -311,8 +349,56 @@ Checklist.init({
     asset_id: { type: DataTypes.UUID },
     pm_schedule_id: { type: DataTypes.UUID },
     work_order_id: { type: DataTypes.UUID },
+    area_id: { type: DataTypes.UUID },
+    area_execution_id: { type: DataTypes.UUID },
     created_by: { type: DataTypes.UUID, allowNull: false },
 }, { sequelize, tableName: 'checklists', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class AreaChecklistSchedule extends Model {
+    public id!: string;
+    public org_id!: string;
+    public area_id!: string;
+    public checklist_template_id!: string;
+    public cron_expression!: string;
+    public assigned_group_id?: string;
+    public is_active!: boolean;
+}
+
+AreaChecklistSchedule.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    org_id: { type: DataTypes.UUID, allowNull: false },
+    area_id: { type: DataTypes.UUID, allowNull: false },
+    checklist_template_id: { type: DataTypes.UUID, allowNull: false },
+    cron_expression: { type: DataTypes.STRING, allowNull: false },
+    assigned_group_id: { type: DataTypes.UUID },
+    is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+}, { sequelize, tableName: 'area_checklist_schedules', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
+
+class AreaChecklistExecution extends Model {
+    public id!: string;
+    public org_id!: string;
+    public schedule_id!: string;
+    public area_id!: string;
+    public checklist_id!: string;
+    public status!: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'MISSED';
+    public scheduled_for!: Date;
+    public started_at?: Date;
+    public completed_at?: Date;
+    public completed_by?: string;
+}
+
+AreaChecklistExecution.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    org_id: { type: DataTypes.UUID, allowNull: false },
+    schedule_id: { type: DataTypes.UUID, allowNull: false },
+    area_id: { type: DataTypes.UUID, allowNull: false },
+    checklist_id: { type: DataTypes.UUID, allowNull: false },
+    status: { type: DataTypes.ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'MISSED'), defaultValue: 'PENDING' },
+    scheduled_for: { type: DataTypes.DATE, allowNull: false },
+    started_at: { type: DataTypes.DATE },
+    completed_at: { type: DataTypes.DATE },
+    completed_by: { type: DataTypes.UUID },
+}, { sequelize, tableName: 'area_checklist_executions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', paranoid: true, deletedAt: 'deleted_at' });
 
 class ChecklistItem extends Model {
     public id!: string;
@@ -453,6 +539,42 @@ PMSchedule.belongsTo(Site, { as: 'site', foreignKey: 'site_id' });
 Organization.hasMany(PMSchedule, { foreignKey: 'org_id' });
 PMSchedule.belongsTo(Organization, { as: 'organization', foreignKey: 'org_id' });
 
+// Site and Floor/Area Associations
+Site.hasMany(Floor, { foreignKey: 'site_id' });
+Floor.belongsTo(Site, { foreignKey: 'site_id' });
+
+Floor.hasMany(Area, { foreignKey: 'floor_id' });
+Area.belongsTo(Floor, { foreignKey: 'floor_id' });
+
+// Area Scheduling Associations
+Area.hasMany(AreaChecklistSchedule, { as: 'schedules', foreignKey: 'area_id' });
+AreaChecklistSchedule.belongsTo(Area, { as: 'area', foreignKey: 'area_id' });
+
+Checklist.hasMany(AreaChecklistSchedule, { as: 'area_schedules', foreignKey: 'checklist_template_id' });
+AreaChecklistSchedule.belongsTo(Checklist, { as: 'template', foreignKey: 'checklist_template_id' });
+
+Group.hasMany(AreaChecklistSchedule, { as: 'area_schedules', foreignKey: 'assigned_group_id' });
+AreaChecklistSchedule.belongsTo(Group, { as: 'assigned_group', foreignKey: 'assigned_group_id' });
+
+// Area Execution Associations
+AreaChecklistSchedule.hasMany(AreaChecklistExecution, { as: 'executions', foreignKey: 'schedule_id' });
+AreaChecklistExecution.belongsTo(AreaChecklistSchedule, { as: 'schedule', foreignKey: 'schedule_id' });
+
+Area.hasMany(AreaChecklistExecution, { as: 'executions', foreignKey: 'area_id' });
+AreaChecklistExecution.belongsTo(Area, { as: 'area', foreignKey: 'area_id' });
+
+Checklist.hasOne(AreaChecklistExecution, { as: 'execution', foreignKey: 'checklist_id' });
+AreaChecklistExecution.belongsTo(Checklist, { as: 'checklist_instance', foreignKey: 'checklist_id' });
+
+User.hasMany(AreaChecklistExecution, { foreignKey: 'completed_by' });
+AreaChecklistExecution.belongsTo(User, { as: 'completer', foreignKey: 'completed_by' });
+
+Checklist.belongsTo(Area, { as: 'related_area', foreignKey: 'area_id' });
+Area.hasMany(Checklist, { as: 'checklists', foreignKey: 'area_id' });
+
+Checklist.belongsTo(AreaChecklistExecution, { as: 'related_execution', foreignKey: 'area_execution_id' });
+AreaChecklistExecution.hasMany(Checklist, { as: 'checklists', foreignKey: 'area_execution_id' });
+
 // Checklists Associations
 Checklist.hasMany(ChecklistItem, { as: 'items', foreignKey: 'checklist_id', onDelete: 'CASCADE' });
 ChecklistItem.belongsTo(Checklist, { as: 'checklist', foreignKey: 'checklist_id' });
@@ -492,5 +614,9 @@ export {
     WOAttachment,
     Checklist,
     ChecklistItem,
+    Floor,
+    Area,
+    AreaChecklistSchedule,
+    AreaChecklistExecution,
     sequelize
 };
