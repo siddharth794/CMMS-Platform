@@ -250,6 +250,15 @@ class WorkOrderController {
             } else { next(err); }
         }
     }
+
+    deleteAttachment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const result = await workOrderService.deleteAttachment(req.params.wo_id as string, req.params.attachment_id as string, targetOrgId);
+        res.json(result);
+    }
 }
 
 export const workOrderController = new WorkOrderController();

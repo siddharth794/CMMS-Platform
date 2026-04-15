@@ -112,6 +112,7 @@ const WorkOrderDetailPage = () => {
 
   // Attachments state
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -397,6 +398,19 @@ const WorkOrderDetailPage = () => {
       addNotification('error', error.response?.data?.detail || 'Failed to upload images');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await workOrdersApi.deleteAttachment(id, attachmentId);
+      addNotification('success', 'Attachment deleted successfully');
+      fetchData();
+    } catch (error) {
+      addNotification('error', error.response?.data?.detail || 'Failed to delete attachment');
+    } finally {
+      setDeletingAttachmentId(null);
     }
   };
 
@@ -768,6 +782,20 @@ const WorkOrderDetailPage = () => {
                             alt="Work Order"
                             className="w-full h-32 object-cover"
                           />
+                          {(!isRequester() && workOrder.status !== 'completed' && workOrder.status !== 'cancelled') && (
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteAttachment(att.id)}
+                              disabled={deletingAttachmentId === att.id}
+                            >
+                              {deletingAttachmentId === att.id
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : <X className="h-3 w-3" />
+                              }
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>

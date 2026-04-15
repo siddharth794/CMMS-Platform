@@ -680,5 +680,6 @@ router.delete('/:wo_id/inventory/:usage_id', requireRole([...MANAGER_ROLES, ROLE
  *         $ref: '#/components/responses/NotFound'
  */
 router.post('/:wo_id/attachments', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), upload.array('images', 3), workOrderController.addAttachments);
+router.delete('/:wo_id/attachments/:attachment_id', requireRole([...MANAGER_ROLES, ROLES.TECHNICIAN]), workOrderController.deleteAttachment);
 
 export default router;

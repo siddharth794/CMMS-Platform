@@ -289,6 +289,19 @@ class WorkOrderService {
 
         return workOrderRepository.createAttachments(woId, uploadedKeys);
     }
+
+    async deleteAttachment(woId: string, attachmentId: string, orgId: string | null): Promise<{ message: string }> {
+        const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
+        if (!wo) throw new NotFoundError('Work order');
+
+        const attachment = await workOrderRepository.findAttachmentById(attachmentId, woId);
+        if (!attachment) throw new NotFoundError('Attachment');
+
+        await deleteFromS3(attachment.file_path);
+        await workOrderRepository.hardDeleteAttachment(attachment);
+
+        return { message: 'Attachment deleted successfully' };
+    }
 }
 
 export const workOrderService = new WorkOrderService();

@@ -119,6 +119,7 @@ export const workOrdersApi = {
   uploadAttachments: (id, formData) => api.post(`/work-orders/${id}/attachments`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  deleteAttachment: (woId, attachmentId) => api.delete(`/work-orders/${woId}/attachments/${attachmentId}`),
 };
 
 // PM Schedules

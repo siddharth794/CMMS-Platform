@@ -215,6 +215,14 @@ class WorkOrderRepository {
     }
 
     // ─── Attachments ──────────────────────────────────────────────
+    async findAttachmentById(attachmentId: string, woId: string): Promise<any | null> {
+        return WOAttachment.findOne({ where: { id: attachmentId, work_order_id: woId } });
+    }
+
+    async hardDeleteAttachment(attachment: any): Promise<void> {
+        await attachment.destroy({ force: true });
+    }
+
     async createAttachments(woId: string, s3Keys: string[]): Promise<any[]> {
         return sequelize.transaction(async (t) => {
             const results = [];
