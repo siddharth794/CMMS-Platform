@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { workOrderService } from '../services/workOrder.service';
 import { siteRepository } from '../repositories/site.repository';
 import { assetRepository } from '../repositories/asset.repository';
@@ -13,16 +11,8 @@ import {
 import { AuditContext, BulkDeleteDTO } from '../types/common.dto';
 import { ROLES } from '../constants/roles';
 
-// ─── Multer Setup ─────────────────────────────────────────────────
-const uploadDir = path.join(__dirname, '../../uploads/work-orders');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadDir),
-    filename: (_req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + '-' + file.originalname)
-});
-
-export const upload = multer({ storage, limits: { fileSize: 1024 * 1024, files: 3 } });
+// ─── Multer Setup (memory buffer → S3) ───────────────────────────
+export const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024, files: 3 } });
 
 class WorkOrderController {
     private getAuditContext = (req: Request): AuditContext => {
@@ -251,15 +241,23 @@ class WorkOrderController {
             const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
             const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
 
-            const files = req.files as Express.Multer.File[];
-            const filenames = (files || []).map(f => f.filename);
-            const attachments = await workOrderService.addAttachments(req.params.wo_id as string, targetOrgId, filenames);
+            const files = (req.files as Express.Multer.File[]) || [];
+            const attachments = await workOrderService.addAttachments(req.params.wo_id as string, targetOrgId, files);
             res.status(201).json(attachments);
         } catch (err) {
             if (err instanceof multer.MulterError) {
                 res.status(400).json({ detail: err.message });
             } else { next(err); }
         }
+    }
+
+    deleteAttachment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const effectiveRoles = req.user!.effectiveRoles || [];
+        const isSuperAdmin = effectiveRoles.some((r: any) => r.name.toLowerCase() === ROLES.SUPER_ADMIN);
+        const targetOrgId = isSuperAdmin ? null : req.user!.org_id;
+
+        const result = await workOrderService.deleteAttachment(req.params.wo_id as string, req.params.attachment_id as string, targetOrgId);
+        res.json(result);
     }
 }
 
