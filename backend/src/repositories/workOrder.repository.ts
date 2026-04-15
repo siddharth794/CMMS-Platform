@@ -1,9 +1,6 @@
 import { Op } from 'sequelize';
-import fs from 'fs';
-import path from 'path';
 import { WorkOrder, Asset, User, Role, WorkOrderInventoryItem, InventoryItem, WOAttachment, Site, Organization, sequelize } from '../models';
-
-const UPLOADS_DIR = path.join(__dirname, '../../uploads/work-orders');
+import { deleteFromS3, deleteMultipleFromS3 } from '../utils/s3';
 
 const WO_INCLUDES = [
     { model: Asset, as: 'asset', paranoid: false, required: false },
@@ -75,12 +72,10 @@ class WorkOrderRepository {
     }
 
     async hardDelete(wo: any): Promise<void> {
-        // Clean up attachment files from disk before deleting DB records
+        // Clean up attachment files from S3 before deleting DB records
         const attachments = await WOAttachment.findAll({ where: { work_order_id: wo.id }, paranoid: false });
-        for (const att of attachments) {
-            const filePath = path.join(UPLOADS_DIR, path.basename(att.file_path));
-            fs.unlink(filePath, () => {});
-        }
+        const keys = attachments.map((att: any) => att.file_path).filter(Boolean);
+        if (keys.length > 0) await deleteMultipleFromS3(keys).catch(() => {});
 
         await sequelize.transaction(async (t) => {
             const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');
@@ -119,15 +114,13 @@ class WorkOrderRepository {
                 // Manually clean up related records for hard delete
                 const { PMExecution, WOComment, WorkOrderInventoryItem, WOAttachment } = require('../models');
 
-                // Clean up attachment files from disk before deleting DB records
+                // Clean up attachment files from S3 before deleting DB records
                 const attachmentsToDelete = await WOAttachment.findAll({
                     where: { work_order_id: { [Op.in]: toHardDelete } },
                     paranoid: false
                 });
-                for (const att of attachmentsToDelete) {
-                    const filePath = path.join(UPLOADS_DIR, path.basename(att.file_path));
-                    fs.unlink(filePath, () => {});
-                }
+                const s3Keys = attachmentsToDelete.map((att: any) => att.file_path).filter(Boolean);
+                if (s3Keys.length > 0) await deleteMultipleFromS3(s3Keys).catch(() => {});
                 await PMExecution.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
                 await WOComment.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
                 await WorkOrderInventoryItem.destroy({ where: { work_order_id: { [Op.in]: toHardDelete } }, force: true, transaction: t });
@@ -222,12 +215,12 @@ class WorkOrderRepository {
     }
 
     // ─── Attachments ──────────────────────────────────────────────
-    async createAttachments(woId: string, filenames: string[]): Promise<any[]> {
+    async createAttachments(woId: string, s3Keys: string[]): Promise<any[]> {
         return sequelize.transaction(async (t) => {
             const results = [];
-            for (const filename of filenames) {
+            for (const key of s3Keys) {
                 const attachment = await WOAttachment.create(
-                    { work_order_id: woId, file_path: `/uploads/work-orders/${filename}` },
+                    { work_order_id: woId, file_path: key },
                     { transaction: t }
                 );
                 results.push(attachment);

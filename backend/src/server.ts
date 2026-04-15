@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import path from 'path';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import jwt from 'jsonwebtoken';
@@ -96,9 +95,6 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 app.use('/api/auth/login', authLimiter);
-
-// ─── Static Files ─────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ─── Health Check (Enhanced) ──────────────────────────────────────
 app.get('/health', async (req: Request, res: Response) => {

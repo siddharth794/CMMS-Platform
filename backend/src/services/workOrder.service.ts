@@ -8,7 +8,8 @@ import {
     StatusUpdateDTO, AssignDTO, CommentDTO, InventoryUsageDTO
 } from '../types/dto';
 import { AuditContext, BulkDeleteDTO, PaginatedResponse } from '../types/common.dto';
-import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/AppError';
+import { NotFoundError, BadRequestError, ForbiddenError, InternalError } from '../errors/AppError';
+import { uploadToS3, deleteFromS3 } from '../utils/s3';
 import { AuthenticatedUser } from '../types/express';
 import { WO_STATUS, WO_STATUS_TRANSITIONS } from '../constants/workOrder';
 
@@ -267,12 +268,26 @@ class WorkOrderService {
     }
 
     // ─── Attachments ──────────────────────────────────────────────
-    async addAttachments(woId: string, orgId: string | null, filenames: string[]): Promise<any[]> {
+    async addAttachments(woId: string, orgId: string | null, files: { buffer: Buffer; originalname: string; mimetype: string }[]): Promise<any[]> {
         const wo = await workOrderRepository.findByIdAndOrg(woId, orgId);
         if (!wo) throw new NotFoundError('Work order');
-        if (!filenames.length) throw new BadRequestError('No files uploaded. Ensure images are < 1MB and max 3 files.');
+        if (!files.length) throw new BadRequestError('No files uploaded. Ensure images are < 1MB and max 3 files.');
 
-        return workOrderRepository.createAttachments(woId, filenames);
+        const uploadedKeys: string[] = [];
+        try {
+            for (const file of files) {
+                const key = `work-orders/${Date.now()}-${Math.round(Math.random() * 1E9)}-${file.originalname}`;
+                await uploadToS3(file.buffer, key, file.mimetype);
+                uploadedKeys.push(key);
+            }
+        } catch (err) {
+            for (const key of uploadedKeys) {
+                await deleteFromS3(key).catch(() => {});
+            }
+            throw new InternalError('Failed to upload attachments');
+        }
+
+        return workOrderRepository.createAttachments(woId, uploadedKeys);
     }
 }
 
