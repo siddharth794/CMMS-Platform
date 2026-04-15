@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+export const S3_BASE_URL = import.meta.env.VITE_S3_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 const api = axios.create({

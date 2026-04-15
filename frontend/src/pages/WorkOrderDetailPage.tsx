@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { workOrdersApi, usersApi, inventoryApi, assetsApi, BACKEND_URL } from '../lib/api';
+import { workOrdersApi, usersApi, inventoryApi, assetsApi, BACKEND_URL, S3_BASE_URL } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -764,7 +764,7 @@ const WorkOrderDetailPage = () => {
                       {workOrder.attachments.map(att => (
                         <div key={att.id} className="relative group rounded-md overflow-hidden border">
                           <img
-                            src={`${BACKEND_URL}${att.file_path}`}
+                            src={`${S3_BASE_URL}/${att.file_path}`}
                             alt="Work Order"
                             className="w-full h-32 object-cover"
                           />
